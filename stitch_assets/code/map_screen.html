@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "accent-cyan": "#06B6D4",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102220",
+                        "slate-900": "#0F172A",
+                        "slate-500": "#64748B",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Manrope', sans-serif; }
+        .map-gradient-overlay {
+            background: linear-gradient(to bottom, rgba(246, 248, 248, 0.8) 0%, rgba(246, 248, 248, 0) 15%, rgba(246, 248, 248, 0) 85%, rgba(246, 248, 248, 0.9) 100%);
+        }
+        .polyline-glow {
+            filter: drop-shadow(0 0 8px rgba(13, 150, 139, 0.4));
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display">
+<div class="relative flex h-screen w-full flex-col overflow-hidden">
+<!-- Top Navigation Header -->
+<div class="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 bg-white/80 backdrop-blur-md border-b border-primary/10">
+<button class="flex size-10 items-center justify-center rounded-full bg-white shadow-sm text-slate-900">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="flex flex-col items-center">
+<h1 class="text-sm font-bold uppercase tracking-widest text-primary">Territory Walk</h1>
+<p class="text-[10px] font-medium text-slate-500 uppercase">Morning Session • Zone A</p>
+</div>
+<button class="flex size-10 items-center justify-center rounded-full bg-white shadow-sm overflow-hidden border border-primary/20">
+<img class="w-full h-full object-cover" data-alt="User profile avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBkP0Ry-oi9mOESPItmh8mkxMImm0FGs90aYAFUkKFFCs15hCwIRX6_t6JOov_NkOEbcnExQQgIhhO3s_iG7C0z-MA-1FZUzuSGQC2N02raB_RKVTTzJIOe8lac6e307PZY49y6MxkzPbt2GLlik9fTqG3zE0IvqWYSQeLcvw9wWpZUy_S4uaPK4arMJHwhAXifDsJyQd4nlMWQ9DQxdzqA-6QfQ5XgTrzWosF-T0dAhbEYqk8CYw6HuXtcPMQhTOAs8qAFi0I78buB"/>
+</button>
+</div>
+<!-- Main Map Area -->
+<div class="relative flex-1 bg-[#e5e7eb]">
+<!-- Simulated Map Background -->
+<div class="absolute inset-0 bg-cover bg-center" data-alt="Clean silver style city map grid" data-location="San Francisco" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuASlJVJGuYpy-8rxwLMjJbxQZhXmizRIIp46zuETf5-6Md1C1aYkqfk0bg8-TbE3ww206kKyNwYvjzSvBj2UJjFRIcaDoabbQoab0AXlZIgAUjVejY4Pv0WPihtzHA0mO7ArEucvukFL64y9Yvy5BjnCFOmywaVFQ9LpwY94WnIFIhrDZWdbmPOQpDLeU3zIIEgxls-uaDzcrm0Xw_unAJ6Z7NTtY2lcAi4E9Wfoj2ujctVXLsF9t1TCM0ocfas12cHP75bVUZD82TV');">
+<!-- Simulated Polylines (SVG) -->
+<svg class="absolute inset-0 w-full h-full polyline-glow" fill="none" viewbox="0 0 400 800" xmlns="http://www.w3.org/2000/svg">
+<path d="M100 600 L150 550 L140 450 L250 400 L280 300 L220 250" stroke="#0d968b" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.8" stroke-width="6"></path>
+<circle cx="220" cy="250" fill="#0d968b" r="8"></circle>
+<circle cx="220" cy="250" r="12" stroke="#0d968b" stroke-opacity="0.3" stroke-width="4"></circle>
+</svg>
+</div>
+<!-- Map Overlay Gradients -->
+<div class="absolute inset-0 map-gradient-overlay pointer-events-none"></div>
+<!-- Floating Map Actions (Right Side) -->
+<div class="absolute right-4 top-24 z-10 flex flex-col gap-3">
+<div class="flex flex-col bg-white rounded-2xl shadow-xl shadow-primary/5 border border-primary/5 overflow-hidden">
+<button class="flex size-12 items-center justify-center text-slate-900 hover:bg-primary/5 transition-colors border-b border-primary/5">
+<span class="material-symbols-outlined">add</span>
+</button>
+<button class="flex size-12 items-center justify-center text-slate-900 hover:bg-primary/5 transition-colors">
+<span class="material-symbols-outlined">remove</span>
+</button>
+</div>
+<button class="flex size-12 items-center justify-center rounded-2xl bg-white shadow-xl shadow-primary/5 border border-primary/5 text-primary">
+<span class="material-symbols-outlined">near_me</span>
+</button>
+<button class="flex size-12 items-center justify-center rounded-2xl bg-white shadow-xl shadow-primary/5 border border-primary/5 text-slate-500">
+<span class="material-symbols-outlined">layers</span>
+</button>
+</div>
+<!-- Search Bar Overlay -->
+<div class="absolute top-24 left-4 right-20 z-10">
+<div class="flex items-center bg-white rounded-2xl shadow-xl shadow-primary/5 border border-primary/5 px-4 h-12">
+<span class="material-symbols-outlined text-primary mr-3">search</span>
+<input class="w-full bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-900 placeholder:text-slate-500" placeholder="Find territory..." type="text"/>
+</div>
+</div>
+<!-- Bottom Stats Card -->
+<div class="absolute bottom-24 left-4 right-4 z-20">
+<div class="bg-white/95 backdrop-blur-md rounded-2xl p-5 shadow-2xl shadow-primary/10 border border-primary/10">
+<div class="flex items-center justify-between mb-4">
+<div class="flex items-center gap-2">
+<div class="size-2 rounded-full bg-primary animate-pulse"></div>
+<span class="text-xs font-bold text-slate-500 uppercase tracking-tighter">Live Session</span>
+</div>
+<span class="text-sm font-bold text-slate-900">14:22</span>
+</div>
+<div class="grid grid-cols-3 gap-4">
+<div class="flex flex-col">
+<span class="text-[10px] font-bold text-slate-500 uppercase">Distance</span>
+<span class="text-xl font-extrabold text-slate-900">2.4 <span class="text-xs font-medium">km</span></span>
+</div>
+<div class="flex flex-col border-x border-primary/10 px-4">
+<span class="text-[10px] font-bold text-slate-500 uppercase">Pace</span>
+<span class="text-xl font-extrabold text-slate-900">11'20"</span>
+</div>
+<div class="flex flex-col pl-4">
+<span class="text-[10px] font-bold text-slate-500 uppercase">Territories</span>
+<span class="text-xl font-extrabold text-accent-cyan">04</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Action Button -->
+<div class="absolute bottom-6 left-0 right-0 z-30 flex justify-center px-6">
+<button class="flex w-full max-w-md items-center justify-between bg-primary hover:bg-primary/90 text-white rounded-2xl h-16 px-6 shadow-xl shadow-primary/30 transition-all transform active:scale-95">
+<div class="flex items-center gap-3">
+<div class="flex size-10 items-center justify-center rounded-xl bg-white/20">
+<span class="material-symbols-outlined">pause</span>
+</div>
+<span class="text-lg font-bold tracking-tight">Pause Walk</span>
+</div>
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<div class="flex border-t border-primary/5 bg-white px-6 pb-6 pt-3 z-40">
+<a class="flex flex-1 flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">explore</span>
+<p class="text-[10px] font-bold uppercase tracking-wider">Map</p>
+</a>
+<a class="flex flex-1 flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">grid_view</span>
+<p class="text-[10px] font-bold uppercase tracking-wider">Zones</p>
+</a>
+<a class="flex flex-1 flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<p class="text-[10px] font-bold uppercase tracking-wider">Stats</p>
+</a>
+<a class="flex flex-1 flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">person</span>
+<p class="text-[10px] font-bold uppercase tracking-wider">Profile</p>
+</a>
+</div>
+</div>
+</body></html>

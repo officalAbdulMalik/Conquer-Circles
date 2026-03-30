@@ -1,0 +1,98 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configurations and tasks you actually want to
+# keep. However, dev-specific settings should be ignored.
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
+.vscode/project.xcworkspace
+
+# Flutter/Dart/Pub-related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+
+# Android-related
+**/android/app/src/main/res/generated
+**/android/gen
+**/android/out
+**/android/local.properties
+**/android/Flutter/build
+android/app/google-services.json
+
+# iOS-related
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.[h|m]
+**/ios/Runner/GoogleService-Info.plist
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/ephemeral/
+**/ios/DerivedData/
+*.moved-aside
+*.xcuserstate
+
+# MacOS-related
+**/macos/Flutter/ephemeral/
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+**/macos/Pods/
+
+# Linux-related
+**/linux/flutter/ephemeral/
+
+# Windows-related
+**/windows/flutter/ephemeral/
+**/windows/flutter/generated_plugin_registrant.cc
+**/windows/flutter/generated_plugin_registrant.h
+
+# Symbols
+app.*.symbols
+app.*.map.json
+
+# Web-related
+lib/generated_plugin_registrant.dart
+
+# Executable distributions
+*.apk
+*.aab
+*.app
+*.ipa
+
+# Coverage
+coverage/
+
+# VS Code
+.vscode/
+
+# Build artifacts
+build/
+
+# Node modules
+# Secrets
+assets/service.json
