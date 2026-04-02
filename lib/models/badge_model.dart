@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 
 enum BadgeCategory { steps, territory, raids, social, special }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:test_steps/features/map/widgets/hexa_tile_painter.dart';
 import 'package:test_steps/providers/map_provider.dart';
 import 'package:test_steps/models/map_model.dart';
 import 'package:test_steps/features/map/utils/h3_utils.dart';
@@ -12,8 +13,10 @@ import '../widgets/map_action_button.dart';
 import '../widgets/attack_energy_badge.dart';
 import '../widgets/speed_indicator_badge.dart';
 import '../widgets/attack_toast.dart';
-import '../widgets/tile_info_sheet.dart';
 import '../widgets/attack_history_sheet.dart';
+import '../widgets/map_search_overlay.dart';
+import '../../chatbot/widgets/quick_action_chips.dart';
+import '../widgets/tile_handler.dart';
 import '../../../services/attack_service.dart'; // stepProvider
 import '../../../services/supabase_service.dart';
 
@@ -27,6 +30,12 @@ class MapView extends ConsumerStatefulWidget {
 class _MapViewState extends ConsumerState<MapView> {
   GoogleMapController? _mapController;
   Set<Polygon> hexGrid = {};
+  
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  final MapTileHandler _tileHandler = MapTileHandler();
+  final SupabaseService _supabase = SupabaseService();
+  Map<String, Offset> _computedTileCenters = {};
 
   /// Toast controller — lives here so all child code can call it
   final AttackToastController _toastController = AttackToastController();
@@ -136,7 +145,6 @@ class _MapViewState extends ConsumerState<MapView> {
       final result = next.lastAttackResult;
       if (result == null) return;
 
-      // Only show toast when result changes
       if (result == previous?.lastAttackResult) return;
 
       final action = result['action'] as String?;
@@ -145,7 +153,6 @@ class _MapViewState extends ConsumerState<MapView> {
       final variant = AttackToastController.variantFromAction(action);
       if (variant == null && action != 'not_friends') return;
 
-      // Update energy immediately in step provider if available
       if (result['attacker_energy_left'] != null) {
         ref
             .read(stepProvider.notifier)
@@ -189,8 +196,6 @@ class _MapViewState extends ConsumerState<MapView> {
           _toastController.show(variant!, 'Tile claimed!');
           _triggerGreenFlash();
           break;
-        case 'not_friends':
-          break;
       }
     });
   }
@@ -202,51 +207,82 @@ class _MapViewState extends ConsumerState<MapView> {
     });
   }
 
+  void _updateTileCenters() async {
+    if (_mapController == null) return;
+    
+    final mapState = ref.read(mapProvider);
+    if (mapState.visibleTiles.isEmpty) return;
+    
+    final Map<String, Offset> newCenters = {};
+    for (final tile in mapState.visibleTiles) {
+      final latLng = H3Utils.h3ToLatLng(tile.tileId);
+      if (latLng != null) {
+        final screenPos = await _mapController!.getScreenCoordinate(latLng);
+        newCenters[tile.tileId] = Offset(
+          screenPos.x.toDouble(), 
+          screenPos.y.toDouble(),
+        );
+      }
+    }
+    
+    if (mounted) {
+      setState(() {
+        _computedTileCenters = newCenters;
+      });
+    }
+  }
+
+  void _handleMapTap(Offset localPos) {
+    String? tappedTileId;
+    double minDistance = 40.0; // Hex radius approximately
+    
+    _computedTileCenters.forEach((tileId, screenPos) {
+      final dist = (localPos - screenPos).distance;
+      if (dist < minDistance) {
+        minDistance = dist;
+        tappedTileId = tileId;
+      }
+    });
+    
+    if (tappedTileId != null) {
+      final tile = ref.read(mapProvider).visibleTiles
+          .firstWhere((t) => t.tileId == tappedTileId);
+      
+      ref.read(mapProvider.notifier).selectTile(tappedTileId);
+      
+      final userLoc = ref.read(mapProvider).userLocation;
+      if (userLoc != null) {
+        _tileHandler.handleTileTap(
+          context: context,
+          tile: tile,
+          lat: userLoc.latitude,
+          lng: userLoc.longitude,
+        );
+      }
+    } else {
+      ref.read(mapProvider.notifier).selectTile(null);
+    }
+  }
+
   @override
   void dispose() {
     _mapController?.dispose();
     _toastController.dispose();
     _showGreenFlash.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
-  }
-
-  void _onMapTap(LatLng tapPoint) {
-    final mapState = ref.read(mapProvider);
-    final h3Index = H3Utils.latLngToH3(tapPoint);
-    final mapNotifier = ref.read(mapProvider.notifier);
-    final currentUserId = mapNotifier.currentUser?.id;
-
-    // Find tapped territory
-    final tappedTile = mapState.nearbyTerritories
-        .where((t) => t.id == h3Index)
-        .firstOrNull;
-
-    // Show tile info sheet (null = unclaimed)
-    showTileInfoSheet(
-      context: context,
-      tile: tappedTile,
-      currentUserId: currentUserId,
-      toastController: _toastController,
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     final mapState = ref.watch(mapProvider);
     final mapNotifier = ref.read(mapProvider.notifier);
-    final currentUserId = mapNotifier.currentUser?.id;
-
-    // Attack energy from step provider
     final attackEnergy = ref.watch(stepProvider.select((s) => s.attackEnergy));
 
-    // Walking speed from map state (m/s → km/h)
-    final speedMps = mapState.currentSpeedMps ?? 0.0;
-    final speedKmh = speedMps * 3.6;
-
-    // Build hex polygons
     final hexPolygons = HexGridOverlay.build(
       mapState.nearbyTerritories,
-      currentUserId,
+      _supabase.currentUser?.id,
       homeBase: mapState.homeBase,
     );
 
@@ -254,7 +290,6 @@ class _MapViewState extends ConsumerState<MapView> {
       backgroundColor: const Color(0xFF0F172A),
       body: Stack(
         children: [
-          // ── Map Layer ────────────────────────────────────────────────────────
           if (mapState.userLocation != null || mapState.homeBase != null)
             GoogleMap(
               initialCameraPosition: CameraPosition(
@@ -267,13 +302,14 @@ class _MapViewState extends ConsumerState<MapView> {
               zoomControlsEnabled: false,
               polylines: _buildPolylines(mapState, mapNotifier),
               polygons: {...hexGrid, ...hexPolygons},
-              onTap: _onMapTap,
               onCameraIdle: () async {
                 final bounds = await _mapController?.getVisibleRegion();
                 if (bounds != null) {
-                  mapNotifier.loadTerritoriesForBounds(bounds);
+                  ref.read(mapProvider.notifier).loadTerritoriesForBounds(bounds);
                 }
+                _updateTileCenters();
               },
+              onCameraMove: (_) => _updateTileCenters(),
               onMapCreated: (controller) {
                 _mapController = controller;
               },
@@ -283,229 +319,229 @@ class _MapViewState extends ConsumerState<MapView> {
               child: CircularProgressIndicator(color: Color(0xFF0D968B)),
             ),
 
-          // ── Top UI ──────────────────────────────────────────────────────────
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: Column(
-                children: [
-                  MapHeader(
-                    title: 'Conquer Circles',
-                    subtitle: mapState.isWalking
-                        ? 'Live Session • Active'
-                        : 'Ready to Start',
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // ── Territory Legend ─────────────────────────────────────────────────
-          Positioned(top: 140, left: 16, child: _TerritoryLegend()),
-
-          // ── Speed Indicator Badge (top-left, only while walking) ─────────────
-          Positioned(
-            top: 196,
-            left: 16,
-            child: SpeedIndicatorBadge(
-              speedKmh: speedKmh,
-              visible: mapState.isWalking,
-            ),
-          ),
-
-          // ── Attack Energy Badge (top-right) ──────────────────────────────────
-          Positioned(
-            top: 140,
-            right: 16 + 48 + 12, // inset left of the action controls
-            child: FutureBuilder<Map<String, dynamic>?>(
-              future: SupabaseService().getProfile(),
-              builder: (context, snapshot) {
-                final tiles = snapshot.data?['total_tiles_owned'] ?? 0;
-                return Row(
-                  children: [
-                    _SmallStatBadge(
-                      icon: Icons.hexagon,
-                      value: '$tiles',
-                      color: const Color(0xFF2196F3),
-                    ),
-                    const SizedBox(width: 8),
-                    AttackEnergyBadge(energy: attackEnergy),
-                  ],
-                );
-              },
-            ),
-          ),
-
-          // ── Side Controls ───────────────────────────────────────────────────
-          Positioned(
-            top: 140,
-            right: 16,
-            child: Column(
-              children: [
-                MapActionControls(
-                  onZoomIn: () =>
-                      _mapController?.animateCamera(CameraUpdate.zoomIn()),
-                  onZoomOut: () =>
-                      _mapController?.animateCamera(CameraUpdate.zoomOut()),
-                  onMyLocation: () {
-                    if (mapState.userLocation != null) {
-                      _mapController?.animateCamera(
-                        CameraUpdate.newLatLng(mapState.userLocation!),
-                      );
-                    }
-                  },
-                  onLayersToggled: () {},
-                ),
-                const SizedBox(height: 12),
-
-                // ── Attack History button ────────────────────────────────────
-                GestureDetector(
-                  onTap: () => showAttackHistorySheet(
-                    context,
-                    attackEnergy: attackEnergy,
-                  ),
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E1E2E),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: const Color(0xFFFF9800).withValues(alpha: 0.3),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFFF9800).withValues(alpha: 0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.history,
-                      color: Color(0xFFFF9800),
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ── Tile Count Badge ─────────────────────────────────────────────────
-          if (mapState.nearbyTerritories.isNotEmpty)
-            Positioned(
-              bottom: 180,
-              left: 16,
-              child: _TileCountBadge(
-                ownedCount: mapState.nearbyTerritories
-                    .where((t) => t.userId == currentUserId)
-                    .length,
-                totalCount: mapState.nearbyTerritories.length,
-              ),
-            ),
-
-          // ── Bottom Stats & Action ───────────────────────────────────────────
-          Positioned(
-            bottom: 90,
-            left: 16,
-            right: 16,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (mapState.isWalking)
-                  MapStatsOverlay(
-                    duration: _formatDuration(mapState),
-                    distance: _formatDistance(mapState),
-                    pace: '—',
-                    territoryCount: mapState.nearbyTerritories
-                        .where((t) => t.userId == currentUserId)
-                        .length
-                        .toString()
-                        .padLeft(2, '0'),
-                  ),
-                const SizedBox(height: 16),
-                MapActionButton(
-                  type: mapState.isWalking
-                      ? MapActionType.pause
-                      : MapActionType.start,
-                  onTap: () {
-                    if (mapState.isWalking) {
-                      mapNotifier.stopWalk();
-                    } else {
-                      mapNotifier.startWalk();
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-
-          // ── Attack Toast Overlay (bottom-center) ─────────────────────────────
-          Positioned(
-            bottom: 90,
-            left: 0,
-            right: 0,
-            child: AttackToastOverlay(controller: _toastController),
-          ),
-
-          // ── Green Flash Overlay ─────────────────────────────────────────────
-          ValueListenableBuilder<bool>(
-            valueListenable: _showGreenFlash,
-            builder: (context, show, child) {
-              return IgnorePointer(
-                child: AnimatedOpacity(
-                  opacity: show ? 0.3 : 0.0,
-                  duration: const Duration(milliseconds: 150),
-                  child: Container(color: Colors.green),
-                ),
-              );
-            },
-          ),
+          _buildMapInteractionLayer(),
+          _buildTopOverlays(context, mapState),
+          _buildSideControls(context, mapState, attackEnergy),
+          _buildBottomOverlays(context, mapState),
         ],
       ),
     );
   }
 
-  String _formatDuration(MapState state) {
-    return '0:00';
+  Widget _buildMapInteractionLayer() {
+    return Stack(
+      children: [
+        IgnorePointer(
+          child: CustomPaint(
+            painter: HexTilePainter(
+              tiles: ref.watch(mapProvider).visibleTiles,
+              tileCenters: _computedTileCenters,
+              currentUserId: _supabase.currentUser?.id ?? '',
+              selectedTileId: ref.watch(mapProvider).selectedTileId,
+            ),
+            child: const SizedBox.expand(),
+          ),
+        ),
+        GestureDetector(
+          onTapDown: (details) => _handleMapTap(details.localPosition),
+        ),
+      ],
+    );
   }
+
+  Widget _buildTopOverlays(BuildContext context, MapState mapState) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SafeArea(
+        child: Column(
+          children: [
+            MapHeader(
+              title: 'Conquer Circles',
+              subtitle: mapState.isWalking ? 'Live Session • Active' : 'Ready to Start',
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: MapSearchOverlay(
+                controller: _searchController,
+                onSearch: (val) {
+                  _searchFocusNode.unfocus();
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            QuickActionChips(
+              chips: const ['Home Base', 'My Territories', 'Nearest Rival'],
+              onChipTapped: (chip) {
+                if (chip == 'Home Base' && mapState.homeBase != null) {
+                  _mapController?.animateCamera(
+                    CameraUpdate.newLatLng(mapState.homeBase!),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSideControls(BuildContext context, MapState mapState, int attackEnergy) {
+    final speedMps = mapState.currentSpeedMps ?? 0.0;
+    final speedKmh = speedMps * 3.6;
+
+    return Stack(
+      children: [
+        Positioned(top: 250, left: 16, child: _TerritoryLegend()),
+        Positioned(
+          top: 306,
+          left: 16,
+          child: SpeedIndicatorBadge(
+            speedKmh: speedKmh,
+            visible: mapState.isWalking,
+          ),
+        ),
+        Positioned(
+          top: 250,
+          right: 16 + 48 + 12,
+          child: FutureBuilder<Map<String, dynamic>?>(
+            future: _supabase.getProfile(),
+            builder: (context, snapshot) {
+              final tiles = snapshot.data?['total_tiles_owned'] ?? 0;
+              return Row(
+                children: [
+                  _SmallStatBadge(
+                    icon: Icons.hexagon,
+                    value: '$tiles',
+                    color: const Color(0xFF2196F3),
+                  ),
+                  const SizedBox(width: 8),
+                  AttackEnergyBadge(energy: attackEnergy),
+                ],
+              );
+            },
+          ),
+        ),
+        Positioned(
+          top: 250,
+          right: 16,
+          child: Column(
+            children: [
+              MapActionControls(
+                onZoomIn: () => _mapController?.animateCamera(CameraUpdate.zoomIn()),
+                onZoomOut: () => _mapController?.animateCamera(CameraUpdate.zoomOut()),
+                onMyLocation: () {
+                  if (mapState.userLocation != null) {
+                    _mapController?.animateCamera(
+                      CameraUpdate.newLatLng(mapState.userLocation!),
+                    );
+                  }
+                },
+                onLayersToggled: () {},
+              ),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () => showAttackHistorySheet(context, attackEnergy: attackEnergy),
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E1E2E).withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFFF9800).withOpacity(0.3)),
+                  ),
+                  child: const Icon(Icons.history, color: Color(0xFFFF9800), size: 20),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBottomOverlays(BuildContext context, MapState mapState) {
+    final mapNotifier = ref.read(mapProvider.notifier);
+    final currentUserId = _supabase.currentUser?.id;
+
+    return Stack(
+      children: [
+        if (mapState.isWalking)
+          Positioned(
+            bottom: 180,
+            left: 16,
+            right: 16,
+            child: MapStatsOverlay(
+              duration: _formatDuration(mapState),
+              distance: _formatDistance(mapState),
+              pace: '—',
+              territoryCount: mapState.nearbyTerritories
+                  .where((t) => t.userId == currentUserId)
+                  .length
+                  .toString(),
+            ),
+          ),
+        Positioned(
+          bottom: 90,
+          left: 16,
+          right: 16,
+          child: MapActionButton(
+            type: mapState.isWalking ? MapActionType.pause : MapActionType.start,
+            onTap: () {
+              if (mapState.isWalking) {
+                mapNotifier.stopWalk();
+              } else {
+                mapNotifier.startWalk();
+              }
+            },
+          ),
+        ),
+        Positioned(
+          bottom: 90,
+          left: 0,
+          right: 0,
+          child: AttackToastOverlay(controller: _toastController),
+        ),
+        ValueListenableBuilder<bool>(
+          valueListenable: _showGreenFlash,
+          builder: (context, show, child) {
+            return IgnorePointer(
+              child: AnimatedOpacity(
+                opacity: show ? 0.3 : 0.0,
+                duration: const Duration(milliseconds: 150),
+                child: Container(color: Colors.green),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  String _formatDuration(MapState state) => '0:00';
 
   String _formatDistance(MapState state) {
     if (state.activePath.length < 2) return '0.0';
     double totalM = 0;
     for (int i = 1; i < state.activePath.length; i++) {
-      totalM += H3Utils.distanceMeters(
-        state.activePath[i - 1],
-        state.activePath[i],
-      );
+      totalM += H3Utils.distanceMeters(state.activePath[i - 1], state.activePath[i]);
     }
     return (totalM / 1000).toStringAsFixed(1);
   }
 
   Set<Polyline> _buildPolylines(MapState state, MapNotifier notifier) {
-    final Set<Polyline> polylines = {};
-
-    if (state.activePath.isNotEmpty) {
-      polylines.add(
-        Polyline(
-          polylineId: const PolylineId('active_path'),
-          points: state.activePath,
-          color: const Color(0xFF0D968B),
-          width: 5,
-        ),
-      );
-    }
-
-    return polylines;
+    if (state.activePath.isEmpty) return {};
+    return {
+      Polyline(
+        polylineId: const PolylineId('active_path'),
+        points: state.activePath,
+        color: const Color(0xFF0D968B),
+        width: 5,
+      ),
+    };
   }
 }
-
-// ---------------------------------------------------------------------------
-// Supporting Widgets
-// ---------------------------------------------------------------------------
 
 class _TerritoryLegend extends StatelessWidget {
   @override
@@ -513,9 +549,9 @@ class _TerritoryLegend extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A).withValues(alpha: 0.85),
+        color: const Color(0xFF0F172A).withOpacity(0.85),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -523,11 +559,7 @@ class _TerritoryLegend extends StatelessWidget {
         children: const [
           _LegendItem(color: Color(0xFF0D968B), label: 'Yours'),
           SizedBox(height: 4),
-          _LegendItem(
-            color: Color(0xFF0D968B),
-            label: 'Home Base',
-            isHome: true,
-          ),
+          _LegendItem(color: Color(0xFF0D968B), label: 'Home Base', isHome: true),
           SizedBox(height: 4),
           _LegendItem(color: Color(0xFF06F5E9), label: 'Protected'),
           SizedBox(height: 4),
@@ -544,11 +576,7 @@ class _LegendItem extends StatelessWidget {
   final Color color;
   final String label;
   final bool isHome;
-  const _LegendItem({
-    required this.color,
-    required this.label,
-    this.isHome = false,
-  });
+  const _LegendItem({required this.color, required this.label, this.isHome = false});
 
   @override
   Widget build(BuildContext context) {
@@ -567,48 +595,9 @@ class _LegendItem extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           label,
-          style: const TextStyle(
-            color: Color(0xFFCBD5E1),
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-          ),
+          style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 11, fontWeight: FontWeight.w500),
         ),
       ],
-    );
-  }
-}
-
-class _TileCountBadge extends StatelessWidget {
-  final int ownedCount;
-  final int totalCount;
-  const _TileCountBadge({required this.ownedCount, required this.totalCount});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0D968B).withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xFF0D968B).withValues(alpha: 0.4),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.hexagon, color: Color(0xFF0D968B), size: 14),
-          const SizedBox(width: 6),
-          Text(
-            '$ownedCount tiles owned',
-            style: const TextStyle(
-              color: Color(0xFF0D968B),
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -617,12 +606,7 @@ class _SmallStatBadge extends StatelessWidget {
   final IconData icon;
   final String value;
   final Color color;
-
-  const _SmallStatBadge({
-    required this.icon,
-    required this.value,
-    required this.color,
-  });
+  const _SmallStatBadge({required this.icon, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -631,21 +615,14 @@ class _SmallStatBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E2E),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, color: color, size: 14),
           const SizedBox(width: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(value, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
         ],
       ),
     );

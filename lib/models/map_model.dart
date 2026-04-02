@@ -1,5 +1,6 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:test_steps/models/walk_models.dart';
+import '../features/map/widgets/tile_handler.dart';
 
 class MapState {
   final LatLng? userLocation;
@@ -20,6 +21,8 @@ class MapState {
 
   // Hex Tile Territory System
   final LatLng? homeBase;
+  final List<MapTile> visibleTiles;
+  final String? selectedTileId;
 
   // Current GPS speed in m/s — updated every position event while walking.
   final double? currentSpeedMps;
@@ -40,6 +43,8 @@ class MapState {
     this.currentSpeedKmh = 0.0,
     this.lastAttackResult,
     this.currentSpeedMps,
+    this.visibleTiles = const [],
+    this.selectedTileId,
   });
 
   MapState copyWith({
@@ -60,6 +65,8 @@ class MapState {
     bool clearSpeed = false,
     double? currentSpeedKmh,
     Map<String, dynamic>? lastAttackResult,
+    List<MapTile>? visibleTiles,
+    String? selectedTileId,
   }) {
     return MapState(
       userLocation: userLocation ?? this.userLocation,
@@ -80,6 +87,8 @@ class MapState {
           : (currentSpeedMps ?? this.currentSpeedMps),
       currentSpeedKmh: currentSpeedKmh ?? this.currentSpeedKmh,
       lastAttackResult: lastAttackResult ?? this.lastAttackResult,
+      visibleTiles: visibleTiles ?? this.visibleTiles,
+      selectedTileId: selectedTileId ?? this.selectedTileId,
     );
   }
 }

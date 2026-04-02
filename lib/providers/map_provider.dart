@@ -12,6 +12,7 @@ import '../models/walk_models.dart';
  import '../services/supabase_service.dart';
 import '../services/badge_service.dart';
 import '../services/notification_service.dart';
+import '../features/map/widgets/tile_handler.dart';
 
 // ---------------------------------------------------------------------------
 // Notifier
@@ -20,6 +21,7 @@ import '../services/notification_service.dart';
 class MapNotifier extends StateNotifier<MapState> {
   final SupabaseService _service;
   final BadgeService _badgeService;
+  final MapTileHandler _tileHandler = MapTileHandler();
 
   StreamSubscription<Position>? _positionSubscription;
   StreamSubscription<List<Map<String, dynamic>>>? _liveLocationSubscription;
@@ -132,9 +134,22 @@ class MapNotifier extends StateNotifier<MapState> {
       };
 
       state = state.copyWith(nearbyTerritories: merged.values.toList());
+
+      // ── Hex Tiles ──────────────────────────────────────────────────────────
+      final hexTiles = await _tileHandler.loadTilesForBounds(
+        swLat: bounds.southwest.latitude,
+        swLng: bounds.southwest.longitude,
+        neLat: bounds.northeast.latitude,
+        neLng: bounds.northeast.longitude,
+      );
+      state = state.copyWith(visibleTiles: hexTiles);
     } catch (e) {
       print('[Map] loadTerritoriesForBounds error: $e');
     }
+  }
+
+  void selectTile(String? tileId) {
+    state = state.copyWith(selectedTileId: tileId);
   }
 
   Future<void> getCurrentLocation() async {
