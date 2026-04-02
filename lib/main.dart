@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:test_steps/features/splash/screen/splash_screen.dart';
 import 'screens/main_navigation.dart';
 import 'features/login_screen.dart';
 import 'services/notification_service.dart';
@@ -63,7 +64,7 @@ class MyApp extends StatelessWidget {
           if (session != null) {
             return const MainNavigation();
           } else {
-            return const LoginScreen();
+            return const SplashScreen();
           }
         },
       ),

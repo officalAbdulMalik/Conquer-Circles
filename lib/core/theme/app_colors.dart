@@ -7,6 +7,31 @@ class AppColors {
   static const Color secondary = Color(0xFFFACC15); // Yellow
   static const Color accent = Color(0xFF6366F1); // Indigo
 
+  // Splash Screen Colors
+  static const Color splashBackground = Color(0xFF251B56); // Deep Purple
+  static const Color splashGradientStart = Color(0xFFF0EEFF); // Light Purple
+  static const Color splashGradientMid = Color(0xFFFFFFFF); // White
+  static const Color splashGradientEnd = Color(0xFFE8FAFB); // Light Cyan
+  static const Color splashPrimaryPurple = Color(0xFF675FAA); // Purple
+  static const Color splashCyan = Color(0xFF53E4F3); // Cyan
+  static const Color splashLightCyan = Color(0xFF99D7E9); // Light Cyan
+  static const Color splashTextPrimary = Color(0xFF2D2D2D); // Dark Text
+  static const Color splashTextSecondary = Color(
+    0xFF2D2D2D,
+  ); // Dark Text Semi-transparent
+  static const Color splashBadgeLight = Color(0xFF675FAA); // Purple Badge
+
+  // Onboarding Screen Colors
+  static const Color onboardingBgTop = Color(0xFFFFFFFF);
+  static const Color onboardingBgBottom = Color(0xFFF8F7FF);
+  static const Color onboardingStepTrack = Color(0xFFEDE9FF);
+  static const Color onboardingTitle = Color(0xFF2D2D2D);
+  static const Color onboardingSubtitle = Color(0xFF888888);
+  static const Color onboardingLabel = Color(0xFF675FAA);
+  static const Color onboardingCard = Color(0xFFF5F3FF);
+  static const Color onboardingBackText = Color(0xFFCCCCCC);
+  static const Color onboardingNextButton = Color(0xFFE0DCEF);
+
   // Light Theme Colors
   static const Color backgroundLight = Color(0xFFF8FAFC);
   static const Color surfaceLight = Colors.white;
