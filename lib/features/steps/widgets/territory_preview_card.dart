@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+
+import 'package:test_steps/core/theme/app_text_styles.dart';
 
 class TerritoryPreviewCard extends StatelessWidget {
   final String title;
@@ -15,11 +18,11 @@ class TerritoryPreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(top: 16),
-      height: 160,
+      margin: EdgeInsets.only(top: 16.h),
+      height: 160.h,
       width: double.infinity,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r),
         border: Border.all(color: const Color(0xFFF1F5F9)),
         image: DecorationImage(
           image: NetworkImage(imageUrl),
@@ -30,36 +33,41 @@ class TerritoryPreviewCard extends StatelessWidget {
         children: [
           Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(12.r),
               gradient: LinearGradient(
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
-                colors: [Colors.black.withOpacity(0.6), Colors.transparent],
+                colors: [
+                  Colors.black.withValues(alpha: 0.6),
+                  Colors.transparent,
+                ],
               ),
             ),
           ),
           Positioned(
-            bottom: 16,
-            left: 16,
+            bottom: 16.h,
+            left: 16.w,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   location.toUpperCase(),
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
+                  style: AppTextStyles.style(
+                    fontFamily: 'Inter',
+                    color: Colors.white.withValues(alpha: 0.8),
+                    size: 10,
+                    weight: FontWeight.w500,
                     letterSpacing: 1.2,
                   ),
                 ),
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: AppTextStyles.style(
+                    fontFamily: 'Poppins',
                     color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    size: 16,
+                    weight: FontWeight.bold,
                   ),
                 ),
               ],

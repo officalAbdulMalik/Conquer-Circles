@@ -30,14 +30,42 @@ class AnimatedGradientProgressBar extends StatefulWidget {
 class _AnimatedGradientProgressBarState
     extends State<AnimatedGradientProgressBar>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _shimmerController = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1800),
-  )..repeat();
+  AnimationController? _shimmerController;
+
+  void _startShimmerIfNeeded() {
+    if (_shimmerController != null || !widget.showShimmer) {
+      return;
+    }
+
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _startShimmerIfNeeded();
+  }
+
+  @override
+  void didUpdateWidget(covariant AnimatedGradientProgressBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.showShimmer != oldWidget.showShimmer) {
+      if (widget.showShimmer) {
+        _startShimmerIfNeeded();
+      } else {
+        _shimmerController?.dispose();
+        _shimmerController = null;
+      }
+    }
+  }
 
   @override
   void dispose() {
-    _shimmerController.dispose();
+    _shimmerController?.dispose();
     super.dispose();
   }
 
@@ -65,11 +93,14 @@ class _AnimatedGradientProgressBarState
                     decoration: BoxDecoration(gradient: widget.gradient),
                   ),
                 ),
-                if (widget.showShimmer && animatedValue > 0)
+                if (widget.showShimmer &&
+                    animatedValue > 0 &&
+                    _shimmerController != null)
                   AnimatedBuilder(
-                    animation: _shimmerController,
+                    animation: _shimmerController!,
                     builder: (context, child) {
-                      final shimmerX = -1.5 + (_shimmerController.value * 3);
+                      final shimmerX =
+                          -1.5 + (_shimmerController!.value * 3);
                       return IgnorePointer(
                         child: FractionallySizedBox(
                           alignment: Alignment.centerLeft,

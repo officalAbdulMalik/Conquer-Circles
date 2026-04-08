@@ -29,7 +29,7 @@ class SplashLogo extends StatelessWidget {
               borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.splashPrimaryPurple.withValues(alpha: 0.3),
+                  color: AppColors.brandPurple.withValues(alpha: 0.3),
                   blurRadius: 40,
                   offset: const Offset(0, 12),
                 ),
@@ -63,7 +63,7 @@ class SplashLogo extends StatelessWidget {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.splashCyan.withValues(alpha: 0.4),
+                    color: AppColors.brandCyan.withValues(alpha: 0.4),
                     blurRadius: 20,
                     offset: const Offset(0, 6),
                   ),
@@ -98,7 +98,7 @@ class SplashLogo extends StatelessWidget {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.splashLightCyan.withValues(alpha: 0.4),
+                    color: AppColors.brandLightCyan.withValues(alpha: 0.4),
                     blurRadius: 20,
                     offset: const Offset(0, 6),
                   ),

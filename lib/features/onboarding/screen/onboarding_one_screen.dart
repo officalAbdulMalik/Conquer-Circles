@@ -17,7 +17,7 @@ class OnboardingOneScreen extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [AppColors.onboardingBgTop, AppColors.onboardingBgBottom],
+            colors: [AppColors.surface, AppColors.bgSoftPurple],
           ),
         ),
         child: SafeArea(
@@ -41,14 +41,14 @@ class OnboardingOneScreen extends StatelessWidget {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              AppColors.splashPrimaryPurple,
+                              AppColors.brandPurple,
                               Color(0xFF8B7FD4),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.splashPrimaryPurple.withValues(
+                              color: AppColors.brandPurple.withValues(
                                 alpha: 0.25,
                               ),
                               blurRadius: 24,
@@ -69,7 +69,14 @@ class OnboardingOneScreen extends StatelessWidget {
                     Center(
                       child: Text(
                         'GENDER',
-                        style: AppTextStyles.onboardingStepLabel,
+                        style: AppTextStyles.style(
+                          fontFamily: 'Poppins',
+                          size: 12,
+                          weight: FontWeight.w700,
+                          color: AppColors.brandPurple,
+                          height: 1.5,
+                          letterSpacing: 2,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -77,7 +84,13 @@ class OnboardingOneScreen extends StatelessWidget {
                       child: Text(
                         "What's Your Gender?",
                         textAlign: TextAlign.center,
-                        style: AppTextStyles.onboardingTitle,
+                        style: AppTextStyles.style(
+                          fontFamily: 'Poppins',
+                          size: 24,
+                          weight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                          height: 1.3,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -87,7 +100,13 @@ class OnboardingOneScreen extends StatelessWidget {
                         child: Text(
                           'This helps us personalize your fitness plan.',
                           textAlign: TextAlign.center,
-                          style: AppTextStyles.onboardingSubtitle,
+                          style: AppTextStyles.style(
+                            fontFamily: 'Poppins',
+                            size: 14,
+                            weight: FontWeight.w400,
+                            color: AppColors.textSecondary,
+                            height: 1.5,
+                          ),
                         ),
                       ),
                     ),

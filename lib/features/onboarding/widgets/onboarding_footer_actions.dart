@@ -18,7 +18,7 @@ class OnboardingFooterActions extends StatelessWidget {
           child: TextButton(
             onPressed: () {},
             style: TextButton.styleFrom(
-              foregroundColor: AppColors.onboardingBackText,
+              foregroundColor: AppColors.textMuted,
               padding: EdgeInsets.zero,
             ),
             child: Row(
@@ -30,7 +30,16 @@ class OnboardingFooterActions extends StatelessWidget {
                   height: 20,
                 ),
                 const SizedBox(width: 8),
-                Text('Back', style: AppTextStyles.onboardingBack),
+                Text(
+                  'Back',
+                  style: AppTextStyles.style(
+                    fontFamily: 'Poppins',
+                    size: 16,
+                    weight: FontWeight.w600,
+                    color: AppColors.textMuted,
+                    height: 1.5,
+                  ),
+                ),
               ],
             ),
           ),
@@ -46,7 +55,7 @@ class OnboardingFooterActions extends StatelessWidget {
             },
             style: ElevatedButton.styleFrom(
               elevation: 0,
-              backgroundColor: AppColors.onboardingNextButton.withValues(
+              backgroundColor: AppColors.bgSoftPurple.withValues(
                 alpha: 0.6,
               ),
               shape: RoundedRectangleBorder(
@@ -56,7 +65,16 @@ class OnboardingFooterActions extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Next', style: AppTextStyles.onboardingNext),
+                Text(
+                  'Next',
+                  style: AppTextStyles.style(
+                    fontFamily: 'Poppins',
+                    size: 16,
+                    weight: FontWeight.w600,
+                    color: Colors.white,
+                    height: 1.5,
+                  ),
+                ),
                 const SizedBox(width: 8),
                 SvgPicture.asset(
                   'assets/icons/onboarding_next_arrow.svg',

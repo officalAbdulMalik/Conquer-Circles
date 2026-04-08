@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
 import '../../../widgets/shared/animated_gradient_progress_bar.dart';
 
 class OnboardingProgressHeader extends StatelessWidget {
@@ -17,7 +18,7 @@ class OnboardingProgressHeader extends StatelessWidget {
                 child: AnimatedGradientProgressBar(
                   value: i == 0 ? 1 : 0,
                   height: 6,
-                  trackColor: AppColors.onboardingStepTrack,
+                  trackColor: AppColors.bgSoftPurple,
                   showShimmer: i == 0,
                 ),
               ),
@@ -26,13 +27,13 @@ class OnboardingProgressHeader extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           '1 / 5',
-          style: TextStyle(
+          style: AppTextStyles.style(
             fontFamily: 'Inter',
-            fontSize: 12,
-            fontWeight: FontWeight.w400,
-            color: Color(0xFFAAAAAA),
+            size: 12,
+            weight: FontWeight.w400,
+            color: const Color(0xFFAAAAAA),
             height: 1.5,
           ),
         ),

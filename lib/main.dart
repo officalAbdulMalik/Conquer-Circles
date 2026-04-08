@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:test_steps/features/splash/screen/splash_screen.dart';
+import 'package:test_steps/core/theme/app_theme.dart';
 import 'screens/main_navigation.dart';
-import 'features/login_screen.dart';
 import 'services/notification_service.dart';
 
 import 'package:purchases_flutter/purchases_flutter.dart';
@@ -12,14 +13,14 @@ import 'dart:io';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  // await Firebase.initializeApp();
   await Supabase.initialize(
     url: 'https://dpvelnjzovjhxgpjvtay.supabase.co',
     anonKey:
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwdmVsbmp6b3ZqaHhncGp2dGF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzOTI0MTAsImV4cCI6MjA4Njk2ODQxMH0.Nbssvqd6jnpXXQpdDCzfrPpx1k4CxBiP9FDQSVNkous',
   );
   await initializeRevenueCat();
-  await NotificationService.initialize();
+  // await NotificationService.initialize();
 
   runApp(ProviderScope(child: MyApp()));
 }
@@ -43,15 +44,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Health Data',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        useMaterial3: true,
-        fontFamily: 'Manrope',
+    return ScreenUtilInit(
+      designSize: const Size(390, 844),
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) => MaterialApp(
+        title: 'Health Data',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        home: child,
       ),
-      home: StreamBuilder<AuthState>(
+      child: StreamBuilder<AuthState>(
         stream: Supabase.instance.client.auth.onAuthStateChange,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {

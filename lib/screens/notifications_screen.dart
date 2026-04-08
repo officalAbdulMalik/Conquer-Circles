@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
+import '../core/theme/app_colors.dart';
+import '../core/theme/app_spacing.dart';
+import '../core/theme/app_text_styles.dart';
 import '../services/notification_service.dart';
 import '../services/supabase_service.dart';
 import '../models/notification_model.dart';
@@ -10,19 +14,20 @@ class NotificationsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Notifications',
-          style: TextStyle(
-            color: Color(0xFF0F172A),
-            fontWeight: FontWeight.bold,
+          style: AppTextStyles.poppins(
+            size: 18,
+            color: AppColors.textNavy,
+            weight: FontWeight.bold,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
+          icon: Icon(Icons.arrow_back, color: AppColors.textNavy),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -54,7 +59,7 @@ class NotificationsScreen extends StatelessWidget {
           final notifications = rawList.map((json) => UserNotification.fromJson(json)).toList();
 
           return ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: AppSpacing.pagePadding,
             itemCount: notifications.length,
             separatorBuilder: (context, index) => const Divider(height: 1),
             itemBuilder: (context, index) {
@@ -91,39 +96,39 @@ class _NotificationTile extends StatelessWidget {
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        color: isRead ? Colors.transparent : Colors.teal.withOpacity(0.05),
+        padding: AppSpacing.symmetric(vertical: 12, horizontal: 8),
+        color: isRead ? Colors.transparent : AppColors.brandPrimary.withValues(alpha: 0.05),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildIcon(notification.type),
-            const SizedBox(width: 12),
+            SizedBox(width: AppSpacing.x12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     notification.title,
-                    style: TextStyle(
-                      fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
-                      fontSize: 14,
-                      color: const Color(0xFF0F172A),
+                    style: AppTextStyles.poppins(
+                      size: 14,
+                      color: AppColors.textNavy,
+                      weight: isRead ? FontWeight.normal : FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: AppSpacing.x4),
                   Text(
                     notification.message,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF64748B),
+                    style: AppTextStyles.poppins(
+                      size: 13,
+                      color: AppColors.textSecondary,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: AppSpacing.x4),
                   Text(
                     DateFormat('MMM d, h:mm a').format(notification.createdAt),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade500,
+                    style: AppTextStyles.poppins(
+                      size: 11,
+                      color: AppColors.textMuted,
                     ),
                   ),
                 ],
@@ -131,10 +136,10 @@ class _NotificationTile extends StatelessWidget {
             ),
             if (!isRead)
               Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: Colors.teal,
+                width: 8.w,
+                height: 8.w,
+                decoration: BoxDecoration(
+                  color: AppColors.brandPrimary,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -152,42 +157,42 @@ class _NotificationTile extends StatelessWidget {
       case 'welcome':
       case 'first_territory':
         icon = Icons.emoji_events_outlined;
-        color = Colors.orange;
+        color = AppColors.warning;
         break;
       case 'territory_under_attack':
       case 'territory_lost':
         icon = Icons.warning_amber_rounded;
-        color = Colors.red;
+        color = AppColors.error;
         break;
       case 'raid_victory':
         icon = Icons.check_circle_outline;
-        color = Colors.green;
+        color = AppColors.success;
         break;
       case 'badge_unlocked':
       case 'rare_badge':
         icon = Icons.workspace_premium_outlined;
-        color = Colors.amber;
+        color = AppColors.gold;
         break;
       case 'circle_invite':
         icon = Icons.group_add_outlined;
-        color = Colors.blue;
+        color = AppColors.info;
         break;
       case 'streak_reminder':
         icon = Icons.local_fire_department_outlined;
-        color = Colors.deepOrange;
+        color = AppColors.warning;
         break;
       default:
         icon = Icons.notifications_none_rounded;
-        color = Colors.teal;
+        color = AppColors.brandPrimary;
     }
 
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: AppSpacing.cardAll(8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         shape: BoxShape.circle,
       ),
-      child: Icon(icon, color: color, size: 20),
+      child: Icon(icon, color: color, size: 20.sp),
     );
   }
 }

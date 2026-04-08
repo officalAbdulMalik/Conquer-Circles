@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+
+import 'package:test_steps/core/theme/app_text_styles.dart';
 
 class MetricCard extends StatelessWidget {
   final String label;
@@ -21,16 +24,16 @@ class MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r),
         border: Border.all(color: const Color(0xFFF1F5F9)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 4.r,
+            offset: Offset(0, 2.h),
           ),
         ],
       ),
@@ -38,29 +41,31 @@ class MetricCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 40.w,
+            height: 40.h,
             decoration: BoxDecoration(
               color: iconBgColor,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(8.r),
             ),
-            child: Icon(icon, color: iconColor, size: 20),
+            child: Icon(icon, color: iconColor, size: 20.sp),
           ),
-          const SizedBox(height: 16),
+          16.verticalSpace,
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+            style: AppTextStyles.style(
+              fontFamily: 'Poppins',
+              size: 24,
+              weight: FontWeight.bold,
               color: Color(0xFF0F172A),
             ),
           ),
           Text(
             '$unit $label',
-            style: TextStyle(
-              fontSize: 12,
+            style: AppTextStyles.style(
+              fontFamily: 'Inter',
+              size: 12,
               color: const Color(0xFF64748B),
-              fontWeight: FontWeight.w500,
+              weight: FontWeight.w500,
             ),
           ),
         ],

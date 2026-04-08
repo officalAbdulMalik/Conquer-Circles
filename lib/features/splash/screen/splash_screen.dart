@@ -34,7 +34,7 @@ class _SplashScreenState extends State<SplashScreen>
     // Navigate after animation completes
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
-        // TODO: Navigate to next screen
+       
        Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const OnboardingOneScreen()),
         );
@@ -53,7 +53,7 @@ class _SplashScreenState extends State<SplashScreen>
     final screenSize = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: AppColors.splashBackground,
+      backgroundColor: AppColors.bgDeep,
       body: SafeArea(
         child: Stack(
           children: [
@@ -66,9 +66,9 @@ class _SplashScreenState extends State<SplashScreen>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.splashGradientStart, // Light purple
-                    AppColors.splashGradientMid, // White
-                    AppColors.splashGradientEnd, // Light cyan
+                    AppColors.bgSoftPurple, // Light purple
+                    AppColors.surface, // White
+                    AppColors.brandLightCyan, // Light cyan
                   ],
                   stops: [0.08, 0.41, 0.91],
                 ),

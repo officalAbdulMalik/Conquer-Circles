@@ -1,108 +1,118 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+
 import 'app_colors.dart';
 
 class AppTextStyles {
-  AppTextStyles._(); // prevent instantiation
+  AppTextStyles._();
 
-  // Splash Screen Styles
-  static const TextStyle splashHeading = TextStyle(
-    fontFamily: 'Poppins',
-    fontSize: 36,
-    fontWeight: FontWeight.w800, // ExtraBold
-    color: AppColors.splashTextPrimary,
-    height: 1.3, // 46.8px / 36px
-    letterSpacing: 0,
-  );
+  static TextStyle style({
+    required String fontFamily,
+    required double size,
+    required Color color,
+    FontWeight weight = FontWeight.w400,
+    double? height,
+    double letterSpacing = 0,
+  }) {
+    return TextStyle(
+      fontFamily: fontFamily,
+      fontSize: size.sp,
+      fontWeight: weight,
+      color: color,
+      height: height,
+      letterSpacing: letterSpacing,
+    );
+  }
 
-  static const TextStyle splashParagraph = TextStyle(
-    fontFamily: 'Poppins',
-    fontSize: 15,
-    fontWeight: FontWeight.w400, // Regular
-    color: AppColors.splashTextSecondary,
-    height: 1.5, // 22.5px / 15px
-    letterSpacing: 0,
-  );
+  static TextStyle poppins({
+    required double size,
+    required Color color,
+    FontWeight weight = FontWeight.w400,
+    double? height,
+    double letterSpacing = 0,
+  }) {
+    return style(
+      fontFamily: 'Poppins',
+      size: size,
+      color: color,
+      weight: weight,
+      height: height,
+      letterSpacing: letterSpacing,
+    );
+  }
 
-  // Existing heading styles
-  static const TextStyle heading1 = TextStyle(
-    fontFamily: 'Poppins',
-    fontSize: 32,
-    fontWeight: FontWeight.w700,
+  static TextStyle inter({
+    required double size,
+     Color? color,
+    FontWeight weight = FontWeight.w400,
+    double? height,
+    double letterSpacing = 0,
+  }) {
+    return style(
+      fontFamily: 'Inter',
+      size: size,
+      color: color ?? AppColors.textSecondaryLight,
+      weight: weight,
+      height: height,
+      letterSpacing: letterSpacing,
+    );
+  }
+
+  // Core styles
+  static TextStyle get heading1 => poppins(
+    size: 32,
+    weight: FontWeight.w700,
     color: AppColors.textPrimaryLight,
     height: 1.25,
   );
 
-  static const TextStyle heading2 = TextStyle(
-    fontFamily: 'Poppins',
-    fontSize: 24,
-    fontWeight: FontWeight.w600,
+  static TextStyle get heading2 => poppins(
+    size: 24,
+    weight: FontWeight.w600,
     color: AppColors.textPrimaryLight,
     height: 1.33,
   );
 
-  static const TextStyle bodyMedium = TextStyle(
-    fontFamily: 'Poppins',
-    fontSize: 16,
-    fontWeight: FontWeight.w400,
+  static TextStyle get heading3 => poppins(
+    size: 20,
+    weight: FontWeight.w600,
+    color: AppColors.textPrimaryLight,
+    height: 1.4,
+  );
+
+   static TextStyle get bodyLarge => poppins(
+    size: 18,
+    weight: FontWeight.w500,
     color: AppColors.textPrimaryLight,
     height: 1.5,
   );
 
-  static const TextStyle caption = TextStyle(
-    fontFamily: 'Poppins',
-    fontSize: 12,
-    fontWeight: FontWeight.w400,
+  static TextStyle get bodyMedium => poppins(
+    size: 16,
+    weight: FontWeight.w400,
+    color: AppColors.textPrimaryLight,
+    height: 1.5,
+  );
+
+  static TextStyle get caption => poppins(
+    size: 12,
+    weight: FontWeight.w400,
     color: AppColors.textSecondaryLight,
     height: 1.33,
   );
 
-  // Onboarding Screen Styles
-  static const TextStyle onboardingStepLabel = TextStyle(
-    fontFamily: 'Poppins',
-    fontSize: 12,
-    fontWeight: FontWeight.w700,
-    color: AppColors.onboardingLabel,
-    height: 1.5,
-    letterSpacing: 2,
-  );
-
-  static const TextStyle onboardingTitle = TextStyle(
-    fontFamily: 'Poppins',
-    fontSize: 24,
-    fontWeight: FontWeight.w700,
-    color: AppColors.onboardingTitle,
+  // Splash styles
+  static TextStyle get splashHeading => poppins(
+    size: 36,
+    weight: FontWeight.w800,
+    color: AppColors.textPrimary,
     height: 1.3,
   );
 
-  static const TextStyle onboardingSubtitle = TextStyle(
-    fontFamily: 'Poppins',
-    fontSize: 14,
-    fontWeight: FontWeight.w400,
-    color: AppColors.onboardingSubtitle,
-    height: 1.5,
-  );
-
-  static const TextStyle onboardingOption = TextStyle(
-    fontFamily: 'Poppins',
-    fontSize: 16,
-    fontWeight: FontWeight.w600,
-    color: AppColors.onboardingTitle,
-    height: 1.5,
-  );
-
-  static const TextStyle onboardingBack = TextStyle(
-    fontFamily: 'Poppins',
-    fontSize: 16,
-    fontWeight: FontWeight.w600,
-    color: AppColors.onboardingBackText,
-    height: 1.5,
-  );
-
-  static const TextStyle onboardingNext = TextStyle(
-    fontFamily: 'Poppins',
-    fontSize: 16,
-    fontWeight: FontWeight.w600,
-    color: Colors.white,
+  static TextStyle get splashParagraph => poppins(
+    size: 15,
+    weight: FontWeight.w400,
+    color: AppColors.textSecondary,
     height: 1.5,
   );
 }

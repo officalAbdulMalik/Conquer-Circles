@@ -14,14 +14,23 @@ class GenderOptionTile extends StatelessWidget {
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: AppColors.onboardingCard,
+        color: AppColors.bgSoftPurple,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
           Text(emoji, style: const TextStyle(fontSize: 24, height: 1.2)),
           const SizedBox(width: 16),
-          Text(label, style: AppTextStyles.onboardingOption),
+          Text(
+            label,
+            style: AppTextStyles.style(
+              fontFamily: 'Poppins',
+              size: 16,
+              weight: FontWeight.w600,
+              color: AppColors.textPrimary,
+              height: 1.5,
+            ),
+          ),
         ],
       ),
     );
