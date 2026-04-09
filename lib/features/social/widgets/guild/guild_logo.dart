@@ -27,7 +27,7 @@ class GuildLogo extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: gradA.withOpacity(0.35),
+            color: gradA.withValues(alpha: 0.35),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),

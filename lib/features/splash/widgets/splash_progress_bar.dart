@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:test_steps/core/theme/app_colors.dart';
 
 class SplashProgressBar extends StatelessWidget {
   const SplashProgressBar({super.key});
@@ -9,7 +10,7 @@ class SplashProgressBar extends StatelessWidget {
       width: 208,
       height: 8,
       decoration: BoxDecoration(
-        color: const Color(0xFF675FAA).withValues(alpha: 0.1),
+        color: AppColors.brandPurple.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(21413900), // Very large for pill shape
       ),
       child: Stack(
@@ -23,8 +24,8 @@ class SplashProgressBar extends StatelessWidget {
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
                 colors: [
-                  Color(0xFF675FAA), // Purple
-                  Color(0xFF53E4F3), // Cyan
+                  AppColors.brandPurple, // Purple
+                  AppColors.brandCyan, // Cyan
                 ],
               ),
               borderRadius: BorderRadius.circular(21413900),

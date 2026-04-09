@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:test_steps/core/theme/app_colors.dart';
+import 'package:test_steps/core/theme/app_text_styles.dart';
+import 'package:test_steps/widgets/shared/app_button.dart';
 import '../../../providers/circles_provider.dart';
 import './circle_detail_view.dart';
 import '../../subscription/view/premium_paywall_view.dart';
@@ -28,7 +31,7 @@ class CirclesListTab extends ConsumerWidget {
             ...circlesState.circles.map((circleData) {
               final circle = circleData['circles'];
               return _buildCircleCard(context, circle);
-            }).toList(),
+            }),
           const SizedBox(height: 100),
         ],
       ),
@@ -39,20 +42,20 @@ class CirclesListTab extends ConsumerWidget {
     return Row(
       children: [
         Expanded(
-          child: _ActionButton(
+          child: AppActionTileButton(
             label: 'Create Circle',
             icon: Icons.add_circle_outline,
             onTap: () => _showCreateCircleDialog(context, ref),
-            color: const Color(0xFF0D968B),
+            color: AppColors.brandPrimary,
           ),
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: _ActionButton(
+          child: AppActionTileButton(
             label: 'Join by Code',
             icon: Icons.qr_code_scanner,
             onTap: () => _showJoinCircleDialog(context, ref),
-            color: const Color(0xFF0F172A),
+            color: AppColors.bgDark,
           ),
         ),
       ],
@@ -64,21 +67,21 @@ class CirclesListTab extends ConsumerWidget {
       child: Column(
         children: [
           const SizedBox(height: 60),
-          Icon(Icons.group_work_outlined, size: 64, color: Colors.grey[300]),
+          Icon(
+            Icons.group_work_outlined,
+            size: 64,
+            color: AppColors.textSecondary.withValues(alpha: 0.32),
+          ),
           const SizedBox(height: 16),
           Text(
             'No circles yet',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
-            ),
+            style: AppTextStyles.sectionTitle,
           ),
           const SizedBox(height: 8),
           Text(
             'Create a circle to play with friends\nor join an existing one with a code.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey[600]),
+            style: AppTextStyles.bodySmall,
           ),
         ],
       ),
@@ -89,12 +92,12 @@ class CirclesListTab extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFF1F5F9)),
+        border: Border.all(color: AppColors.borderLight),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -106,17 +109,20 @@ class CirclesListTab extends ConsumerWidget {
           width: 56,
           height: 56,
           decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9),
+            color: AppColors.backgroundLight,
             borderRadius: BorderRadius.circular(16),
           ),
-          child: const Icon(Icons.group, color: Color(0xFF0D968B), size: 30),
+          child: const Icon(Icons.group, color: AppColors.brandPrimary, size: 30),
         ),
         title: Text(
           circle['name'] ?? 'Untitled Circle',
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          style: AppTextStyles.cardTitle,
         ),
-        subtitle: Text('Code: ${circle['invite_code']}'),
-        trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+        subtitle: Text(
+          'Code: ${circle['invite_code']}',
+          style: AppTextStyles.cardSubtitle,
+        ),
+        trailing: const Icon(Icons.chevron_right, color: AppColors.textLight),
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -172,8 +178,8 @@ class CirclesListTab extends ConsumerWidget {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0D968B),
-              foregroundColor: Colors.white,
+              backgroundColor: AppColors.brandPrimary,
+              foregroundColor: AppColors.surface,
             ),
             child: const Text('Create'),
           ),
@@ -218,61 +224,12 @@ class CirclesListTab extends ConsumerWidget {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0D968B),
-              foregroundColor: Colors.white,
+              backgroundColor: AppColors.brandPrimary,
+              foregroundColor: AppColors.surface,
             ),
             child: const Text('Join'),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-  final Color color;
-
-  const _ActionButton({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: Colors.white, size: 28),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

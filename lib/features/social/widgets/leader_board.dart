@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:test_steps/core/constants/app_emojis.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
+import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/social/models/leaderboard_user.dart';
 import 'package:test_steps/widgets/shared/animated_gradient_progress_bar.dart';
 import 'package:test_steps/widgets/shared/user_avatar.dart';
@@ -18,7 +19,7 @@ const _users = [
     score: 142,
     progressValue: 0.90,
     avatarEmoji: AppEmojis.eagle,
-    avatarBgColor: Color(0xFFE8E8E8),
+    avatarBgColor: AppColors.avatarNeutral,
     badgeEmoji: AppEmojis.crown,
     isOnline: true,
   ),
@@ -28,7 +29,7 @@ const _users = [
     score: 128,
     progressValue: 0.75,
     avatarEmoji: AppEmojis.wolf,
-    avatarBgColor: Color(0xFFE8E8E8),
+    avatarBgColor: AppColors.avatarNeutral,
     isOnline: true,
   ),
   LeaderboardUser(
@@ -37,7 +38,7 @@ const _users = [
     score: 98,
     progressValue: 0.58,
     avatarEmoji: AppEmojis.fire,
-    avatarBgColor: Color(0xFFFFE0CC),
+    avatarBgColor: AppColors.avatarWarm,
     isOnline: false,
   ),
   LeaderboardUser(
@@ -46,7 +47,7 @@ const _users = [
     score: 95,
     progressValue: 0.54,
     avatarEmoji: AppEmojis.shield,
-    avatarBgColor: Color(0xFFDCEEFF),
+    avatarBgColor: AppColors.avatarCool,
     isOnline: true,
   ),
   LeaderboardUser(
@@ -55,7 +56,7 @@ const _users = [
     score: 85,
     progressValue: 0.44,
     avatarEmoji: AppEmojis.lightning,
-    avatarBgColor: Color(0xFFFFF9CC),
+    avatarBgColor: AppColors.avatarSun,
     isOnline: true,
   ),
   LeaderboardUser(
@@ -64,7 +65,7 @@ const _users = [
     score: 72,
     progressValue: 0.35,
     avatarEmoji: AppEmojis.moon,
-    avatarBgColor: Color(0xFFF0EAFF),
+    avatarBgColor: AppColors.avatarLavender,
     isOnline: false,
   ),
 ];
@@ -90,7 +91,7 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(24.r),
       ),
       child: Column(
@@ -104,9 +105,7 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
                 SizedBox(width: 6.w),
                 Text(
                   'Leaderboard',
-                  style: TextStyle(
-                    color: AppColors.textNavy,
-                    fontWeight: FontWeight.w700,
+                  style: AppTextStyles.cardTitle.copyWith(
                     fontSize: 16.sp,
                     letterSpacing: -0.2,
                   ),
@@ -140,8 +139,8 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
                               children: [
                                 Text(
                                   icon,
-                                  style: TextStyle(
-                                    fontSize: 11.sp,
+                                  style: AppTextStyles.inter(
+                                    size: 11,
                                     color: active
                                         ? AppColors.accentPurple
                                         : AppColors.textSecondary,
@@ -150,9 +149,9 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
                                 SizedBox(width: 3.w),
                                 Text(
                                   label,
-                                  style: TextStyle(
-                                    fontSize: 12.sp,
-                                    fontWeight: active
+                                  style: AppTextStyles.inter(
+                                    size: 12,
+                                    weight: active
                                         ? FontWeight.w600
                                         : FontWeight.w400,
                                     color: active
@@ -189,10 +188,10 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
                             ? MedalBadge(rank: _users[i].rank)
                             : Text(
                                 '#${_users[i].rank}',
-                                style: TextStyle(
+                                style: AppTextStyles.inter(
+                                  size: 13,
                                   color: AppColors.textSecondary,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13.sp,
+                                  weight: FontWeight.w600,
                                 ),
                               ),
                       ),
@@ -211,10 +210,10 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
                             children: [
                               TextSpan(
                                 text: _users[i].username,
-                                style: TextStyle(
+                                style: AppTextStyles.poppins(
+                                  size: 14,
                                   color: AppColors.textNavy,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14.sp,
+                                  weight: FontWeight.w600,
                                 ),
                               ),
                               TextSpan(
@@ -228,10 +227,10 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
                       ),
                       Text(
                         '${_users[i].score}',
-                        style: TextStyle(
+                        style: AppTextStyles.poppins(
+                          size: 16,
                           color: AppColors.accentIndigo,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16.sp,
+                          weight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -272,7 +271,7 @@ class MedalBadge extends StatelessWidget {
       width: 26.r,
       height: 26.r,
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         shape: BoxShape.circle,
         border: Border.all(color: color, width: 1.5.r),
       ),

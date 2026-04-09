@@ -4,11 +4,14 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_spacing.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
+import 'package:test_steps/features/profile/view/profile_stats_view.dart';
 import 'package:test_steps/features/profile/widgets/profile_achievement_tile.dart';
 import 'package:test_steps/features/profile/widgets/profile_settings_tile.dart';
 import 'package:test_steps/features/profile/widgets/profile_stat_tile.dart';
+import 'package:test_steps/screens/notifications_screen.dart';
 
 class ProfileContent extends StatefulWidget {
   const ProfileContent({
@@ -38,7 +41,7 @@ class _ProfileContentState extends State<ProfileContent> {
       value: '1.2M',
       label: 'Total Steps',
       gradient: [Color(0xFFDDD6FE), Color(0xFFC4B5FD)],
-      iconBackground: Color(0xFF675FAA),
+      iconBackground: AppColors.brandPurple,
     ),
     _StatData(
       icon: '🔥',
@@ -52,7 +55,7 @@ class _ProfileContentState extends State<ProfileContent> {
       value: '892 km',
       label: 'Distance',
       gradient: [Color(0xFFBFDBFE), Color(0xFF93C5FD)],
-      iconBackground: Color(0xFF3B82F6),
+      iconBackground: AppColors.info,
     ),
   ];
 
@@ -205,7 +208,7 @@ class _ProfileContentState extends State<ProfileContent> {
                       child: Icon(
                         Icons.person,
                         size: 52.sp,
-                        color: const Color(0xFF675FAA),
+                        color: AppColors.brandPurple,
                       ),
                     ),
                     Positioned(
@@ -218,14 +221,14 @@ class _ProfileContentState extends State<ProfileContent> {
                           shape: BoxShape.circle,
                           color: Colors.white,
                           border: Border.all(
-                            color: const Color(0xFF675FAA),
+                            color: AppColors.brandPurple,
                             width: 1.4.w,
                           ),
                         ),
                         child: Icon(
                           Icons.edit,
                           size: 16.sp,
-                          color: const Color(0xFF675FAA),
+                          color: AppColors.brandPurple,
                         ),
                       ),
                     ),
@@ -298,12 +301,19 @@ class _ProfileContentState extends State<ProfileContent> {
       children: [
         for (int i = 0; i < _stats.length; i++) ...[
           Expanded(
-            child: ProfileStatTile(
-              icon: _stats[i].icon,
-              value: _stats[i].value,
-              label: _stats[i].label,
-              gradient: _stats[i].gradient,
-              iconBackground: _stats[i].iconBackground,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ProfileStatsView()),
+                );
+              },
+              child: ProfileStatTile(
+                icon: _stats[i].icon,
+                value: _stats[i].value,
+                label: _stats[i].label,
+                gradient: _stats[i].gradient,
+                iconBackground: _stats[i].iconBackground,
+              ),
             ),
           ),
           if (i < _stats.length - 1) 12.horizontalSpace,
@@ -327,7 +337,7 @@ class _ProfileContentState extends State<ProfileContent> {
                     fontFamily: 'Poppins',
                     size: 16,
                     weight: FontWeight.w600,
-                    color: const Color(0xFF2D2D2D),
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 8.verticalSpace,
@@ -337,7 +347,7 @@ class _ProfileContentState extends State<ProfileContent> {
                     fontFamily: 'Poppins',
                     size: 30,
                     weight: FontWeight.w700,
-                    color: const Color(0xFF675FAA),
+                    color: AppColors.brandPurple,
                     height: 1,
                   ),
                 ),
@@ -361,7 +371,7 @@ class _ProfileContentState extends State<ProfileContent> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(8.r),
                           color: active
-                              ? const Color(0xFF675FAA)
+                              ? AppColors.brandPurple
                               : const Color(0xFFE9EAF4),
                         ),
                       ),
@@ -385,7 +395,7 @@ class _ProfileContentState extends State<ProfileContent> {
                     fontFamily: 'Poppins',
                     size: 16,
                     weight: FontWeight.w600,
-                    color: const Color(0xFF2D2D2D),
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 8.verticalSpace,
@@ -479,81 +489,95 @@ class _ProfileContentState extends State<ProfileContent> {
     final maxValue = values.reduce(math.max);
     final labels = const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-    return _glassCard(
-      padding: EdgeInsets.all(18.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                'Activity',
-                style: AppTextStyles.style(
-                  fontFamily: 'Poppins',
-                  size: 20,
-                  weight: FontWeight.w600,
-                  color: const Color(0xFF2D2D2D),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const ProfileStatsView()));
+      },
+      child: _glassCard(
+        padding: EdgeInsets.all(18.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Activity',
+                  style: AppTextStyles.style(
+                    fontFamily: 'Poppins',
+                    size: 20,
+                    weight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-              ),
-              const Spacer(),
-              _buildSegmentedToggle(),
-            ],
-          ),
-          16.verticalSpace,
-          SizedBox(
-            height: 170.h,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: List.generate(values.length, (index) {
-                final value = values[index];
-                final barHeight = ((value / maxValue) * 110).h;
-                final isPeak = value == maxValue;
+                const Spacer(),
+                _buildSegmentedToggle(),
+              ],
+            ),
+            16.verticalSpace,
+            SizedBox(
+              height: 170.h,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: List.generate(values.length, (index) {
+                  final value = values[index];
+                  final barHeight = ((value / maxValue) * 110).h;
+                  final isPeak = value == maxValue;
 
-                return Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 250),
-                        width: 24.w,
-                        height: barHeight,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12.r),
-                          gradient: LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                            colors: isPeak
-                                ? const [Color(0xFF675FAA), Color(0xFF53E4F3)]
-                                : const [Color(0xFFC7D2FE), Color(0xFFE0E7FF)],
+                  return Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          width: 24.w,
+                          height: barHeight,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12.r),
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              colors: isPeak
+                                  ? const [
+                                      AppColors.brandPurple,
+                                      AppColors.brandCyan,
+                                    ]
+                                  : const [
+                                      Color(0xFFC7D2FE),
+                                      Color(0xFFE0E7FF),
+                                    ],
+                            ),
                           ),
                         ),
-                      ),
-                      8.verticalSpace,
-                      Text(
-                        labels[index],
-                        style: AppTextStyles.style(
-                          fontFamily: 'Inter',
-                          size: 11,
-                          color: const Color(0xFF6B7280),
+                        8.verticalSpace,
+                        Text(
+                          labels[index],
+                          style: AppTextStyles.style(
+                            fontFamily: 'Inter',
+                            size: 11,
+                            color: const Color(0xFF6B7280),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
+                      ],
+                    ),
+                  );
+                }),
+              ),
             ),
-          ),
-          8.verticalSpace,
-          Text(
-            'Avg: 9,207 steps/day this week',
-            style: AppTextStyles.style(
-              fontFamily: 'Inter',
-              size: 12,
-              weight: FontWeight.w500,
-              color: const Color(0xFF64748B),
+            8.verticalSpace,
+            Text(
+              'Avg: 9,207 steps/day this week',
+              style: AppTextStyles.style(
+                fontFamily: 'Inter',
+                size: 12,
+                weight: FontWeight.w500,
+                color: const Color(0xFF64748B),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -611,7 +635,7 @@ class _ProfileContentState extends State<ProfileContent> {
             fontFamily: 'Inter',
             size: 12,
             weight: FontWeight.w600,
-            color: active ? const Color(0xFF2D2D2D) : const Color(0xFF94A3B8),
+            color: active ? AppColors.textPrimary : const Color(0xFF94A3B8),
           ),
         ),
       ),
@@ -678,6 +702,13 @@ class _ProfileContentState extends State<ProfileContent> {
                   icon: _settings[i].icon,
                   title: _settings[i].title,
                   subtitle: _settings[i].subtitle,
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationsScreen(),
+                      ),
+                    );
+                  },
                 ),
                 if (i < _settings.length - 1)
                   Divider(height: 1.h, color: const Color(0xFFE8EDF7)),
@@ -774,7 +805,7 @@ class _ProfileContentState extends State<ProfileContent> {
                   fontFamily: 'Poppins',
                   size: 20,
                   weight: FontWeight.w600,
-                  color: const Color(0xFF2D2D2D),
+                  color: AppColors.textPrimary,
                 ),
               ),
               const Spacer(),
@@ -784,7 +815,7 @@ class _ProfileContentState extends State<ProfileContent> {
                   fontFamily: 'Inter',
                   size: 12,
                   weight: FontWeight.w600,
-                  color: const Color(0xFF675FAA),
+                  color: AppColors.brandPurple,
                 ),
               ),
             ],
@@ -803,7 +834,7 @@ class _ProfileContentState extends State<ProfileContent> {
                     gradient: LinearGradient(
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
-                      colors: [Color(0xFF675FAA), Color(0xFF53E4F3)],
+                      colors: [AppColors.brandPurple, AppColors.brandCyan],
                     ),
                   ),
                 ),
@@ -833,7 +864,7 @@ class _ProfileContentState extends State<ProfileContent> {
               style: AppTextStyles.style(
                 fontFamily: 'Inter',
                 size: 12,
-                color: const Color(0xFF675FAA),
+                color: AppColors.brandPurple,
                 weight: FontWeight.w600,
               ),
             ),
@@ -852,7 +883,7 @@ class _ProfileContentState extends State<ProfileContent> {
           child: ElevatedButton(
             onPressed: widget.onEditProfile,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF675FAA),
+              backgroundColor: AppColors.brandPurple,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -875,18 +906,7 @@ class _ProfileContentState extends State<ProfileContent> {
           width: double.infinity,
           height: 52.h,
           child: OutlinedButton(
-            onPressed: _isLoggingOut
-                ? null
-                : () async {
-                    setState(() => _isLoggingOut = true);
-                    try {
-                      await widget.onLogout();
-                    } finally {
-                      if (mounted) {
-                        setState(() => _isLoggingOut = false);
-                      }
-                    }
-                  },
+            onPressed: _isLoggingOut ? null : _showLogoutDialog,
             style: OutlinedButton.styleFrom(
               side: BorderSide(color: const Color(0xFFFCA5A5), width: 1.2.w),
               backgroundColor: const Color(0xFFFFF1F2),
@@ -899,7 +919,10 @@ class _ProfileContentState extends State<ProfileContent> {
                 ? SizedBox(
                     width: 18.w,
                     height: 18.h,
-                    child: const CircularProgressIndicator(strokeWidth: 2),
+                    child: const CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFFDC2626),
+                    ),
                   )
                 : Text(
                     'Log Out',
@@ -916,6 +939,267 @@ class _ProfileContentState extends State<ProfileContent> {
     );
   }
 
+  Future<void> _showLogoutDialog() async {
+    await showDialog<void>(
+      context: context,
+      barrierColor: const Color(0x8C2B285C),
+      builder: (dialogContext) {
+        bool isDialogSubmitting = false;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              insetPadding: EdgeInsets.symmetric(horizontal: 20.w),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(32.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0x806958CA),
+                      blurRadius: 34.r,
+                      spreadRadius: 2.r,
+                      offset: Offset(0, 12.h),
+                    ),
+                  ],
+                ),
+                child: Container(
+                  padding: EdgeInsets.fromLTRB(18.w, 16.h, 18.w, 14.h),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(30.r),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          const Spacer(),
+                          GestureDetector(
+                            onTap: () => Navigator.of(dialogContext).pop(),
+                            child: Container(
+                              width: 30.w,
+                              height: 30.h,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF4F3FE),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.close_rounded,
+                                size: 18.sp,
+                                color: const Color(0xFF8E8CB5),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        width: 66.w,
+                        height: 66.h,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF1F2),
+                          borderRadius: BorderRadius.circular(18.r),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0x40FCA5A5),
+                              blurRadius: 18.r,
+                              offset: Offset(0, 10.h),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.logout_rounded,
+                          size: 30.sp,
+                          color: const Color(0xFFEF4444),
+                        ),
+                      ),
+                      16.verticalSpace,
+                      Text(
+                        'Log Out?',
+                        style: AppTextStyles.style(
+                          fontFamily: 'Poppins',
+                          size: 34 / 2,
+                          weight: FontWeight.w700,
+                          color: const Color(0xFF2E2E35),
+                        ),
+                      ),
+                      10.verticalSpace,
+                      Text(
+                        'Are you sure you want to log out?\nYou\'ll need to sign in again to\naccess your fitness data.',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.style(
+                          fontFamily: 'Inter',
+                          size: 16 / 1.2,
+                          weight: FontWeight.w500,
+                          color: const Color(0xFF8D8E96),
+                          height: 1.45,
+                        ),
+                      ),
+                      16.verticalSpace,
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 14.w,
+                          vertical: 12.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF7E8),
+                          borderRadius: BorderRadius.circular(16.r),
+                          border: Border.all(color: const Color(0xFFF8E3B3)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('🔥', style: TextStyle(fontSize: 18.sp)),
+                            10.horizontalSpace,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Don\'t lose your streak!',
+                                    style: AppTextStyles.style(
+                                      fontFamily: 'Poppins',
+                                      size: 14,
+                                      weight: FontWeight.w700,
+                                      color: const Color(0xFFDD6B20),
+                                    ),
+                                  ),
+                                  3.verticalSpace,
+                                  Text(
+                                    'You have a 12-day streak going. Come back tomorrow!',
+                                    style: AppTextStyles.style(
+                                      fontFamily: 'Inter',
+                                      size: 12.2,
+                                      weight: FontWeight.w500,
+                                      color: const Color(0xFFC56A1F),
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      18.verticalSpace,
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50.h,
+                        child: ElevatedButton(
+                          onPressed: isDialogSubmitting
+                              ? null
+                              : () => Navigator.of(dialogContext).pop(),
+                          style: ElevatedButton.styleFrom(
+                            elevation: 0,
+                            backgroundColor: const Color(0xFF7A70C6),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16.r),
+                            ),
+                          ),
+                          child: Text(
+                            'Stay Logged In',
+                            style: AppTextStyles.style(
+                              fontFamily: 'Poppins',
+                              size: 16,
+                              weight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      10.verticalSpace,
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50.h,
+                        child: OutlinedButton(
+                          onPressed: isDialogSubmitting
+                              ? null
+                              : () async {
+                                  setDialogState(() {
+                                    isDialogSubmitting = true;
+                                  });
+                                  setState(() => _isLoggingOut = true);
+
+                                  try {
+                                    await widget.onLogout();
+                                    if (dialogContext.mounted) {
+                                      Navigator.of(dialogContext).pop();
+                                    }
+                                  } catch (_) {
+                                    if (dialogContext.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Logout failed. Please try again.',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  } finally {
+                                    if (mounted) {
+                                      setState(() => _isLoggingOut = false);
+                                    }
+                                    if (dialogContext.mounted) {
+                                      setDialogState(() {
+                                        isDialogSubmitting = false;
+                                      });
+                                    }
+                                  }
+                                },
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(
+                              color: const Color(0xFFF8CACA),
+                              width: 1.1.w,
+                            ),
+                            backgroundColor: const Color(0xFFFFF5F5),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16.r),
+                            ),
+                          ),
+                          child: isDialogSubmitting
+                              ? SizedBox(
+                                  width: 18.w,
+                                  height: 18.h,
+                                  child: const CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Color(0xFFEF4444),
+                                  ),
+                                )
+                              : Text(
+                                  'Log Out',
+                                  style: AppTextStyles.style(
+                                    fontFamily: 'Poppins',
+                                    size: 16,
+                                    weight: FontWeight.w700,
+                                    color: const Color(0xFFEF4444),
+                                  ),
+                                ),
+                        ),
+                      ),
+                      12.verticalSpace,
+                      Container(
+                        width: 40.w,
+                        height: 4.h,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD7D9E0),
+                          borderRadius: BorderRadius.circular(99.r),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _sectionTitle(String title) {
     return Text(
       title,
@@ -923,7 +1207,7 @@ class _ProfileContentState extends State<ProfileContent> {
         fontFamily: 'Poppins',
         size: 20,
         weight: FontWeight.w600,
-        color: const Color(0xFF2D2D2D),
+        color: AppColors.textPrimary,
       ),
     );
   }

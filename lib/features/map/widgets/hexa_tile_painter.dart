@@ -56,11 +56,11 @@ class HexTilePainter extends CustomPainter {
     path.close();
 
     final fillPaint = Paint()
-      ..color = tile.displayColor.withOpacity(isSelected ? 0.6 : 0.3)
+      ..color = tile.displayColor.withValues(alpha: isSelected ? 0.6 : 0.3)
       ..style = PaintingStyle.fill;
     
     final borderPaint = Paint()
-      ..color = tile.displayColor.withOpacity(isSelected ? 0.8 : 0.4)
+      ..color = tile.displayColor.withValues(alpha: isSelected ? 0.8 : 0.4)
       ..style = PaintingStyle.stroke
       ..strokeWidth = isSelected ? 3.0 : 1.0;
 
@@ -72,7 +72,7 @@ class HexTilePainter extends CustomPainter {
       final textSpan = TextSpan(
         text: '${tile.energy}',
         style: TextStyle(
-          color: Colors.white.withOpacity(0.9),
+          color: Colors.white.withValues(alpha: 0.9),
           fontSize: 10,
           fontWeight: FontWeight.bold,
         ),
@@ -93,7 +93,7 @@ class HexTilePainter extends CustomPainter {
       final textSpan = TextSpan(
         text: String.fromCharCode(icon.codePoint),
         style: TextStyle(
-          color: Colors.white.withOpacity(0.8),
+          color: Colors.white.withValues(alpha: 0.8),
           fontSize: 14,
           fontFamily: icon.fontFamily,
           package: icon.fontPackage,

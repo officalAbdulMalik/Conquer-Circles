@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 
 class ProfileAchievementTile extends StatelessWidget {
@@ -18,7 +19,7 @@ class ProfileAchievementTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final baseColor = isCompleted
-        ? const Color(0xFFF5F3FF)
+        ? AppColors.fillColor
         : const Color(0xFFF1F5F9);
 
     return Stack(
@@ -43,7 +44,7 @@ class ProfileAchievementTile extends StatelessWidget {
                   fontFamily: 'Poppins',
                   size: 24,
                   color: isCompleted
-                      ? const Color(0xFF675FAA)
+                      ? AppColors.brandPurple
                       : const Color(0xFF94A3B8),
                 ),
               ),

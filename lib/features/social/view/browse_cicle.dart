@@ -7,6 +7,8 @@ import 'package:test_steps/features/social/mock_data/circles_mock_data.dart';
 import 'package:test_steps/features/social/models/circle_models.dart';
 import 'package:test_steps/features/social/view/circle_details.dart';
 import 'package:test_steps/widgets/search_text_field.dart';
+import 'package:test_steps/widgets/shared/app_avatar_stack.dart';
+import 'package:test_steps/widgets/shared/app_button.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Page
@@ -59,7 +61,10 @@ class AllCirclesPage extends StatelessWidget {
                 'assets/icons/filter.svg',
                 width: 16.w,
                 height: 16.h,
-                color: AppColors.brandPurple,
+                colorFilter: const ColorFilter.mode(
+                  AppColors.brandPurple,
+                  BlendMode.srcIn,
+                ),
               ),
             ),
           ],
@@ -79,9 +84,9 @@ class AllCirclesPage extends StatelessWidget {
 
               10.verticalSpace,
 
-              Text(
-                'Featured Circles',
-                style: AppTextStyles.bodyLarge.copyWith(
+                Text(
+                  'Featured Circles',
+                  style: AppTextStyles.sectionTitle.copyWith(
                   fontWeight: FontWeight.w600,
                   fontSize: 16.sp,
                 ),
@@ -95,7 +100,7 @@ class AllCirclesPage extends StatelessWidget {
 
               Text(
                 'All Circles',
-                style: AppTextStyles.bodyLarge.copyWith(
+                style: AppTextStyles.sectionTitle.copyWith(
                   fontWeight: FontWeight.w600,
                   fontSize: 16.sp,
                 ),
@@ -336,7 +341,11 @@ class _RankChip extends StatelessWidget {
         if (_trendIcon.isNotEmpty)
           Text(
             _trendIcon,
-            style: TextStyle(color: _trendColor, fontSize: 11.sp),
+            style: AppTextStyles.inter(
+              size: 11,
+              color: _trendColor,
+              weight: FontWeight.w700,
+            ),
           ),
       ],
     );
@@ -370,7 +379,7 @@ class _StatsRow extends StatelessWidget {
           SizedBox(width: 14.w),
           _StatItem(icon: '🏆', value: '${data.wins}', label: 'wins'),
           SizedBox(width: 14.w),
-          _StatItem(icon: '⚡', value: '${data.xp}', label: 'XP'),
+          _StatItem(icon: '⚡', value: data.xp, label: 'XP'),
         ],
       ),
     );
@@ -474,38 +483,11 @@ class _MemberAvatars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double size = 30;
-    const double offset = 18;
-    final total = emojis.length;
-
-    return SizedBox(
-      height: size.h,
-      width: size.w + offset.w * (total - 1),
-      child: Stack(
-        children: List.generate(total, (i) {
-          return Positioned(
-            left: i * offset.w,
-            child: Container(
-              width: size.w,
-              height: size.h,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2.w),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 4.r,
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Text(emojis[i], style: TextStyle(fontSize: 14.sp)),
-              ),
-            ),
-          );
-        }),
-      ),
+    return AppAvatarStack(
+      emojis: emojis,
+      size: 30,
+      overlap: 18,
+      backgroundColor: AppColors.surface,
     );
   }
 }
@@ -537,37 +519,28 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final isFull = status == JoinStatus.full;
     final isJoin = status == JoinStatus.join;
-    return InkWell(
-      onTap: isFull
+    return AppButton(
+      label: _label,
+      icon: isJoin ? Icons.arrow_forward_ios : null,
+      variant: isFull ? AppButtonVariant.outlined : AppButtonVariant.filled,
+      backgroundColor: isJoin ? AppColors.brandPurple : color,
+      foregroundColor: AppColors.surface,
+      borderColor: AppColors.textSecondary.withValues(alpha: 0.25),
+      height: 34,
+      borderRadius: 18,
+      horizontalPadding: 12,
+      textStyle: AppTextStyles.poppins(
+        size: 14,
+        color: isFull ? AppColors.textSecondary : AppColors.surface,
+        weight: FontWeight.w600,
+      ),
+      onPressed: isFull
           ? null
           : () {
-            Navigator.of(context).push(MaterialPageRoute(builder: (_) => CircleProfileScreen()));
-        // Handle join or view action
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-        decoration: BoxDecoration(
-          color: isFull ? AppColors.textSecondary.withValues(alpha: 0.12) : color,
-          gradient: isJoin ? AppColors.primaryGradient : null,
-          borderRadius: BorderRadius.circular(18.r),
-        ),
-        child: Row(
-          children: [
-            Text(
-              _label,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: isFull ? AppColors.textSecondary : Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 14.sp,
-              ),
-            ),
-            isJoin ? SizedBox(width: 3.w) : SizedBox.shrink(),
-            isJoin
-                ? Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white)
-                : SizedBox.shrink(),
-          ],
-        ),
-      ),
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => CircleProfileScreen()));
+            },
     );
   }
 }

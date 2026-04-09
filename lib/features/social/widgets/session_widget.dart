@@ -7,14 +7,18 @@ import 'package:test_steps/core/theme/app_colors.dart';
 class SeasonCountdownCard extends StatefulWidget {
   const SeasonCountdownCard({
     super.key,
+    this.onTap,
     this.seasonLabel = 'Season 4',
+    this.seasonId = 4,
     this.endsAt,
     this.progressValue = 0.78,
     this.progressLabel = 'Circle Season Progress',
     this.rankLabel = '#2 Circle',
   });
 
+  final VoidCallback? onTap;
   final String seasonLabel;
+  final int seasonId;
   final DateTime? endsAt;
   final double progressValue;
   final String progressLabel;
@@ -64,40 +68,43 @@ class _SeasonCountdownCardState extends State<SeasonCountdownCard> {
     final m = _remaining.inMinutes.remainder(60);
     final s = _remaining.inSeconds.remainder(60);
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.brandPurple, AppColors.brandCyan],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-        borderRadius: BorderRadius.circular(24.r),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.brandPurple.withOpacity(0.35),
-            blurRadius: 24.r,
-            offset: Offset(0, 8.h),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.brandPurple, AppColors.brandCyan],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
-        ],
-      ),
-      padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 16.h),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+          borderRadius: BorderRadius.circular(24.r),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.brandPurple.withValues(alpha: 0.35),
+              blurRadius: 24.r,
+              offset: Offset(0, 8.h),
+            ),
+          ],
+        ),
+        padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 16.h),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // ── Header ────────────────────────────────────────────────────────
           Row(
             children: [
               Icon(
                 Icons.timer_outlined,
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
                 size: 16.r,
               ),
               SizedBox(width: 6.w),
               Text(
                 '${widget.seasonLabel}  ·  Ends in',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w500,
                   letterSpacing: 0.2,
@@ -134,7 +141,7 @@ class _SeasonCountdownCardState extends State<SeasonCountdownCard> {
                     Text(
                       widget.progressLabel,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                         fontSize: 12.sp,
                         fontWeight: FontWeight.w500,
                       ),
@@ -160,7 +167,8 @@ class _SeasonCountdownCardState extends State<SeasonCountdownCard> {
               _RankBadge(label: widget.rankLabel),
             ],
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -181,7 +189,7 @@ class _UnitBox extends StatelessWidget {
       width: 58.r,
       padding: EdgeInsets.symmetric(vertical: 8.h),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Column(
@@ -200,7 +208,7 @@ class _UnitBox extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
               fontSize: 10.5.sp,
               fontWeight: FontWeight.w500,
             ),
@@ -220,7 +228,7 @@ class _GradientProgressBar extends StatelessWidget {
     return Container(
       height: 7.h,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(4.r),
       ),
       child: Align(
@@ -250,10 +258,10 @@ class _RankBadge extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 9.h),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
+        color: Colors.white.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(14.r),
         border: Border.all(
-          color: Colors.white.withOpacity(0.2),
+          color: Colors.white.withValues(alpha: 0.2),
           width: 1.r,
         ),
       ),

@@ -447,9 +447,9 @@ class _MapViewState extends ConsumerState<MapView> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E1E2E).withOpacity(0.9),
+                    color: const Color(0xFF1E1E2E).withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFFF9800).withOpacity(0.3)),
+                    border: Border.all(color: const Color(0xFFFF9800).withValues(alpha: 0.3)),
                   ),
                   child: const Icon(Icons.history, color: Color(0xFFFF9800), size: 20),
                 ),
@@ -549,9 +549,9 @@ class _TerritoryLegend extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A).withOpacity(0.85),
+        color: const Color(0xFF0F172A).withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -615,7 +615,7 @@ class _SmallStatBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E2E),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

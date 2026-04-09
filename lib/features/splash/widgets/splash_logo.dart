@@ -22,7 +22,7 @@ class SplashLogo extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFF675FAA), // Purple
+                  AppColors.brandPurple, // Purple
                   Color(0xFF8B7FD4), // Light Purple
                 ],
               ),
@@ -56,7 +56,7 @@ class SplashLogo extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Color(0xFF53E4F3), // Cyan
+                    AppColors.brandCyan, // Cyan
                     Color(0xFF3DD4E3), // Dark Cyan
                   ],
                 ),

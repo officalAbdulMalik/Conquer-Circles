@@ -104,7 +104,7 @@ class AttackResultOverlay {
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Attack Result',
-      barrierColor: Colors.black.withOpacity(0.7),
+      barrierColor: Colors.black.withValues(alpha: 0.7),
       transitionDuration: const Duration(milliseconds: 300),
       pageBuilder: (context, anim1, anim2) {
         return Center(

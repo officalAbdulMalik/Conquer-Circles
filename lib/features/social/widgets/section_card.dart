@@ -31,7 +31,7 @@ class SectionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(borderRadius ?? 8.r),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.06),
+            color: AppColors.primary.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 2),
           ),
@@ -84,9 +84,9 @@ class SectionHeader extends StatelessWidget {
               children: [
                 Text(
                   actionLabel!,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                  style: AppTextStyles.inter(
+                    size: 13,
+                    weight: FontWeight.w500,
                     color: AppColors.primary,
                   ),
                 ),

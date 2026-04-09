@@ -54,58 +54,63 @@ class AppColors {
   static const Color borderLight = Color(0xFFE2E8F0);
   static const Color cardLight = surface;
 
-  static const Color fillColor = Color(0xffF5F3FF);
+  static const Color fillColor = Color(0xFFF5F3FF);
 
-
-   // Background
+  // Background
   static const Color scaffoldBg = Color(0xFFF0F0F8);
-  static const Color appBarBg = Colors.white;
-  static const Color inputBarBg = Colors.white;
- 
+  static const Color appBarBg = surface;
+  static const Color inputBarBg = surface;
+
   // Bubbles
   static const Color sentBubble = Color(0xFF7C6FCD);
-  static const Color receivedBubble = Colors.white;
+  static const Color receivedBubble = surface;
   static const Color systemBubble = Color(0xFFE8F5E9);
   static const Color xpBubble = Color(0xFFF0FFF4);
- 
+
   // Text
-  static const Color sentText = Colors.white;
-  static const Color receivedText = Color(0xFF1A1A2E);
+  static const Color sentText = surface;
+  static const Color receivedText = textNavy;
   static const Color systemText = Color(0xFF2E7D32);
   static const Color timeText = Color(0xFFAAAAAA);
   static const Color senderIronStrider = Color(0xFFE87040);
   static const Color senderNeonPath = Color(0xFF4CAF50);
- 
+
   // Accents
-  static const Color onlineGreen = Color(0xFF4CAF50);
+  static const Color onlineGreen = senderNeonPath;
   static const Color xpGold = Color(0xFFFFB300);
-  static const Color purple = Color(0xFF7C6FCD);
+  static const Color purple = sentBubble;
   static const Color reactionBg = Color(0xFFF5F5FF);
   static const Color reactionBorder = Color(0xFFE0DEFF);
- 
+
   // Raid
-  static const Color raidBubble = Color(0xFFE8F5E9);
+  static const Color raidBubble = systemBubble;
   static const Color raidBorder = Color(0xFF81C784);
 
   static const Color primary = Color(0xFF7C3AED);
   static const Color primaryLight = Color(0xFFE9D5FF);
   static const Color primaryLighter = Color(0xFFF3EEFF);
-  static const Color background = Color(0xFFF0EEFF);
-  static const Color cardBackground = Color(0xFFFFFFFF);
+  static const Color background = bgSoftPurple;
+  static const Color cardBackground = surface;
   static const Color green = Color(0xFF10B981);
   static const Color yellow = Color(0xFFFBBF24);
   static const Color orange = Color(0xFFF97316);
-  static const Color blue = Color(0xFF3B82F6);
+  static const Color blue = info;
   static const Color divider = Color(0xFFF3F4F6);
   static const Color tileOwned = Color(0xFFD8B4FE);
   static const Color tileContested = Color(0xFFFDE68A);
   static const Color tileNeutral = Color(0xFFE5E7EB);
-  static const Color online = Color(0xFF10B981);
+  static const Color online = green;
 
+  // Avatar swatches
+  static const Color avatarNeutral = Color(0xFFE8E8E8);
+  static const Color avatarWarm = Color(0xFFFFE0CC);
+  static const Color avatarSun = Color(0xFFFFF9CC);
+  static const Color avatarCool = Color(0xFFDCEEFF);
+  static const Color avatarLavender = Color(0xFFF0EAFF);
 
- static Gradient  primaryGradient =  LinearGradient(
-        colors: [Color(0xff675FAA), Color(0xff675FAA).withAlpha(0x80)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
+  static Gradient primaryGradient = LinearGradient(
+    colors: [brandPurple, brandPurple.withAlpha(0x80)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 }

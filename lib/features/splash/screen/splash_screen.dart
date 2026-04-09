@@ -117,7 +117,7 @@ class _SplashScreenState extends State<SplashScreen>
                                   width: 208,
                                   height: 8,
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF675FAA)
+                                    color: AppColors.brandPurple
                                         .withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(
                                         21413900), // Very large for pill shape
@@ -132,8 +132,8 @@ class _SplashScreenState extends State<SplashScreen>
                                       begin: Alignment.centerLeft,
                                       end: Alignment.centerRight,
                                       colors: [
-                                        Color(0xFF675FAA),
-                                        Color(0xFF53E4F3),
+                                        AppColors.brandPurple,
+                                        AppColors.brandCyan,
                                       ],
                                     ),
                                     borderRadius: BorderRadius.circular(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:test_steps/core/constants/app_emojis.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
+import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/social/models/guild_models.dart';
 import 'package:test_steps/features/social/widgets/guild/guild_logo.dart';
 import 'package:test_steps/features/social/widgets/guild/member_avatar_row.dart';
@@ -35,12 +36,12 @@ final _stats = [
 ];
 
 const _members = [
-  GuildMember(avatarEmoji: AppEmojis.eagle, bgColor: Color(0xFFE8E8E8), isOnline: true),
-  GuildMember(avatarEmoji: AppEmojis.wolf, bgColor: Color(0xFFE8E8E8), isOnline: true),
-  GuildMember(avatarEmoji: AppEmojis.fire, bgColor: Color(0xFFFFE0CC), isOnline: true),
-  GuildMember(avatarEmoji: AppEmojis.lightning, bgColor: Color(0xFFFFF9CC), isOnline: true),
-  GuildMember(avatarEmoji: AppEmojis.moon, bgColor: Color(0xFFF0EAFF), isOnline: false),
-  GuildMember(avatarEmoji: AppEmojis.shield, bgColor: Color(0xFFDCEEFF), isOnline: false),
+  GuildMember(avatarEmoji: AppEmojis.eagle, bgColor: AppColors.avatarNeutral, isOnline: true),
+  GuildMember(avatarEmoji: AppEmojis.wolf, bgColor: AppColors.avatarNeutral, isOnline: true),
+  GuildMember(avatarEmoji: AppEmojis.fire, bgColor: AppColors.avatarWarm, isOnline: true),
+  GuildMember(avatarEmoji: AppEmojis.lightning, bgColor: AppColors.avatarSun, isOnline: true),
+  GuildMember(avatarEmoji: AppEmojis.moon, bgColor: AppColors.avatarLavender, isOnline: false),
+  GuildMember(avatarEmoji: AppEmojis.shield, bgColor: AppColors.avatarCool, isOnline: false),
 ];
 
 const _extraMembers = 18;
@@ -74,7 +75,7 @@ class GuildCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(26.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.07),
+            color: Colors.black.withValues(alpha: 0.07),
             blurRadius: 24.r,
             offset: Offset(0, 8.h),
           ),
@@ -96,10 +97,10 @@ class GuildCard extends StatelessWidget {
                   children: [
                     Text(
                       guildName,
-                      style: TextStyle(
+                      style: AppTextStyles.poppins(
+                        size: 22,
                         color: AppColors.textNavy,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 22.sp,
+                        weight: FontWeight.w800,
                         letterSpacing: -0.4,
                       ),
                     ),
@@ -110,10 +111,10 @@ class GuildCard extends StatelessWidget {
                         SizedBox(width: 4.w),
                         Text(
                           '$ownerName · $leagueName',
-                          style: TextStyle(
+                          style: AppTextStyles.inter(
+                            size: 13,
                             color: AppColors.textSecondary,
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w500,
+                            weight: FontWeight.w500,
                           ),
                         ),
                       ],
@@ -158,9 +159,7 @@ class GuildCard extends StatelessWidget {
             children: [
               Text(
                 'Active Members',
-                style: TextStyle(
-                  color: AppColors.textNavy,
-                  fontWeight: FontWeight.w700,
+                style: AppTextStyles.cardTitle.copyWith(
                   fontSize: 14.sp,
                 ),
               ),
@@ -177,10 +176,10 @@ class GuildCard extends StatelessWidget {
                   SizedBox(width: 5.w),
                   Text(
                     '$onlineCount online',
-                    style: TextStyle(
+                    style: AppTextStyles.inter(
+                      size: 13,
                       color: AppColors.accentPurple,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13.sp,
+                      weight: FontWeight.w600,
                     ),
                   ),
                 ],

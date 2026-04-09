@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:test_steps/core/constants/app_emojis.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
+import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/social/models/rank_models.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -77,10 +78,9 @@ class SpecialRankingsSection extends StatelessWidget {
               SizedBox(width: 6.w),
               Text(
                 'Special Rankings',
-                style: TextStyle(
-                  color: AppColors.textNavy,
-                  fontWeight: FontWeight.w800,
+                style: AppTextStyles.sectionTitle.copyWith(
                   fontSize: 18.sp,
+                  fontWeight: FontWeight.w800,
                   letterSpacing: -0.3,
                 ),
               ),
@@ -125,7 +125,7 @@ class _RankCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20.r),
         boxShadow: [
           BoxShadow(
-            color: rank.titleColor.withOpacity(0.08),
+            color: rank.titleColor.withValues(alpha: 0.08),
             blurRadius: 12.r,
             offset: Offset(0, 4.h),
           ),
@@ -143,10 +143,10 @@ class _RankCard extends StatelessWidget {
           // Title
           Text(
             rank.title,
-            style: TextStyle(
+            style: AppTextStyles.poppins(
+              size: 13,
               color: rank.titleColor,
-              fontWeight: FontWeight.w700,
-              fontSize: 13.sp,
+              weight: FontWeight.w700,
             ),
           ),
 
@@ -160,10 +160,10 @@ class _RankCard extends StatelessWidget {
               Flexible(
                 child: Text(
                   rank.playerName,
-                  style: TextStyle(
+                  style: AppTextStyles.poppins(
+                    size: 12,
                     color: AppColors.textNavy,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w600,
+                    weight: FontWeight.w600,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -176,10 +176,10 @@ class _RankCard extends StatelessWidget {
           // Stat value
           Text(
             rank.statValue,
-            style: TextStyle(
+            style: AppTextStyles.poppins(
+              size: 13,
               color: rank.statColor,
-              fontWeight: FontWeight.w800,
-              fontSize: 13.sp,
+              weight: FontWeight.w800,
             ),
           ),
 
@@ -188,10 +188,10 @@ class _RankCard extends StatelessWidget {
           // Stat description
           Text(
             rank.statDescription,
-            style: TextStyle(
+            style: AppTextStyles.inter(
+              size: 10.5,
               color: AppColors.textSecondary,
-              fontSize: 10.5.sp,
-              fontWeight: FontWeight.w400,
+              weight: FontWeight.w400,
             ),
           ),
         ],

@@ -6,6 +6,7 @@ class ChatBubble extends StatelessWidget {
   final String timestamp;
   final String? profileImageUrl;
   final Widget? extraContent;
+  final bool showTimestamp;
 
   const ChatBubble({
     super.key,
@@ -14,17 +15,18 @@ class ChatBubble extends StatelessWidget {
     required this.timestamp,
     this.profileImageUrl,
     this.extraContent,
+    this.showTimestamp = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         mainAxisAlignment: isUser
             ? MainAxisAlignment.end
             : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isUser) _buildAssistantAvatar(),
           const SizedBox(width: 8),
@@ -35,23 +37,29 @@ class ChatBubble extends StatelessWidget {
                   : CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  constraints: const BoxConstraints(maxWidth: 260),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
-                    color: isUser
-                        ? const Color(0xFF0F172A)
-                        : const Color(0xFFE6F4F3),
+                    color: isUser ? const Color(0xFF8A77E8) : Colors.white,
                     borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(20),
-                      topRight: const Radius.circular(20),
-                      bottomLeft: Radius.circular(isUser ? 20 : 0),
-                      bottomRight: Radius.circular(isUser ? 0 : 20),
+                      topLeft: const Radius.circular(16),
+                      topRight: const Radius.circular(16),
+                      bottomLeft: Radius.circular(isUser ? 16 : 2),
+                      bottomRight: Radius.circular(isUser ? 2 : 16),
                     ),
                     border: !isUser
-                        ? Border.all(
-                            color: const Color(0xFF0D968B).withOpacity(0.05),
-                            width: 1,
-                          )
+                        ? Border.all(color: const Color(0xFFE2E4EC))
                         : null,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF2A2A2A).withValues(alpha: 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,9 +69,10 @@ class ChatBubble extends StatelessWidget {
                         style: TextStyle(
                           color: isUser
                               ? Colors.white
-                              : const Color(0xFF0F172A),
-                          fontSize: 15,
-                          height: 1.5,
+                              : const Color(0xFF50525A),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
                         ),
                       ),
                       if (extraContent != null) ...[
@@ -73,21 +82,23 @@ class ChatBubble extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Text(
-                    timestamp,
-                    style: const TextStyle(
-                      color: Color(0xFF94A3B8),
-                      fontSize: 10,
+                if (showTimestamp) ...[
+                  const SizedBox(height: 4),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Text(
+                      timestamp,
+                      style: const TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 10,
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          if (isUser) const SizedBox(width: 8),
           if (isUser) _buildUserAvatar(),
         ],
       ),
@@ -99,12 +110,19 @@ class ChatBubble extends StatelessWidget {
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        color: const Color(0xFF0D968B).withOpacity(0.1),
+        color: const Color(0xFF8A77E8),
         shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF8A77E8).withValues(alpha: 0.24),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: const Icon(
-        Icons.smart_toy_rounded,
-        color: Color(0xFF0D968B),
+        Icons.auto_awesome_rounded,
+        color: Colors.white,
         size: 16,
       ),
     );

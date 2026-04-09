@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:test_steps/core/theme/app_colors.dart';
+import 'package:test_steps/core/theme/app_text_styles.dart';
 
 class CardWrapper extends StatelessWidget {
   final String title;
@@ -12,7 +14,7 @@ class CardWrapper extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(20.r),
       ),
       child: Column(
@@ -20,7 +22,10 @@ class CardWrapper extends StatelessWidget {
         children: [
           Text(
             title,
-            style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+            style: AppTextStyles.cardTitle.copyWith(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           SizedBox(height: 12.h),
           child,

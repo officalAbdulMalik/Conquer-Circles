@@ -224,7 +224,7 @@ class _RequirementTile extends StatelessWidget {
               width: 22,
               height: 22,
               decoration: BoxDecoration(
-                color: isMet ? AppColors.green.withOpacity(0.12) : AppColors.textMuted.withOpacity(0.12),
+                color: isMet ? AppColors.green.withValues(alpha: 0.12) : AppColors.textMuted.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -372,7 +372,7 @@ class _ChatTile extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 16,
-              backgroundColor: avatarColor.withOpacity(0.15),
+              backgroundColor: avatarColor.withValues(alpha: 0.15),
               child: Icon(Icons.person_rounded, size: 16, color: avatarColor),
             ),
             const SizedBox(width: 10),

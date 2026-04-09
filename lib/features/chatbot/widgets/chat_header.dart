@@ -14,106 +14,99 @@ class ChatHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double topInset = MediaQuery.of(context).padding.top;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(16, topInset + 8, 16, 18),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.8),
-        border: Border(
-          bottom: BorderSide(
-            color: const Color(0xFF0D968B).withOpacity(0.1),
-            width: 1,
-          ),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF7D74C8), Color(0xFF65D5E8)],
         ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF7D74C8).withValues(alpha: 0.28),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
+          Stack(
             children: [
-              Stack(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.28),
+                  ),
+                  image: avatarUrl != null
+                      ? DecorationImage(
+                          image: NetworkImage(avatarUrl!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: avatarUrl == null
+                    ? const Icon(
+                        Icons.monitor_heart_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      )
+                    : null,
+              ),
+              if (isLive)
+                Positioned(
+                  right: 3,
+                  bottom: 3,
+                  child: Container(
+                    width: 8,
+                    height: 8,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0D968B).withOpacity(0.1),
+                      color: const Color(0xFF4AF47C),
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFF0D968B).withOpacity(0.2),
-                        width: 1,
-                      ),
-                      image: avatarUrl != null
-                          ? DecorationImage(
-                              image: NetworkImage(avatarUrl!),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                    ),
-                    child: avatarUrl == null
-                        ? const Icon(
-                            Icons.smart_toy_rounded,
-                            color: Color(0xFF0D968B),
-                          )
-                        : null,
-                  ),
-                  if (isLive)
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF4AF47C).withValues(alpha: 0.6),
+                          blurRadius: 6,
+                          offset: const Offset(0, 0),
                         ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Color(0xFF0F172A),
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      ],
                     ),
                   ),
-                  Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF0D968B),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      const Text(
-                        'LIVE',
-                        style: TextStyle(
-                          color: Color(0xFF0D968B),
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                ),
             ],
           ),
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Color(0xFF64748B)),
-            onPressed: () {},
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 34 / 2,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  isLive ? 'Online · Ready to help' : 'Offline',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.75),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

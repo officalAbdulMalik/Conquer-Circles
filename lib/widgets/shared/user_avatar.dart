@@ -5,8 +5,9 @@ import 'package:test_steps/core/theme/app_colors.dart';
 class UserAvatar extends StatelessWidget {
   const UserAvatar({
     super.key,
-    required this.avatarEmoji,
+    this.avatarEmoji = '',
     required this.bgColor,
+    this.imageUrl,
     this.size = 40,
     this.isOnline,
     this.badgeEmoji,
@@ -18,6 +19,7 @@ class UserAvatar extends StatelessWidget {
 
   final String avatarEmoji;
   final Color bgColor;
+  final String? imageUrl;
   final double size;
   final bool? isOnline;
   final String? badgeEmoji;
@@ -48,18 +50,21 @@ class UserAvatar extends StatelessWidget {
                   : null,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 8,
                   offset: const Offset(0, 3),
                 ),
               ],
             ),
-            child: Center(
-              child: Text(
-                avatarEmoji,
-                style: TextStyle(fontSize: (size * 0.45).r),
-              ),
-            ),
+            child: imageUrl != null && imageUrl!.isNotEmpty
+                ? ClipOval(
+                    child: Image.network(
+                      imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _emojiFallback(),
+                    ),
+                  )
+                : _emojiFallback(),
           ),
 
           // ── Online Status Indicator ───────────────────────────────────────
@@ -73,7 +78,7 @@ class UserAvatar extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isOnline!
                       ? AppColors.success
-                      : AppColors.textSecondary.withOpacity(0.4),
+                      : AppColors.textSecondary.withValues(alpha: 0.4),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: borderColor,
@@ -94,6 +99,15 @@ class UserAvatar extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _emojiFallback() {
+    return Center(
+      child: Text(
+        avatarEmoji,
+        style: TextStyle(fontSize: (size * 0.45).r),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_spacing.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/widgets/shared/animated_gradient_progress_bar.dart';
@@ -96,7 +97,7 @@ class TopGreetingSection extends StatelessWidget {
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF675FAA), Color(0xFF53E4F3)],
+                  colors: [AppColors.brandPurple, AppColors.brandCyan],
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -212,7 +213,7 @@ class ProfileCardSection extends StatelessWidget {
                         fontFamily: 'Poppins',
                         size: 16,
                         weight: FontWeight.w600,
-                        color: const Color(0xFF2D2D2D),
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     4.verticalSpace,
@@ -224,7 +225,7 @@ class ProfileCardSection extends StatelessWidget {
                             vertical: 2.h,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF5F3FF),
+                            color: AppColors.fillColor,
                             borderRadius: BorderRadius.circular(999.r),
                           ),
                           child: Text(
@@ -233,7 +234,7 @@ class ProfileCardSection extends StatelessWidget {
                               fontFamily: 'Inter',
                               size: 12,
                               weight: FontWeight.w600,
-                              color: const Color(0xFF675FAA),
+                              color: AppColors.brandPurple,
                             ),
                           ),
                         ),
@@ -244,7 +245,7 @@ class ProfileCardSection extends StatelessWidget {
                             fontFamily: 'Inter',
                             size: 12,
                             weight: FontWeight.w600,
-                            color: const Color(0xFF675FAA),
+                            color: AppColors.brandPurple,
                           ),
                         ),
                       ],
@@ -269,7 +270,7 @@ class ProfileCardSection extends StatelessWidget {
                         fontFamily: 'Poppins',
                         size: 16,
                         weight: FontWeight.w700,
-                        color: const Color(0xFF675FAA),
+                        color: AppColors.brandPurple,
                       ),
                     ),
                   ],
@@ -280,7 +281,7 @@ class ProfileCardSection extends StatelessWidget {
             AnimatedGradientProgressBar(
               value: xpProgress,
               height: 12.h,
-              trackColor: const Color(0xFFF0EEFF),
+              trackColor: AppColors.background,
               showShimmer: true,
             ),
             4.verticalSpace,
@@ -394,7 +395,7 @@ class ActivityCardSection extends StatelessWidget {
                           vertical: 4.h,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF5F3FF),
+                          color: AppColors.fillColor,
                           borderRadius: BorderRadius.circular(999.r),
                         ),
                         child: Text(
@@ -403,7 +404,7 @@ class ActivityCardSection extends StatelessWidget {
                             fontFamily: 'Poppins',
                             size: 14,
                             weight: FontWeight.w600,
-                            color: const Color(0xFF675FAA),
+                            color: AppColors.brandPurple,
                           ),
                         ),
                       ),
@@ -459,7 +460,7 @@ class _ActivityProgressPainter extends CustomPainter {
     final radius = (size.width - strokeWidth) / 2;
 
     final backgroundPaint = Paint()
-      ..color = const Color(0xFFF0EEFF)
+      ..color = AppColors.background
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
     canvas.drawCircle(center, radius, backgroundPaint);
@@ -469,7 +470,7 @@ class _ActivityProgressPainter extends CustomPainter {
       ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFF675FAA), Color(0xFF53E4F3)],
+        colors: [AppColors.brandPurple, AppColors.brandCyan],
       ).createShader(rect)
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
@@ -556,7 +557,7 @@ class SmallStatCard extends StatelessWidget {
                 fontFamily: 'Poppins',
                 size: 32,
                 weight: FontWeight.w700,
-                color: const Color(0xFF2D2D2D),
+                color: AppColors.textPrimary,
                 height: 1.2,
               ),
             ),
@@ -616,7 +617,7 @@ class AchievementsCardSection extends StatelessWidget {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5F3FF),
+                  color: AppColors.fillColor,
                   borderRadius: BorderRadius.circular(999.r),
                 ),
                 child: Text(
@@ -675,8 +676,8 @@ class AchievementBadge extends StatelessWidget {
               height: 52.h,
               decoration: BoxDecoration(
                 color: unlocked
-                    ? const Color(0xFFF3F4F6)
-                    : const Color(0xFFE5E7EB),
+                    ? AppColors.divider
+                    : AppColors.tileNeutral,
                 borderRadius: BorderRadius.circular(16.r),
               ),
               child: Center(
@@ -689,7 +690,7 @@ class AchievementBadge extends StatelessWidget {
                 top: -1.h,
                 child: CircleAvatar(
                   radius: 6.r,
-                  backgroundColor: const Color(0xFF22C55E),
+                  backgroundColor: AppColors.success,
                   child: Icon(Icons.check, size: 8.sp, color: Colors.white),
                 ),
               ),
@@ -733,7 +734,7 @@ class SummaryGridSection extends StatelessWidget {
         'Steps Today',
         formatNumber(steps),
         const Color(0xFFDDE8FB),
-        const Color(0xFF53E4F3),
+        AppColors.brandCyan,
       ),
       (
         'Heart Rate',
@@ -810,7 +811,7 @@ class SummaryGridSection extends StatelessWidget {
                         AppTextStyles.heading2.copyWith(
                           color: index == 1
                               ? const Color(0xFFFB2C36)
-                              : const Color(0xFF675FAA),
+                              : AppColors.brandPurple,
                         ),
                   ),
                 ],
@@ -854,8 +855,8 @@ class DailyMissionsSection extends StatelessWidget {
         progressPercent: '${(walkProgress * 100).round()}%',
         xp: '+100 XP',
         progress: walkProgress,
-        iconGradient: const [Color(0xFFF3F4F6), Color(0xFFE5E7EB)],
-        tint: const Color(0xFF675FAA),
+        iconGradient: const [AppColors.divider, AppColors.tileNeutral],
+        tint: AppColors.brandPurple,
       ),
       MissionData(
         emoji: '🔥',
@@ -866,7 +867,7 @@ class DailyMissionsSection extends StatelessWidget {
         xp: '+75 XP',
         progress: caloriesProgress,
         iconGradient: const [Color(0xFFFFF5F5), Color(0xFFFFEBEB)],
-        tint: const Color(0xFF675FAA),
+        tint: AppColors.brandPurple,
       ),
       MissionData(
         emoji: '✅',
@@ -897,7 +898,7 @@ class DailyMissionsSection extends StatelessWidget {
                 fontFamily: 'Inter',
                 size: 12,
                 weight: FontWeight.w600,
-                color: const Color(0xFF675FAA),
+                color: AppColors.brandPurple,
               ),
             ),
           ],
@@ -962,7 +963,7 @@ class DailyMissionsSection extends StatelessWidget {
                               style: AppTextStyles.style(
                                 fontFamily: 'Poppins',
                                 size: 20,
-                                color: const Color(0xFF2D2D2D),
+                                color: AppColors.textPrimary,
                               ),
                             ),
                           ),
@@ -979,13 +980,13 @@ class DailyMissionsSection extends StatelessWidget {
                                       fontFamily: 'Poppins',
                                       size: 14,
                                       weight: FontWeight.w600,
-                                      color: const Color(0xFF2D2D2D),
+                                      color: AppColors.textPrimary,
                                     ).copyWith(
                                       color:
                                           mission.tint ==
                                               const Color(0xFF16A34A)
                                           ? const Color(0xFF16A34A)
-                                          : const Color(0xFF2D2D2D),
+                                          : AppColors.textPrimary,
                                     ),
                               ),
                               Text(
@@ -1007,7 +1008,7 @@ class DailyMissionsSection extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: mission.tint == const Color(0xFF16A34A)
                                 ? const Color(0xFFDCFCE7)
-                                : const Color(0xFFF5F3FF),
+                                : AppColors.fillColor,
                             borderRadius: BorderRadius.circular(20.r),
                             border: Border.all(
                               color: mission.tint == const Color(0xFF16A34A)
@@ -1021,7 +1022,7 @@ class DailyMissionsSection extends StatelessWidget {
                               fontFamily: 'Poppins',
                               size: 12,
                               weight: FontWeight.w700,
-                              color: const Color(0xFF675FAA),
+                              color: AppColors.brandPurple,
                             ).copyWith(color: mission.tint),
                           ),
                         ),
@@ -1057,13 +1058,13 @@ class DailyMissionsSection extends StatelessWidget {
                     AnimatedGradientProgressBar(
                       value: mission.progress,
                       height: 8.h,
-                      trackColor: const Color(0xFFF3F4F6),
+                      trackColor: AppColors.divider,
                       gradient: LinearGradient(
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                         colors: mission.tint == const Color(0xFF16A34A)
-                            ? const [Color(0xFF22C55E), Color(0xFF4ADE80)]
-                            : const [Color(0xFF675FAA), Color(0xFF53E4F3)],
+                            ? const [AppColors.success, Color(0xFF4ADE80)]
+                            : const [AppColors.brandPurple, AppColors.brandCyan],
                       ),
                       showShimmer: true,
                     ),
@@ -1097,7 +1098,7 @@ class LevelUpBannerSection extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
-            colors: [Color(0xFF675FAA), Color(0xFF8B7FEA)],
+            colors: [AppColors.brandPurple, Color(0xFF8B7FEA)],
           ),
           boxShadow: [
             BoxShadow(
@@ -1114,7 +1115,7 @@ class LevelUpBannerSection extends StatelessWidget {
               style: AppTextStyles.style(
                 fontFamily: 'Poppins',
                 size: 20,
-                color: const Color(0xFF2D2D2D),
+                color: AppColors.textPrimary,
               ),
             ),
             10.horizontalSpace,

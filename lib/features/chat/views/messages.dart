@@ -111,7 +111,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     border: Border.all(color: Colors.white, width: 2),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
+                        color: Colors.black.withValues(alpha: 0.08),
                         blurRadius: 6,
                       ),
                     ],
@@ -142,7 +142,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 Text(
                   'StormWalkers',
                   style: TextStyle(
-                    color: Color(0xFF1A1A2E),
+                    color: AppColors.textNavy,
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
                   ),

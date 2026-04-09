@@ -8,7 +8,7 @@ class SettingsHeader extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: Colors.white.withOpacity(0.8),
+      backgroundColor: Colors.white.withValues(alpha: 0.8),
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,

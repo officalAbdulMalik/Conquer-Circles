@@ -47,7 +47,7 @@ class _QuickReactionBarState extends State<QuickReactionBar> {
           Text(
             'Tap to add',
             style: TextStyle(
-              color: AppColors.purple.withOpacity(0.7),
+              color: AppColors.purple.withValues(alpha: 0.7),
               fontSize: 12.5,
               fontWeight: FontWeight.w500,
             ),

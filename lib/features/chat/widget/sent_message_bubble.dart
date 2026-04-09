@@ -68,7 +68,7 @@ class _SentMessageBubbleState extends State<SentMessageBubble>
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.purple.withOpacity(0.25),
+                            color: AppColors.purple.withValues(alpha: 0.25),
                             blurRadius: 8,
                             offset: const Offset(0, 3),
                           ),

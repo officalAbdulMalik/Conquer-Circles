@@ -94,11 +94,58 @@ class AppTextStyles {
     height: 1.5,
   );
 
+  static TextStyle get bodySmall => inter(
+    size: 14,
+    color: AppColors.textSecondary,
+    weight: FontWeight.w500,
+    height: 1.4,
+  );
+
   static TextStyle get caption => poppins(
     size: 12,
     weight: FontWeight.w400,
     color: AppColors.textSecondaryLight,
     height: 1.33,
+  );
+
+  static TextStyle get screenTitle => poppins(
+    size: 22,
+    weight: FontWeight.w700,
+    color: AppColors.textNavy,
+    height: 1.2,
+  );
+
+  static TextStyle get sectionTitle => poppins(
+    size: 18,
+    weight: FontWeight.w700,
+    color: AppColors.textNavy,
+    height: 1.2,
+  );
+
+  static TextStyle get cardTitle => poppins(
+    size: 16,
+    weight: FontWeight.w700,
+    color: AppColors.textNavy,
+    height: 1.2,
+  );
+
+  static TextStyle get cardSubtitle => inter(
+    size: 12,
+    color: AppColors.textSecondary,
+    weight: FontWeight.w500,
+  );
+
+  static TextStyle get chipLabel => inter(
+    size: 11,
+    color: AppColors.textSecondary,
+    weight: FontWeight.w600,
+  );
+
+  static TextStyle get buttonLabel => poppins(
+    size: 14,
+    color: AppColors.surface,
+    weight: FontWeight.w600,
+    height: 1.2,
   );
 
   // Splash styles

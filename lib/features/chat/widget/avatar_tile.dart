@@ -22,13 +22,13 @@ class MemberAvatarTile extends StatelessWidget {
                 color: const Color(0xFFEEEEF8),
                 border: Border.all(
                   color: member.isMe
-                      ? AppColors.purple.withOpacity(0.5)
+                      ? AppColors.purple.withValues(alpha: 0.5)
                       : Colors.white,
                   width: 2,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.07),
+                    color: Colors.black.withValues(alpha: 0.07),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),

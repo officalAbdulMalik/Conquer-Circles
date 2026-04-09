@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:test_steps/core/theme/app_colors.dart';
 
 class AnimatedGradientProgressBar extends StatefulWidget {
   const AnimatedGradientProgressBar({
     super.key,
     required this.value,
     this.height = 8,
-    this.trackColor = const Color(0xFFF0EEFF),
+    this.trackColor = AppColors.background,
     this.gradient = const LinearGradient(
       begin: Alignment.centerLeft,
       end: Alignment.centerRight,
-      colors: [Color(0xFF675FAA), Color(0xFF53E4F3)],
+      colors: [AppColors.brandPurple, AppColors.brandCyan],
     ),
     this.showShimmer = true,
     this.animationDuration = const Duration(milliseconds: 1100),

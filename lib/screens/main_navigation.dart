@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:test_steps/core/theme/app_colors.dart';
+import 'package:test_steps/features/chatbot/view/chat_view.dart';
 import 'package:test_steps/features/profile/view/profile_view.dart';
 import 'package:test_steps/features/steps/view/steps_view.dart';
 import 'package:test_steps/features/map/view/map_view.dart';
 import 'package:test_steps/features/social/view/social_view.dart';
 
 class MainNavigation extends StatefulWidget {
-  const MainNavigation({super.key});
+  const MainNavigation({super.key, this.initialIndex = 0});
+
+  final int initialIndex;
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
@@ -16,13 +20,14 @@ class _MainNavigationState extends State<MainNavigation> {
   static const Color _activeColor = Color(0xFF0D968B);
   static const Color _inactiveColor = Color(0xFF94A3B8);
 
-  int _selectedIndex = 0;
+  late int _selectedIndex;
 
   final List<Widget> _screens = const [
     StepsView(),
     MapView(),
     CirclesScreen(),
     ProfileView(),
+    ChatView(),
   ];
 
   final List<_NavItem> _navItems = const [
@@ -42,7 +47,17 @@ class _MainNavigationState extends State<MainNavigation> {
       label: 'Profile',
       iconAsset: 'assets/icons/dashboard_nav_profile_icon.svg',
     ),
+    _NavItem(
+      label: 'Chat',
+      iconAsset: 'assets/icons/dashboard_nav_profile_icon.svg',
+    ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex.clamp(0, _screens.length - 1).toInt();
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -57,7 +72,7 @@ class _MainNavigationState extends State<MainNavigation> {
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
+          border: Border(top: BorderSide(color: AppColors.tileNeutral)),
           boxShadow: [
             BoxShadow(
               color: Color(0x140F172A),

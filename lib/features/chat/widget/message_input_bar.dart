@@ -47,7 +47,7 @@ class _MessageInputBarState extends State<MessageInputBar> {
               ),
               child: TextField(
                 controller: _controller,
-                style: const TextStyle(fontSize: 14.5, color: Color(0xFF1A1A2E)),
+                style: const TextStyle(fontSize: 14.5, color: AppColors.textNavy),
                 decoration: const InputDecoration(
                   hintText: 'Message StormWalkers...',
                   hintStyle: TextStyle(color: Color(0xFFBBBBCC), fontSize: 14),

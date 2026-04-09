@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:test_steps/core/theme/app_colors.dart';
 
 class SplashDecorativeElements extends StatelessWidget {
   const SplashDecorativeElements({super.key});
@@ -16,7 +17,7 @@ class SplashDecorativeElements extends StatelessWidget {
             width: 6,
             height: 6,
             decoration: BoxDecoration(
-              color: const Color(0xFF675FAA).withValues(alpha: 0.53),
+              color: AppColors.brandPurple.withValues(alpha: 0.53),
               shape: BoxShape.circle,
             ),
           ),
@@ -30,7 +31,7 @@ class SplashDecorativeElements extends StatelessWidget {
             width: 9,
             height: 9,
             decoration: BoxDecoration(
-              color: const Color(0xFF53E4F3).withValues(alpha: 0.6),
+              color: AppColors.brandCyan.withValues(alpha: 0.6),
               shape: BoxShape.circle,
             ),
           ),
@@ -44,7 +45,7 @@ class SplashDecorativeElements extends StatelessWidget {
             width: 12,
             height: 12,
             decoration: BoxDecoration(
-              color: const Color(0xFF675FAA).withValues(alpha: 0.55),
+              color: AppColors.brandPurple.withValues(alpha: 0.55),
               shape: BoxShape.circle,
             ),
           ),
@@ -58,7 +59,7 @@ class SplashDecorativeElements extends StatelessWidget {
             width: 15,
             height: 15,
             decoration: BoxDecoration(
-              color: const Color(0xFF53E4F3).withValues(alpha: 0.49),
+              color: AppColors.brandCyan.withValues(alpha: 0.49),
               shape: BoxShape.circle,
             ),
           ),
@@ -72,7 +73,7 @@ class SplashDecorativeElements extends StatelessWidget {
             width: 18,
             height: 18,
             decoration: BoxDecoration(
-              color: const Color(0xFF675FAA).withValues(alpha: 0.44),
+              color: AppColors.brandPurple.withValues(alpha: 0.44),
               shape: BoxShape.circle,
             ),
           ),
@@ -86,7 +87,7 @@ class SplashDecorativeElements extends StatelessWidget {
             width: 21,
             height: 21,
             decoration: BoxDecoration(
-              color: const Color(0xFF53E4F3).withValues(alpha: 0.39),
+              color: AppColors.brandCyan.withValues(alpha: 0.39),
               shape: BoxShape.circle,
             ),
           ),
@@ -100,7 +101,7 @@ class SplashDecorativeElements extends StatelessWidget {
             width: 24,
             height: 24,
             decoration: BoxDecoration(
-              color: const Color(0xFF675FAA).withValues(alpha: 0.35),
+              color: AppColors.brandPurple.withValues(alpha: 0.35),
               shape: BoxShape.circle,
             ),
           ),
@@ -114,7 +115,7 @@ class SplashDecorativeElements extends StatelessWidget {
             width: 27,
             height: 27,
             decoration: BoxDecoration(
-              color: const Color(0xFF53E4F3).withValues(alpha: 0.31),
+              color: AppColors.brandCyan.withValues(alpha: 0.31),
               shape: BoxShape.circle,
             ),
           ),
