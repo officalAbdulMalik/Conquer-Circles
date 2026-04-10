@@ -36,11 +36,7 @@ class SeasonRecapSummaryCard extends StatelessWidget {
               6.horizontalSpace,
               Text(
                 'Season Summary',
-                style: AppTextStyles.poppins(
-                  size: 13,
-                  color: AppColors.textNavy,
-                  weight: FontWeight.w700,
-                ),
+                style: AppTextStyles.heading3,
               ),
               const Spacer(),
               Container(
@@ -51,11 +47,11 @@ class SeasonRecapSummaryCard extends StatelessWidget {
                 ),
                 child: Text(
                   '$rewardsUnlocked rewards',
-                  style: AppTextStyles.inter(
-                    size: 9,
-                    color: AppColors.brandPurple,
-                    weight: FontWeight.w700,
-                  ),
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 10.sp,
+                  )
                 ),
               ),
             ],
@@ -75,16 +71,16 @@ class SeasonRecapSummaryCard extends StatelessWidget {
                     children: [
                       Text(
                         territories.toString(),
-                        style: AppTextStyles.poppins(
-                          size: 18,
-                          color: AppColors.textNavy,
-                          weight: FontWeight.w700,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontSize: 18.sp,
+                          color: AppColors.brandPurple,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       Text(
                         'Territories',
-                        style: AppTextStyles.inter(
-                          size: 9,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          fontSize: 9.sp,
                           color: AppColors.textSecondary,
                         ),
                       ),
@@ -113,8 +109,8 @@ class SeasonRecapSummaryCard extends StatelessWidget {
                       ),
                       Text(
                         'Season Rank',
-                        style: AppTextStyles.inter(
-                          size: 9,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          fontSize: 9.sp,
                           color: AppColors.textSecondary,
                         ),
                       ),
@@ -143,8 +139,8 @@ class SeasonRecapSummaryCard extends StatelessWidget {
                       ),
                       Text(
                         'Score',
-                        style: AppTextStyles.inter(
-                          size: 9,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          fontSize: 9.sp,
                           color: AppColors.textSecondary,
                         ),
                       ),
