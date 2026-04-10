@@ -225,6 +225,20 @@ class SupabaseService {
   // Walk Sessions
   // ---------------------------------------------------------------------------
 
+  /// Fetches unified dashboard data from the Edge Function.
+  Future<Map<String, dynamic>> getStepsDashboardData() async {
+    try {
+      final response = await _client.functions.invoke('get-steps-dashboard');
+      if (response.status != 200) {
+        throw Exception('Function returned status ${response.status}: ${response.data}');
+      }
+      return Map<String, dynamic>.from(response.data as Map);
+    } catch (e) {
+      _log('getStepsDashboardData', e);
+      rethrow;
+    }
+  }
+
   /// Creates a new walking session row. Returns the session UUID.
   /// Automatically cancels any previously stuck active session first.
   /// Call this when the user presses "Start Walk".

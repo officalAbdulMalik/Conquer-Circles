@@ -6,6 +6,12 @@ class StepState {
   final int weeklyStreak;
   final int monthlyStreak;
   final int attackEnergy; // NEW — derived from steps via RPC
+  final int level;
+  final int xp;
+  final int xpGoal;
+  final int stepGoal;
+  final int calories;
+  final double distanceKm;
   final bool isLoading;
   final bool permissionsGranted;
   final String? error;
@@ -16,6 +22,12 @@ class StepState {
     required this.weeklyStreak,
     required this.monthlyStreak,
     required this.attackEnergy,
+    required this.level,
+    required this.xp,
+    required this.xpGoal,
+    required this.stepGoal,
+    required this.calories,
+    required this.distanceKm,
     required this.isLoading,
     required this.permissionsGranted,
     this.error,
@@ -27,6 +39,12 @@ class StepState {
     weeklyStreak: 0,
     monthlyStreak: 0,
     attackEnergy: 0,
+    level: 1,
+    xp: 0,
+    xpGoal: 1000,
+    stepGoal: 10000,
+    calories: 0,
+    distanceKm: 0.0,
     isLoading: false,
     permissionsGranted: false,
   );
@@ -37,6 +55,12 @@ class StepState {
     int? weeklyStreak,
     int? monthlyStreak,
     int? attackEnergy,
+    int? level,
+    int? xp,
+    int? xpGoal,
+    int? stepGoal,
+    int? calories,
+    double? distanceKm,
     bool? isLoading,
     bool? permissionsGranted,
     String? error,
@@ -46,6 +70,12 @@ class StepState {
     weeklyStreak: weeklyStreak ?? this.weeklyStreak,
     monthlyStreak: monthlyStreak ?? this.monthlyStreak,
     attackEnergy: attackEnergy ?? this.attackEnergy,
+    level: level ?? this.level,
+    xp: xp ?? this.xp,
+    xpGoal: xpGoal ?? this.xpGoal,
+    stepGoal: stepGoal ?? this.stepGoal,
+    calories: calories ?? this.calories,
+    distanceKm: distanceKm ?? this.distanceKm,
     isLoading: isLoading ?? this.isLoading,
     permissionsGranted: permissionsGranted ?? this.permissionsGranted,
     error: error,

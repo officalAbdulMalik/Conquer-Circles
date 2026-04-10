@@ -22,6 +22,9 @@ class _StepsViewState extends ConsumerState<StepsView>
   @override
   void initState() {
     super.initState();
+    Future.microtask(() {
+      ref.read(stepProvider.notifier).loadWeeklySteps();
+    });
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2800),
@@ -46,18 +49,20 @@ class _StepsViewState extends ConsumerState<StepsView>
         SupabaseService().currentUser?.email?.split('@')[0] ?? 'FitWarrior_92';
 
     final int steps = stepState.steps;
-    const int goal = 10000;
-    final double stepProgress = (steps / goal).clamp(0, 1);
-    final int xpCurrent = (steps * 0.287).round().clamp(0, 3000);
-    const int xpGoal = 3000;
-    final double xpProgress = (xpCurrent / xpGoal).clamp(0, 1);
-    final int calories = (steps * 0.04).round();
-    final double distanceKm = steps * 0.00073;
-    final int streak = stepState.weeklyStreak;
-    final int energy = ((stepState.attackEnergy / 400) * 100).round().clamp(
+    final int goal = stepState.stepGoal;
+    final double stepProgress = (steps / (goal > 0 ? goal : 10000)).clamp(0, 1);
+
+    final int xpCurrent = stepState.xp;
+    final int xpGoal = stepState.xpGoal;
+    final double xpProgress = (xpCurrent / (xpGoal > 0 ? xpGoal : 3000)).clamp(
       0,
-      100,
+      1,
     );
+
+    final int calories = stepState.calories;
+    final double distanceKm = stepState.distanceKm;
+    final int streak = stepState.weeklyStreak;
+    final int energy = stepState.attackEnergy; // Directly use energy from state
     final pulseValue = _pulseController.value;
     return Scaffold(
       body: AnimatedBuilder(

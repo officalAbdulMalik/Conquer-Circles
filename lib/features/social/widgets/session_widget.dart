@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:test_steps/core/constants/app_emojis.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
-import 'package:test_steps/core/theme/app_text_styles.dart';
 
 class SeasonCountdownCard extends StatefulWidget {
   const SeasonCountdownCard({
@@ -105,16 +104,17 @@ class _SeasonCountdownCardState extends State<SeasonCountdownCard> {
                 SizedBox(width: 6.w),
                 Text(
                   '${widget.seasonLabel}  ·  Ends in',
-                  style: AppTextStyles.bodyMedium.copyWith(
+                  style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.8),
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w500,
+                    letterSpacing: 0.2,
                   ),
                 ),
               ],
             ),
 
-            12.verticalSpace,
+            SizedBox(height: 12.h),
 
             // ── Countdown Units ───────────────────────────────────────────────
             Row(
@@ -129,7 +129,7 @@ class _SeasonCountdownCardState extends State<SeasonCountdownCard> {
               ],
             ),
 
-            16.verticalSpace,
+            SizedBox(height: 16.h),
 
             // ── Progress & Rank ───────────────────────────────────────────────
             Row(
@@ -141,20 +141,20 @@ class _SeasonCountdownCardState extends State<SeasonCountdownCard> {
                     children: [
                       Text(
                         widget.progressLabel,
-                        style: AppTextStyles.bodyMedium.copyWith(
+                        style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.8),
                           fontSize: 12.sp,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      7.verticalSpace,
+                      SizedBox(height: 7.h),
                       _GradientProgressBar(value: widget.progressValue),
-                      5.verticalSpace,
+                      SizedBox(height: 5.h),
                       Align(
                         alignment: Alignment.centerRight,
                         child: Text(
                           '${(widget.progressValue * 100).round()}%',
-                          style: AppTextStyles.bodyMedium.copyWith(
+                          style: TextStyle(
                             color: Colors.white,
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w600,
@@ -164,7 +164,7 @@ class _SeasonCountdownCardState extends State<SeasonCountdownCard> {
                     ],
                   ),
                 ),
-                14.horizontalSpace,
+                SizedBox(width: 14.w),
                 _RankBadge(label: widget.rankLabel),
               ],
             ),
@@ -198,14 +198,19 @@ class _UnitBox extends StatelessWidget {
         children: [
           Text(
             value.toString().padLeft(2, '0'),
-            style: AppTextStyles.heading3.copyWith(color: Colors.white),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 22.sp,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1,
+            ),
           ),
-          2.verticalSpace,
+          SizedBox(height: 2.h),
           Text(
             label,
-            style: AppTextStyles.bodyMedium.copyWith(
-              fontSize: 10.5.sp,
+            style: TextStyle(
               color: Colors.white.withValues(alpha: 0.8),
+              fontSize: 10.5.sp,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -268,7 +273,7 @@ class _RankBadge extends StatelessWidget {
           SizedBox(width: 6.w),
           Text(
             label,
-            style: AppTextStyles.bodyMedium.copyWith(
+            style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w700,
               fontSize: 13.sp,

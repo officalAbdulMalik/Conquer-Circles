@@ -141,68 +141,8 @@ class _MapViewState extends ConsumerState<MapView> {
   @override
   void initState() {
     super.initState();
-    initLoad();
   }
 
-  initLoad() async {
-    ref.listen<MapState>(mapProvider, (previous, next) {
-      final result = next.lastAttackResult;
-      if (result == null) return;
-
-      if (result == previous?.lastAttackResult) return;
-
-      final action = result['action'] as String?;
-      if (action == null) return;
-
-      final variant = AttackToastController.variantFromAction(action);
-      if (variant == null && action != 'not_friends') return;
-
-      if (result['attacker_energy_left'] != null) {
-        ref
-            .read(stepProvider.notifier)
-            .updateEnergy(result['attacker_energy_left'] as int);
-      }
-
-      switch (action) {
-        case 'captured':
-          final defender = result['defender_id'] ?? 'rival';
-          _toastController.show(variant!, 'You captured $defender\'s tile!');
-          break;
-        case 'damaged':
-          final energyAfter = result['tile_energy_after'] ?? 0;
-          _toastController.show(
-            variant!,
-            'Tile damaged — $energyAfter energy left',
-          );
-          break;
-        case 'protected':
-          final hours = result['hours_remaining'] ?? 0;
-          final reason = result['reason'] == 'tile'
-              ? 'tile shield'
-              : 'walk shield';
-          _toastController.show(
-            variant!,
-            'Protected — ${hours}h remaining ($reason)',
-          );
-          break;
-        case 'cooldown':
-          final mins = result['minutes_left'] ?? 0;
-          _toastController.show(variant!, 'Cooldown — $mins min remaining');
-          break;
-        case 'no_energy':
-          final needed = result['energy_needed'] ?? 0;
-          _toastController.show(
-            variant!,
-            'No energy — walk ${needed * 100} more steps',
-          );
-          break;
-        case 'claimed':
-          _toastController.show(variant!, 'Tile claimed!');
-          _triggerGreenFlash();
-          break;
-      }
-    });
-  }
 
   void _triggerGreenFlash() {
     _showGreenFlash.value = true;
@@ -289,6 +229,66 @@ class _MapViewState extends ConsumerState<MapView> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<MapState>(mapProvider, (previous, next) {
+      final result = next.lastAttackResult;
+      if (result == null) return;
+
+      if (result == previous?.lastAttackResult) return;
+
+      final action = result['action'] as String?;
+      if (action == null) return;
+
+      final variant = AttackToastController.variantFromAction(action);
+      if (variant == null && action != 'not_friends') return;
+
+      if (result['attacker_energy_left'] != null) {
+        Future.microtask(() {
+          ref
+              .read(stepProvider.notifier)
+              .updateEnergy(result['attacker_energy_left'] as int);
+        });
+      }
+
+      switch (action) {
+        case 'captured':
+          final defender = result['defender_id'] ?? 'rival';
+          _toastController.show(variant!, 'You captured $defender\'s tile!');
+          break;
+        case 'damaged':
+          final energyAfter = result['tile_energy_after'] ?? 0;
+          _toastController.show(
+            variant!,
+            'Tile damaged — $energyAfter energy left',
+          );
+          break;
+        case 'protected':
+          final hours = result['hours_remaining'] ?? 0;
+          final reason = result['reason'] == 'tile'
+              ? 'tile shield'
+              : 'walk shield';
+          _toastController.show(
+            variant!,
+            'Protected — ${hours}h remaining ($reason)',
+          );
+          break;
+        case 'cooldown':
+          final mins = result['minutes_left'] ?? 0;
+          _toastController.show(variant!, 'Cooldown — $mins min remaining');
+          break;
+        case 'no_energy':
+          final needed = result['energy_needed'] ?? 0;
+          _toastController.show(
+            variant!,
+            'No energy — walk ${needed * 100} more steps',
+          );
+          break;
+        case 'claimed':
+          _toastController.show(variant!, 'Tile claimed!');
+          _triggerGreenFlash();
+          break;
+      }
+    });
+
     final mapState = ref.watch(mapProvider);
     final mapNotifier = ref.read(mapProvider.notifier);
     final stepState = ref.watch(stepProvider);

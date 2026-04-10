@@ -1,0 +1,83 @@
+Analyzing Conquer-Circles...                                    
+
+warning • Unused import: 'package:test_steps/core/theme/app_colors.dart' • lib/features/chat/widget/quick_reaction_bar.dart:3:8 • unused_import
+   info • 'scale' is deprecated and shouldn't be used. Use scaleByVector3, scaleByVector4, or scaleByDouble instead • lib/features/chat/widget/quick_reaction_bar.dart:40:48 • deprecated_member_use
+   info • Don't invoke 'print' in production code • lib/features/map/utils/h3_utils.dart:29:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/features/map/utils/h3_utils.dart:56:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/features/map/utils/h3_utils.dart:122:7 • avoid_print
+warning • The value of the field '_mapStyle' isn't used • lib/features/map/view/map_view.dart:50:23 • unused_field
+warning • The value of the local variable 'mapNotifier' isn't used • lib/features/map/view/map_view.dart:293:11 • unused_local_variable
+warning • The value of the local variable 'hexPolygons' isn't used • lib/features/map/view/map_view.dart:296:11 • unused_local_variable
+   info • Don't invoke 'print' in production code • lib/features/map/view/map_view.dart:302:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/features/map/view/map_view.dart:303:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/features/map/view/map_view.dart:304:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/features/map/view/map_view.dart:629:5 • avoid_print
+warning • The declaration '_buildPolylines' isn't referenced • lib/features/map/view/map_view.dart:688:17 • unused_element
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/map/view/map_view.dart:707:29 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/map/view/map_view.dart:711:33 • deprecated_member_use
+   info • Angle brackets will be interpreted as HTML • lib/features/map/widgets/grid_tile_overlay.dart:9:10 • unintended_html_in_doc_comment
+   info • Unnecessary braces in a string interpolation • lib/features/map/widgets/grid_tile_overlay.dart:58:44 • unnecessary_brace_in_string_interps
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/map/widgets/hexa_tile_painter.dart:56:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/map/widgets/hexa_tile_painter.dart:60:35 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/map/widgets/hexa_tile_painter.dart:73:31 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/map/widgets/location_indicator.dart:43:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/map/widgets/location_indicator.dart:52:48 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/map/widgets/location_indicator.dart:64:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/map/widgets/location_indicator.dart:100:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/map/widgets/map_header.dart:16:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/map/widgets/map_stats_overlay.dart:26:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/map/widgets/territory_label.dart:30:39 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/map/widgets/territory_label.dart:54:37 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps • lib/features/map/widgets/tile_handler.dart:136:11 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/features/map/widgets/tile_handler.dart:148:33 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/features/map/widgets/tile_handler.dart:152:40 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/features/map/widgets/tile_handler.dart:158:28 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/profile/view/profile_view.dart:68:55 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/profile/view/profile_view.dart:125:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/profile/view/profile_view.dart:128:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/profile/view/profile_view.dart:349:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/profile/view/profile_view.dart:409:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/profile/view/profile_view.dart:470:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/profile/view/profile_view.dart:572:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/profile/view/profile_view.dart:575:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/profile/view/profile_view.dart:717:33 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/profile/widgets/profile_menu_tile.dart:76:50 • deprecated_member_use
+warning • Unused import: 'package:test_steps/features/social/widgets/session_progress_bar.dart' • lib/features/seasons/view/season_recap_view.dart:12:8 • unused_import
+warning • Unused import: '../widgets/theme_selector.dart' • lib/features/settings/view/settings_view.dart:6:8 • unused_import
+   info • The private field _selectedTheme could be 'final' • lib/features/settings/view/settings_view.dart:16:10 • prefer_final_fields
+warning • The value of the field '_selectedTheme' isn't used • lib/features/settings/view/settings_view.dart:16:10 • unused_field
+   info • The private field _units could be 'final' • lib/features/settings/view/settings_view.dart:19:10 • prefer_final_fields
+warning • The value of the field '_units' isn't used • lib/features/settings/view/settings_view.dart:19:10 • unused_field
+   info • 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre • lib/features/settings/view/settings_view.dart:95:7 • deprecated_member_use
+   info • Don't use 'BuildContext's across async gaps • lib/features/settings/view/settings_view.dart:109:30 • use_build_context_synchronously
+warning • Unused import: 'package:test_steps/features/social/widgets/session_progress_bar.dart' • lib/features/social/view/circle_details.dart:6:8 • unused_import
+   info • The private field _selectedTab could be 'final' • lib/features/social/view/circle_details.dart:20:7 • prefer_final_fields
+warning • The value of the field '_tabs' isn't used • lib/features/social/view/circle_details.dart:21:22 • unused_field
+warning • The declaration '_buildTabContent' isn't referenced • lib/features/social/view/circle_details.dart:293:10 • unused_element
+warning • Unused import: 'package:firebase_core/firebase_core.dart' • lib/main.dart:5:8 • unused_import
+warning • Unused import: 'services/notification_service.dart' • lib/main.dart:9:8 • unused_import
+   info • Don't invoke 'print' in production code • lib/models/walk_models.dart:156:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/providers/circle_messages_provider.dart:35:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/providers/circle_messages_provider.dart:56:13 • avoid_print
+   info • Don't invoke 'print' in production code • lib/providers/circle_messages_provider.dart:60:13 • avoid_print
+   info • Unnecessary braces in a string interpolation • lib/providers/circle_messages_provider.dart:60:33 • unnecessary_brace_in_string_interps
+   info • Don't invoke 'print' in production code • lib/providers/circle_messages_provider.dart:73:11 • avoid_print
+   info • Don't invoke 'print' in production code • lib/providers/circle_messages_provider.dart:74:30 • avoid_print
+   info • 'desiredAccuracy' is deprecated and shouldn't be used. use settings parameter with AndroidSettings, AppleSettings, WebSettings, or LocationSettings • lib/providers/map_provider.dart:78:9 • deprecated_member_use
+   info • 'timeLimit' is deprecated and shouldn't be used. use settings parameter with AndroidSettings, AppleSettings, WebSettings, or LocationSettings • lib/providers/map_provider.dart:79:9 • deprecated_member_use
+   info • Don't invoke 'print' in production code • lib/providers/map_provider.dart:87:7 • avoid_print
+   info • Statements in an if should be enclosed in a block • lib/providers/map_provider.dart:124:11 • curly_braces_in_flow_control_structures
+   info • Don't invoke 'print' in production code • lib/providers/map_provider.dart:176:7 • avoid_print
+   info • 'timeLimit' is deprecated and shouldn't be used. use settings parameter with AndroidSettings, AppleSettings, WebSettings, or LocationSettings • lib/providers/map_provider.dart:188:9 • deprecated_member_use
+   info • Don't invoke 'print' in production code • lib/providers/map_provider.dart:486:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/providers/map_provider.dart:524:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/providers/subscription_provider.dart:78:5 • avoid_print
+warning • Unused import: 'package:test_steps/core/theme/app_spacing.dart' • lib/screens/main_navigation.dart:5:8 • unused_import
+   info • Don't invoke 'print' in production code • lib/services/badge_service.dart:23:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/badge_service.dart:57:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/badge_service.dart:74:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/game_service.dart:335:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/notification_service.dart:799:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/notification_service.dart:808:7 • avoid_print
+   info • 'purchasePackage' is deprecated and shouldn't be used. Use purchase(PurchaseParams) • lib/services/subscription_service.dart:25:38 • deprecated_member_use
+

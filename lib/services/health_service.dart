@@ -6,9 +6,8 @@ import 'package:health/health.dart';
 import 'package:pedometer/pedometer.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:riverpod/legacy.dart';
- import 'package:test_steps/services/supabase_service.dart';
+import 'package:test_steps/services/supabase_service.dart';
 import 'package:test_steps/services/badge_service.dart';
-import 'package:test_steps/services/notification_service.dart';
 import 'package:test_steps/models/steps_model.dart';
 // Removed unused import: dart:io
 
@@ -20,8 +19,9 @@ class StepNotifier extends StateNotifier<StepState> {
   final SupabaseService _supabaseService;
   final BadgeService _badgeService;
 
-  StepNotifier(this._supabaseService, this._badgeService) : super(StepState.initial()) {
-    initialize();
+  StepNotifier(this._supabaseService, this._badgeService)
+    : super(StepState.initial()) {
+    // initialize();  
   }
 
   final Health _health = Health();
@@ -34,7 +34,10 @@ class StepNotifier extends StateNotifier<StepState> {
   int? _pedometerBaseline;
 
   Future<void> initialize() async {
+    await Future.microtask(() {});
     state = state.copyWith(isLoading: true, error: null);
+
+    print('initialize');
 
     // 1. Request activity recognition permission (for pedometer)
     final activityGranted = await _requestActivityPermission();
@@ -82,9 +85,6 @@ class StepNotifier extends StateNotifier<StepState> {
 
     // Permissions granted
     state = state.copyWith(permissionsGranted: true);
-
-    // 5. Load steps for the last 7 days (Source of Truth)
-    await _loadWeeklySteps();
 
     // 6. Start pedometer listener
     _startPedometer();
@@ -150,104 +150,53 @@ class StepNotifier extends StateNotifier<StepState> {
     }
   }
 
-  // --- Load steps for the last 7 days ---
-  Future<void> _loadWeeklySteps() async {
+  // --- Load dashboard data (Profile, Steps, Badges) from Supabase ---
+  Future<void> loadWeeklySteps() async {
+    print('loadWeeklySteps');
+
     try {
-      final now = DateTime.now();
-      final midnight = DateTime(now.year, now.month, now.day);
-      final sevenDaysAgo = midnight.subtract(const Duration(days: 6));
-      final types = [HealthDataType.STEPS];
+      await Future.microtask(() {});
+      state = state.copyWith(isLoading: true);
 
-      // 1. Fetch from Supabase
-      final supabaseData = await _supabaseService.getWeeklyStepsFromSupabase();
-      developer.log('Fetched ${supabaseData.length} records from Supabase');
+      // 1. Fetch unified dashboard data from Edge Function
+      final dashboardData = await _supabaseService.getStepsDashboardData();
+      developer.log('Fetched dashboard data from Supabase');
 
-      // 2. Fetch from Health Store
-      final healthData = await _health.getHealthDataFromTypes(
-        types: types,
-        startTime: sevenDaysAgo,
-        endTime: now,
-      );
+      final profile = dashboardData['profile'] as Map<String, dynamic>;
+      final today = dashboardData['today'] as Map<String, dynamic>;
+      final weeklyRaw = dashboardData['weekly_steps'] as List;
 
-      final Map<DateTime, int> mergedWeeklyData = {};
-      // Initialize with zeros for the last 7 days
-      for (int i = 0; i < 7; i++) {
-        final date = midnight.subtract(Duration(days: i));
-        mergedWeeklyData[DateTime(date.year, date.month, date.day)] = 0;
+      // 2. Parse weekly steps chart data
+      final Map<DateTime, int> weeklySteps = {};
+      for (var row in weeklyRaw) {
+        final date = DateTime.parse(row['date'] as String);
+        final normalizedDate = DateTime(date.year, date.month, date.day);
+        weeklySteps[normalizedDate] = row['steps'] as int;
       }
 
-      // 3. Process Supabase data
-      supabaseData.forEach((date, steps) {
-        if (mergedWeeklyData.containsKey(date)) {
-          mergedWeeklyData[date] = steps;
-        }
-      });
-
-      // 4. Merge with Health data (take the maximum value for each day)
-      for (var point in healthData) {
-        if (point.value is NumericHealthValue) {
-          final date = DateTime(
-            point.dateFrom.year,
-            point.dateFrom.month,
-            point.dateFrom.day,
-          );
-          if (mergedWeeklyData.containsKey(date)) {
-            // Some health providers return hourly data, so we sum them for the day
-          }
-        }
-      }
-
-      // Re-implementing the summation logic for health data
-      final Map<DateTime, int> localHealthSum = {};
-      for (var point in healthData) {
-        if (point.value is NumericHealthValue) {
-          final date = DateTime(
-            point.dateFrom.year,
-            point.dateFrom.month,
-            point.dateFrom.day,
-          );
-          localHealthSum[date] =
-              (localHealthSum[date] ?? 0) +
-              (point.value as NumericHealthValue).numericValue.toInt();
-        }
-      }
-
-      // Now merge: take the max of Supabase vs Local Health
-      localHealthSum.forEach((date, steps) {
-        if (mergedWeeklyData.containsKey(date)) {
-          if (steps > (mergedWeeklyData[date] ?? 0)) {
-            mergedWeeklyData[date] = steps;
-          }
-        }
-      });
-
-      int todaySteps = mergedWeeklyData[midnight] ?? 0;
-
-      // Calculate streaks
-      final weeklyStreak = _calculateStreak(mergedWeeklyData, 5000);
-
-       state = state.copyWith(
-        steps: todaySteps,
-        weeklySteps: mergedWeeklyData,
-        weeklyStreak: weeklyStreak,
-        monthlyStreak: weeklyStreak > 0 ? weeklyStreak : 0,
+      // 3. Update state with backend-authoritative values
+      state = state.copyWith(
+        steps: today['steps'] as int? ?? 0,
+        calories: today['calories'] as int? ?? 0,
+        distanceKm: (today['distance_km'] as num?)?.toDouble() ?? 0.0,
+        level: profile['level'] as int? ?? 1,
+        xp: profile['xp'] as int? ?? 0,
+        xpGoal: profile['xp_goal'] as int? ?? 1000,
+        stepGoal: profile['step_goal'] as int? ?? 10000,
+        weeklyStreak: profile['streak'] as int? ?? 0,
+        attackEnergy: profile['attack_energy'] as int? ?? 0,
+        weeklySteps: weeklySteps,
+        isLoading: false,
       );
 
-      // Check for streak reminder
-      await NotificationService.checkStreakReminder(
-        currentStreak: weeklyStreak,
-        todaySteps: todaySteps,
-        goalSteps: 5000,
-      );
-
-      _lastSyncedSteps = todaySteps;
+      _lastSyncedSteps = state.steps;
       _stepsSinceLastSync = 0;
-
-      // Ensure Supabase has this baseline value (it will upsert the best value we found)
-      await _syncToSupabase(force: true);
     } catch (e) {
-      developer.log('Failed to load weekly steps: $e');
-      state = state.copyWith(error: 'Failed to load weekly steps: $e');
+      developer.log('Failed to load dashboard data: $e');
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Failed to load dashboard data: $e',
+      );
     }
   }
 
