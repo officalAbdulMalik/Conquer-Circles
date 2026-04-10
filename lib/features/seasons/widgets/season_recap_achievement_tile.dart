@@ -42,20 +42,20 @@ class SeasonRecapAchievementTile extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: AppTextStyles.poppins(
-                    size: 11,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    fontSize: 14.sp,
                     color: AppColors.textNavy,
-                    weight: FontWeight.w600,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 2.verticalSpace,
                 Text(
                   subtitle,
-                  style: AppTextStyles.inter(
-                    size: 9,
-                    color: AppColors.textSecondary,
-                    weight: FontWeight.w500,
-                  ),
+                    style: AppTextStyles.bodySmall.copyWith(
+                      fontSize: 11.sp,
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
                 ),
               ],
             ),

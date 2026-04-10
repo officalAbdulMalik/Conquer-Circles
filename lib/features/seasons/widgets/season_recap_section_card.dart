@@ -32,11 +32,7 @@ class SeasonRecapSectionCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: AppTextStyles.poppins(
-                  size: 13,
-                  color: AppColors.textNavy,
-                  weight: FontWeight.w700,
-                ),
+                style: AppTextStyles.heading3.copyWith(),
               ),
               const Spacer(),
               if (trailing != null) trailing!,
