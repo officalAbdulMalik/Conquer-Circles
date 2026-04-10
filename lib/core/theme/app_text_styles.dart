@@ -43,7 +43,7 @@ class AppTextStyles {
 
   static TextStyle inter({
     required double size,
-     Color? color,
+    Color? color,
     FontWeight weight = FontWeight.w400,
     double? height,
     double letterSpacing = 0,
@@ -60,7 +60,7 @@ class AppTextStyles {
 
   // Core styles
   static TextStyle get heading1 => poppins(
-    size: 32,
+    size: 28,
     weight: FontWeight.w700,
     color: AppColors.textPrimaryLight,
     height: 1.25,
@@ -80,7 +80,7 @@ class AppTextStyles {
     height: 1.4,
   );
 
-   static TextStyle get bodyLarge => poppins(
+  static TextStyle get bodyLarge => poppins(
     size: 18,
     weight: FontWeight.w500,
     color: AppColors.textPrimaryLight,
@@ -96,7 +96,7 @@ class AppTextStyles {
 
   static TextStyle get bodySmall => inter(
     size: 14,
-    color: AppColors.textSecondary,
+    color: AppColors.textLight,
     weight: FontWeight.w500,
     height: 1.4,
   );
@@ -129,17 +129,11 @@ class AppTextStyles {
     height: 1.2,
   );
 
-  static TextStyle get cardSubtitle => inter(
-    size: 12,
-    color: AppColors.textSecondary,
-    weight: FontWeight.w500,
-  );
+  static TextStyle get cardSubtitle =>
+      inter(size: 12, color: AppColors.textSecondary, weight: FontWeight.w500);
 
-  static TextStyle get chipLabel => inter(
-    size: 11,
-    color: AppColors.textSecondary,
-    weight: FontWeight.w600,
-  );
+  static TextStyle get chipLabel =>
+      inter(size: 11, color: AppColors.textSecondary, weight: FontWeight.w600);
 
   static TextStyle get buttonLabel => poppins(
     size: 14,

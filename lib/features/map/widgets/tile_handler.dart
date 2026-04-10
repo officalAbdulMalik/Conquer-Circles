@@ -40,18 +40,12 @@ class MapTile {
 
   Color get displayColor {
     if (ownership == TileOwnership.mine) {
-      return isProtected
-          ? const Color(0xFF1D9E75) // green — mine + protected
-          : const Color(0xFF5DCAA5); // lighter green — mine, unprotected
+      return const Color(0xFF7B6FD4); // premium purple
     }
     if (ownership == TileOwnership.enemy) {
-      return isProtected
-          ? const Color(0xFF185FA5) // blue — enemy protected
-          : energy < 10
-          ? const Color(0xFFE24B4A) // red — enemy weak
-          : const Color(0xFFD85A30); // orange — enemy normal
+      return const Color(0xFFEF4444); // vibrant red
     }
-    return const Color(0xFF888780); // gray — neutral
+    return const Color(0xFFF1F5F9); // neutral light grey
   }
 
   factory MapTile.fromJson(Map<String, dynamic> json, String currentUserId) {

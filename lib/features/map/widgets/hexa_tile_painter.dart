@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:test_steps/features/map/widgets/tile_handler.dart';
+import '../widgets/tile_handler.dart';
 
 class HexTilePainter extends CustomPainter {
   final List<MapTile> tiles;
@@ -35,14 +35,11 @@ class HexTilePainter extends CustomPainter {
   }
 
   void _drawHex(Canvas canvas, Offset center, MapTile tile, bool isSelected) {
-    // Hex radius - roughly matches Google Map zoom level 16-17
-    // This value ideally should come from current zoom scale
     const double radius = 35.0; 
     
     final path = Path();
     for (int i = 0; i < 6; i++) {
         double angle = 2.0 * math.pi / 6 * i;
-        // Pointy-topped hex orientation
         angle -= math.pi / 6; 
         
         double x = center.dx + radius * math.cos(angle);
@@ -56,45 +53,25 @@ class HexTilePainter extends CustomPainter {
     path.close();
 
     final fillPaint = Paint()
-      ..color = tile.displayColor.withValues(alpha: isSelected ? 0.6 : 0.3)
+      ..color = tile.displayColor.withOpacity(isSelected ? 0.5 : 0.25)
       ..style = PaintingStyle.fill;
     
     final borderPaint = Paint()
-      ..color = tile.displayColor.withValues(alpha: isSelected ? 0.8 : 0.4)
+      ..color = tile.displayColor.withOpacity(isSelected ? 0.7 : 0.35)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = isSelected ? 3.0 : 1.0;
+      ..strokeWidth = isSelected ? 3.0 : 1.5;
 
     canvas.drawPath(path, fillPaint);
     canvas.drawPath(path, borderPaint);
-
-    // Draw energy number or icon if needed
-    if (tile.ownership != TileOwnership.neutral && !tile.isProtected) {
-      final textSpan = TextSpan(
-        text: '${tile.energy}',
-        style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.9),
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-      );
-      final textPainter = TextPainter(
-        text: textSpan,
-        textDirection: TextDirection.ltr,
-      );
-      textPainter.layout();
-      textPainter.paint(
-        canvas, 
-        center - Offset(textPainter.width / 2, textPainter.height / 2),
-      );
-    }
     
+    // Protected icon
     if (tile.isProtected) {
       const icon = Icons.shield;
       final textSpan = TextSpan(
         text: String.fromCharCode(icon.codePoint),
         style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.8),
-          fontSize: 14,
+          color: Colors.white.withOpacity(0.8),
+          fontSize: 16,
           fontFamily: icon.fontFamily,
           package: icon.fontPackage,
         ),

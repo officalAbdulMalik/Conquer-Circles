@@ -112,18 +112,14 @@ class RaidAlertsCard extends StatelessWidget {
             padding: EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 10.h),
             child: Row(
               children: [
-                const Icon(Icons.notifications_outlined, color: AppColors.error, size: 20),
-                SizedBox(width: 6.w),
-                Text(
-                  'Raid Alerts',
-                  style: AppTextStyles.poppins(
-                    size: 16,
-                    color: AppColors.textNavy,
-                    weight: FontWeight.w800,
-                    letterSpacing: -0.2,
-                  ),
+                const Icon(
+                  Icons.notifications_outlined,
+                  color: AppColors.error,
+                  size: 20,
                 ),
-                SizedBox(width: 7.w),
+                6.horizontalSpace,
+                Text('Raid Alerts', style: AppTextStyles.heading3),
+                7.horizontalSpace,
                 // Badge
                 if (activeCount > 0)
                   Container(
@@ -136,10 +132,9 @@ class RaidAlertsCard extends StatelessWidget {
                     child: Center(
                       child: Text(
                         '$activeCount',
-                        style: AppTextStyles.poppins(
-                          size: 11,
+                        style: AppTextStyles.bodySmall.copyWith(
                           color: Colors.white,
-                          weight: FontWeight.w700,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -149,10 +144,9 @@ class RaidAlertsCard extends StatelessWidget {
                   onTap: onSeeAll,
                   child: Text(
                     'See all',
-                    style: AppTextStyles.poppins(
-                      size: 13,
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.accentPurple,
-                      weight: FontWeight.w600,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -171,10 +165,16 @@ class RaidAlertsCard extends StatelessWidget {
               children: [
                 _AlertRow(
                   alert: entry.value,
-                  onDefend: onDefend != null ? () => onDefend!(entry.value) : null,
+                  onDefend: onDefend != null
+                      ? () => onDefend!(entry.value)
+                      : null,
                 ),
                 if (!isLast)
-                  const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F6)),
+                  const Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: Color(0xFFF0F0F6),
+                  ),
               ],
             );
           }),
@@ -221,10 +221,7 @@ class _AlertRow extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: Center(
-              child: Text(
-                alert.iconEmoji,
-                style: TextStyle(fontSize: 17.sp),
-              ),
+              child: Text(alert.iconEmoji, style: TextStyle(fontSize: 17.sp)),
             ),
           ),
 
@@ -241,33 +238,27 @@ class _AlertRow extends StatelessWidget {
                     children: [
                       TextSpan(
                         text: alert.attacker,
-                        style: AppTextStyles.poppins(
-                          size: 14,
-                          color: AppColors.textNavy,
-                          weight: FontWeight.w700,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       TextSpan(
                         text: ' → ',
-                        style: AppTextStyles.poppins(
-                          size: 14,
+                        style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
-                          weight: FontWeight.w500,
                         ),
                       ),
                       TextSpan(
                         text: alert.target,
-                        style: AppTextStyles.poppins(
-                          size: 14,
+                        style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textNavy,
-                          weight: FontWeight.w700,
                         ),
                       ),
                     ],
                   ),
                 ),
 
-                SizedBox(height: 3.h),
+                3.verticalSpace,
 
                 // Status + time
                 Row(
@@ -283,17 +274,14 @@ class _AlertRow extends StatelessWidget {
                     SizedBox(width: 5.w),
                     Text(
                       alert.status.label,
-                      style: AppTextStyles.poppins(
-                        size: 12,
+                      style: AppTextStyles.bodySmall.copyWith(
                         color: alert.status.dotColor,
-                        weight: FontWeight.w600,
                       ),
                     ),
                     SizedBox(width: 5.w),
                     Text(
                       '· ${alert.timeAgo}',
-                      style: AppTextStyles.poppins(
-                        size: 12,
+                      style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.textSecondary,
                       ),
                     ),
@@ -304,27 +292,7 @@ class _AlertRow extends StatelessWidget {
           ),
 
           // Defend button (active attacks only)
-          if (alert.status.showDefend) ...[
-            SizedBox(width: 10.w),
-            ElevatedButton(
-              onPressed: onDefend,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.error,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.r),
-                ),
-                elevation: 0,
-                textStyle: AppTextStyles.poppins(
-                  size: 13,
-                  color: Colors.white,
-                  weight: FontWeight.w700,
-                ),
-              ),
-              child: const Text('Defend!'),
-            ),
-          ],
+          // if (alert.status.showDefend) ...[],
         ],
       ),
     );

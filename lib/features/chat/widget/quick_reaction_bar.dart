@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
+import 'package:test_steps/core/theme/app_text_styles.dart';
 
 class QuickReactionBar extends StatefulWidget {
   const QuickReactionBar({super.key});
@@ -36,8 +37,7 @@ class _QuickReactionBarState extends State<QuickReactionBar> {
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.elasticOut,
                 margin: const EdgeInsets.only(right: 10),
-                transform: Matrix4.identity()
-                  ..scale(isTapped ? 1.35 : 1.0),
+                transform: Matrix4.identity()..scale(isTapped ? 1.35 : 1.0),
                 transformAlignment: Alignment.center,
                 child: Text(_emojis[i], style: const TextStyle(fontSize: 22)),
               ),
@@ -46,8 +46,7 @@ class _QuickReactionBarState extends State<QuickReactionBar> {
           const Spacer(),
           Text(
             'Tap to add',
-            style: TextStyle(
-              color: AppColors.purple.withValues(alpha: 0.7),
+            style: AppTextStyles.bodySmall.copyWith(
               fontSize: 12.5,
               fontWeight: FontWeight.w500,
             ),

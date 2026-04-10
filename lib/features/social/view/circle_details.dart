@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
+import 'package:test_steps/features/social/widgets/leader_board.dart';
 import 'package:test_steps/features/social/widgets/session_progress_bar.dart';
 import 'package:test_steps/features/social/widgets/terriorty_tile.dart';
+import 'package:test_steps/features/steps/widgets/steps_dashboard_sections.dart';
 import '../widgets/info_tile.dart';
 import '../widgets/section_card.dart';
-
 
 class CircleProfileScreen extends StatefulWidget {
   const CircleProfileScreen({super.key});
@@ -37,41 +38,142 @@ class _CircleProfileScreenState extends State<CircleProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            Text('NeonStrike', style: AppTextStyles.heading3),
+            Spacer(),
+            _IconButton(icon: Icons.share_rounded, onTap: () {}),
+          ],
+        ),
+      ),
       body: SafeArea(
         child: Stack(
           children: [
-            CustomScrollView(
-              slivers: [
-                // ─── APP BAR ───
-                SliverToBoxAdapter(child: _buildAppBar()),
-
+            ListView(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              children: [
                 // ─── CIRCLE HEADER ───
-                SliverToBoxAdapter(child: _buildCircleHeader()),
+                Row(
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryLight,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: const Icon(
+                        Icons.favorite_rounded,
+                        color: AppColors.primary,
+                        size: 32,
+                      ),
+                    ),
+                    14.horizontalSpace,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [_RankBadge(rank: '#3')]),
+                          2.verticalSpace,
+                          Text(
+                            '"Neon streets, neon dreams."',
+                            style: AppTextStyles.caption,
+                          ),
+                          4.verticalSpace,
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.location_on_outlined,
+                                size: 13,
+                                color: AppColors.textMuted,
+                              ),
+                              3.horizontalSpace,
+                              Text('West Side', style: AppTextStyles.caption),
+                              10.horizontalSpace,
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.online,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              4.horizontalSpace,
+                              Text('2 online', style: AppTextStyles.caption),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                10.verticalSpace,
 
                 // ─── SEASON PROGRESS ───
-                SliverToBoxAdapter(
-                  child: SeasonProgressBar(
-                    seasonLabel: 'Season 4 Progress',
-                    currentXP: 198000,
-                    targetXP: 300000,
+                SizedBox(
+                  child: ProfileProgressCard(
+                    userName: 'User',
+                    xpCurrent: 198000,
+                    xpGoal: 300000,
+                    xpProgress: 0.66,
+                    pulseValue: 0.66,
                   ),
                 ),
+                10.verticalSpace,
 
                 // ─── STATS ROW ───
-                SliverToBoxAdapter(child: _buildStatsRow()),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InfoTile(
+                        variant: TileVariant.stat,
+                        icon: Icons.group_outlined,
+                        iconColor: AppColors.primary,
+                        value: '14',
+                        subValue: '/20',
+                        label: 'Members',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: InfoTile(
+                        variant: TileVariant.stat,
+                        icon: Icons.location_on_outlined,
+                        iconColor: AppColors.blue,
+                        value: '22',
+                        label: 'Territories',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: InfoTile(
+                        variant: TileVariant.stat,
+                        icon: Icons.emoji_events_outlined,
+                        iconColor: AppColors.yellow,
+                        value: '31',
+                        label: 'Season Wins',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: InfoTile(
+                        variant: TileVariant.stat,
+                        icon: Icons.flash_on_rounded,
+                        iconColor: AppColors.orange,
+                        value: '22',
+                        label: 'Raids Won',
+                      ),
+                    ),
+                  ],
+                ),
 
-                // ─── REQUIREMENTS ───
-                SliverToBoxAdapter(child: _buildRequirements()),
+                10.verticalSpace,
 
-                // ─── TABS ───
-                SliverToBoxAdapter(child: _buildTabs()),
+                LeaderboardCard(isMemebers: true),
 
-                // ─── TAB CONTENT ───
-                SliverToBoxAdapter(child: _buildTabContent()),
-
-                // ─── BOTTOM PADDING for FAB ───
-                const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                100.verticalSpace,
               ],
             ),
 
@@ -80,262 +182,106 @@ class _CircleProfileScreenState extends State<CircleProfileScreen> {
               bottom: 0,
               left: 0,
               right: 0,
-              child: _buildBottomBar(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ─────────────────────────────────────────────
-  // APP BAR
-  // ─────────────────────────────────────────────
-  Widget _buildAppBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          _IconButton(
-            icon: Icons.arrow_back_ios_new_rounded,
-            onTap: () {},
-          ),
-          const Spacer(),
-          _IconButton(
-            icon: Icons.notifications_none_rounded,
-            onTap: () {},
-          ),
-          const SizedBox(width: 10),
-          _IconButton(
-            icon: Icons.share_rounded,
-            onTap: () {},
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─────────────────────────────────────────────
-  // CIRCLE HEADER (Avatar + name + rank + location)
-  // ─────────────────────────────────────────────
-  Widget _buildCircleHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Row(
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: const Icon(
-              Icons.favorite_rounded,
-              color: AppColors.primary,
-              size: 32,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                     Text('NeonStrike', style: AppTextStyles.heading1),
-                    const SizedBox(width: 8),
-                    _RankBadge(rank: '#3'),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                const Text(
-                  '"Neon streets, neon dreams."',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.location_on_outlined, size: 13, color: AppColors.textMuted),
-                    const SizedBox(width: 3),
-                     Text('West Side', style: AppTextStyles.caption),
-                    const SizedBox(width: 10),
-                    Container(
-                      width: 7,
-                      height: 7,
-                      decoration: const BoxDecoration(
-                        color: AppColors.online,
-                        shape: BoxShape.circle,
-                      ),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      blurRadius: 20,
+                      offset: const Offset(0, -4),
                     ),
-                    const SizedBox(width: 4),
-                     Text('2 online', style: AppTextStyles.caption),
                   ],
                 ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─────────────────────────────────────────────
-  // STATS ROW
-  // ─────────────────────────────────────────────
-  Widget _buildStatsRow() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Row(
-        children: [
-          Expanded(
-            child: InfoTile(
-              variant: TileVariant.stat,
-              icon: Icons.group_outlined,
-              iconColor: AppColors.primary,
-              value: '14',
-              subValue: '/20',
-              label: 'Members',
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: InfoTile(
-              variant: TileVariant.stat,
-              icon: Icons.location_on_outlined,
-              iconColor: AppColors.blue,
-              value: '22',
-              label: 'Territories',
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: InfoTile(
-              variant: TileVariant.stat,
-              icon: Icons.emoji_events_outlined,
-              iconColor: AppColors.yellow,
-              value: '31',
-              label: 'Season Wins',
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: InfoTile(
-              variant: TileVariant.stat,
-              icon: Icons.flash_on_rounded,
-              iconColor: AppColors.orange,
-              value: '22',
-              label: 'Raids Won',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─────────────────────────────────────────────
-  // REQUIREMENTS
-  // ─────────────────────────────────────────────
-  Widget _buildRequirements() {
-    return SectionCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SectionHeader(
-            icon: Icons.star_outline_rounded,
-            title: 'Requirements to Join',
-          ),
-          const Divider(height: 16, color: AppColors.divider),
-          InfoTile(
-            variant: TileVariant.requirement,
-            label: 'Minimum Level 8',
-            isMet: true,
-            statusText: 'Met',
-          ),
-          const Divider(height: 1, color: AppColors.divider),
-          InfoTile(
-            variant: TileVariant.requirement,
-            label: '3-day active streak',
-            isMet: true,
-            statusText: 'Met',
-          ),
-          const Divider(height: 1, color: AppColors.divider),
-          InfoTile(
-            variant: TileVariant.requirement,
-            label: 'Playstyle: Balanced',
-            isMet: true,
-            statusText: 'Met',
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─────────────────────────────────────────────
-  // TABS
-  // ─────────────────────────────────────────────
-  Widget _buildTabs() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(10.r),
-        ),
-        padding: const EdgeInsets.all(4),
-        child: Row(
-          children: List.generate(_tabs.length, (index) {
-            final isSelected = _selectedTab == index;
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => setState(() => _selectedTab = index),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (index == 0)
-                        Icon(
-                          Icons.grid_view_rounded,
-                          size: 13,
-                          color: isSelected ? Colors.white : AppColors.textSecondary,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {},
+                            child: Container(
+                              height: 52,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFF8B5CF6),
+                                    Color(0xFF6D28D9),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(10.r),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.4,
+                                    ),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.group_add_rounded,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Join Circle',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
-                      if (index == 1)
-                        Icon(
-                          Icons.people_outline_rounded,
-                          size: 13,
-                          color: isSelected ? Colors.white : AppColors.textSecondary,
+                        const SizedBox(width: 12),
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: AppColors.cardBackground,
+                            borderRadius: BorderRadius.circular(10.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withValues(
+                                  alpha: 0.08,
+                                ),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            color: AppColors.textSecondary,
+                            size: 20,
+                          ),
                         ),
-                      if (index == 2)
-                        Icon(
-                          Icons.bolt_rounded,
-                          size: 13,
-                          color: isSelected ? Colors.white : AppColors.textSecondary,
-                        ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _tabs[index],
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                          color: isSelected ? Colors.white : AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '6 spots left · Join before it\'s full!',
+                      style: AppTextStyles.caption,
+                    ),
+                  ],
                 ),
               ),
-            );
-          }),
+            ),
+          ],
         ),
       ),
     );
@@ -351,7 +297,9 @@ class _CircleProfileScreenState extends State<CircleProfileScreen> {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Text(
-              _selectedTab == 1 ? 'Members list coming soon' : 'Activity feed coming soon',
+              _selectedTab == 1
+                  ? 'Members list coming soon'
+                  : 'Activity feed coming soon',
               style: AppTextStyles.splashHeading,
             ),
           ),
@@ -481,99 +429,6 @@ class _CircleProfileScreenState extends State<CircleProfileScreen> {
       ],
     );
   }
-
-  // ─────────────────────────────────────────────
-  // BOTTOM BAR
-  // ─────────────────────────────────────────────
-  Widget _buildBottomBar() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {},
-                  child: Container(
-                    height: 52,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(10.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.4),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.group_add_rounded, color: Colors.white, size: 18),
-                        SizedBox(width: 8),
-                        Text(
-                          'Join Circle',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: AppColors.cardBackground,
-                  borderRadius: BorderRadius.circular(10.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.chat_bubble_outline_rounded,
-                  color: AppColors.textSecondary,
-                  size: 20,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-           Text(
-            '6 spots left · Join before it\'s full!',
-            style: AppTextStyles.caption,
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // ─────────────────────────────────────────────
@@ -627,7 +482,11 @@ class _RankBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.emoji_events_outlined, size: 11, color: AppColors.primary),
+          const Icon(
+            Icons.emoji_events_outlined,
+            size: 11,
+            color: AppColors.primary,
+          ),
           const SizedBox(width: 3),
           Text(
             'Rank $rank',

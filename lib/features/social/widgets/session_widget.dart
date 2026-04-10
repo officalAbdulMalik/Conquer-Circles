@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:test_steps/core/constants/app_emojis.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
+import 'package:test_steps/core/theme/app_text_styles.dart';
 
 class SeasonCountdownCard extends StatefulWidget {
   const SeasonCountdownCard({
@@ -47,7 +48,8 @@ class _SeasonCountdownCardState extends State<SeasonCountdownCard> {
   }
 
   Duration _calcRemaining() {
-    final target = widget.endsAt ??
+    final target =
+        widget.endsAt ??
         DateTime.now().add(
           const Duration(days: 3, hours: 14, minutes: 21, seconds: 41),
         );
@@ -92,81 +94,80 @@ class _SeasonCountdownCardState extends State<SeasonCountdownCard> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          // ── Header ────────────────────────────────────────────────────────
-          Row(
-            children: [
-              Icon(
-                Icons.timer_outlined,
-                color: Colors.white.withValues(alpha: 0.8),
-                size: 16.r,
-              ),
-              SizedBox(width: 6.w),
-              Text(
-                '${widget.seasonLabel}  ·  Ends in',
-                style: TextStyle(
+            // ── Header ────────────────────────────────────────────────────────
+            Row(
+              children: [
+                Icon(
+                  Icons.timer_outlined,
                   color: Colors.white.withValues(alpha: 0.8),
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.2,
+                  size: 16.r,
                 ),
-              ),
-            ],
-          ),
+                SizedBox(width: 6.w),
+                Text(
+                  '${widget.seasonLabel}  ·  Ends in',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
 
-          SizedBox(height: 12.h),
+            12.verticalSpace,
 
-          // ── Countdown Units ───────────────────────────────────────────────
-          Row(
-            children: [
-              _UnitBox(value: d, label: 'Days'),
-              SizedBox(width: 8.w),
-              _UnitBox(value: h, label: 'Hours'),
-              SizedBox(width: 8.w),
-              _UnitBox(value: m, label: 'Min'),
-              SizedBox(width: 8.w),
-              _UnitBox(value: s, label: 'Sec'),
-            ],
-          ),
+            // ── Countdown Units ───────────────────────────────────────────────
+            Row(
+              children: [
+                _UnitBox(value: d, label: 'Days'),
+                SizedBox(width: 8.w),
+                _UnitBox(value: h, label: 'Hours'),
+                SizedBox(width: 8.w),
+                _UnitBox(value: m, label: 'Min'),
+                SizedBox(width: 8.w),
+                _UnitBox(value: s, label: 'Sec'),
+              ],
+            ),
 
-          SizedBox(height: 16.h),
+            16.verticalSpace,
 
-          // ── Progress & Rank ───────────────────────────────────────────────
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.progressLabel,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    SizedBox(height: 7.h),
-                    _GradientProgressBar(value: widget.progressValue),
-                    SizedBox(height: 5.h),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Text(
-                        '${(widget.progressValue * 100).round()}%',
-                        style: TextStyle(
-                          color: Colors.white,
+            // ── Progress & Rank ───────────────────────────────────────────────
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.progressLabel,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: Colors.white.withValues(alpha: 0.8),
                           fontSize: 12.sp,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                    ),
-                  ],
+                      7.verticalSpace,
+                      _GradientProgressBar(value: widget.progressValue),
+                      5.verticalSpace,
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          '${(widget.progressValue * 100).round()}%',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: Colors.white,
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              SizedBox(width: 14.w),
-              _RankBadge(label: widget.rankLabel),
-            ],
-          ),
+                14.horizontalSpace,
+                _RankBadge(label: widget.rankLabel),
+              ],
+            ),
           ],
         ),
       ),
@@ -197,19 +198,14 @@ class _UnitBox extends StatelessWidget {
         children: [
           Text(
             value.toString().padLeft(2, '0'),
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 22.sp,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1,
-            ),
+            style: AppTextStyles.heading3.copyWith(color: Colors.white),
           ),
-          SizedBox(height: 2.h),
+          2.verticalSpace,
           Text(
             label,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.8),
+            style: AppTextStyles.bodyMedium.copyWith(
               fontSize: 10.5.sp,
+              color: Colors.white.withValues(alpha: 0.8),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -272,7 +268,7 @@ class _RankBadge extends StatelessWidget {
           SizedBox(width: 6.w),
           Text(
             label,
-            style: TextStyle(
+            style: AppTextStyles.bodyMedium.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.w700,
               fontSize: 13.sp,

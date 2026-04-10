@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/chat_bubble.dart';
-import '../widgets/chat_header.dart';
 import '../widgets/chat_input_area.dart';
 import '../widgets/quick_action_chips.dart';
 
@@ -94,7 +93,6 @@ class _ChatViewState extends State<ChatView> {
       backgroundColor: const Color(0xFFF5F6FA),
       body: Column(
         children: [
-          const ChatHeader(title: 'FitCoach AI'),
           Container(
             width: double.infinity,
             color: Colors.white,

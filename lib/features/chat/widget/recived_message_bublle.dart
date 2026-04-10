@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
+import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/chat/models/chat_model.dart';
 import 'package:test_steps/features/chat/widget/reaction_row.dart';
-
 
 class ReceivedMessageBubble extends StatefulWidget {
   final ChatMessageModel message;
@@ -61,8 +61,9 @@ class _ReceivedMessageBubbleState extends State<ReceivedMessageBubble>
                   padding: const EdgeInsets.only(left: 48, bottom: 2),
                   child: Text(
                     widget.message.senderName!,
-                    style: TextStyle(
-                      color: widget.message.senderNameColor ??
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color:
+                          widget.message.senderNameColor ??
                           AppColors.senderIronStrider,
                       fontWeight: FontWeight.w600,
                       fontSize: 12.5,
@@ -93,7 +94,9 @@ class _ReceivedMessageBubbleState extends State<ReceivedMessageBubble>
                   Flexible(
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.receivedBubble,
                         borderRadius: const BorderRadius.only(
@@ -118,7 +121,9 @@ class _ReceivedMessageBubbleState extends State<ReceivedMessageBubble>
                             Container(
                               margin: const EdgeInsets.only(bottom: 6),
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 6),
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF0F0F8),
                                 borderRadius: BorderRadius.circular(8),
@@ -131,15 +136,18 @@ class _ReceivedMessageBubbleState extends State<ReceivedMessageBubble>
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.reply,
-                                      size: 13, color: AppColors.purple),
+                                  const Icon(
+                                    Icons.reply,
+                                    size: 13,
+                                    color: AppColors.purple,
+                                  ),
                                   const SizedBox(width: 4),
                                   Flexible(
                                     child: Text(
                                       widget.message.replyPreview!,
-                                      style: const TextStyle(
+                                      style: AppTextStyles.bodySmall.copyWith(
                                         fontSize: 11.5,
-                                        color: Color(0xFF888888),
+                                        color: const Color(0xFF888888),
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -151,8 +159,7 @@ class _ReceivedMessageBubbleState extends State<ReceivedMessageBubble>
                           ],
                           Text(
                             widget.message.text,
-                            style: const TextStyle(
-                              color: AppColors.receivedText,
+                            style: AppTextStyles.bodySmall.copyWith(
                               fontSize: 14.5,
                             ),
                           ),
@@ -168,10 +175,7 @@ class _ReceivedMessageBubbleState extends State<ReceivedMessageBubble>
                   children: [
                     Text(
                       widget.message.time,
-                      style: const TextStyle(
-                        color: AppColors.timeText,
-                        fontSize: 11,
-                      ),
+                      style: AppTextStyles.bodySmall.copyWith(fontSize: 11),
                     ),
                     if (widget.message.reactions.isNotEmpty) ...[
                       const SizedBox(width: 8),

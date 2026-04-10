@@ -72,13 +72,17 @@ class _CircleChatCardState extends State<CircleChatCard> {
   void _send() {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
-    Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ChatScreen())); // Close the chat card
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const ChatScreen()),
+    ); // Close the chat card
     setState(() {
-      _messages.add(ChatMessage(
-        text: text,
-        sender: MessageSender.me,
-        timeLabel: 'just now',
-      ));
+      _messages.add(
+        ChatMessage(
+          text: text,
+          sender: MessageSender.me,
+          timeLabel: 'just now',
+        ),
+      );
       _controller.clear();
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -130,11 +134,7 @@ class _CircleChatCardState extends State<CircleChatCard> {
             ),
           ),
           const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F6)),
-          _InputBar(
-            controller: _controller,
-            hasText: _hasText,
-            onSend: _send,
-          ),
+          _InputBar(controller: _controller, hasText: _hasText, onSend: _send),
         ],
       ),
     );
@@ -164,19 +164,14 @@ class _Header extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 13.h),
       child: Row(
         children: [
-          const Icon(Icons.chat_bubble_outline_rounded,
-              color: AppColors.accentPurple, size: 18),
-          SizedBox(width: 7.w),
-          Text(
-            title,
-            style: AppTextStyles.poppins(
-              size: 16,
-              color: AppColors.textNavy,
-              weight: FontWeight.w800,
-              letterSpacing: -0.2,
-            ),
+          const Icon(
+            Icons.chat_bubble_outline_rounded,
+            color: AppColors.accentPurple,
+            size: 18,
           ),
-          SizedBox(width: 8.w),
+          8.horizontalSpace,
+          Text(title, style: AppTextStyles.heading3),
+          8.horizontalSpace,
           // Unread badge
           if (unreadCount > 0)
             Container(
@@ -187,18 +182,20 @@ class _Header extends StatelessWidget {
               ),
               child: Text(
                 '$unreadCount',
-                style: AppTextStyles.poppins(
-                  size: 11,
+                style: AppTextStyles.bodySmall.copyWith(
                   color: Colors.white,
-                  weight: FontWeight.w700,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
           const Spacer(),
           GestureDetector(
             onTap: onCollapse,
-            child: const Icon(Icons.keyboard_arrow_down_rounded,
-                color: AppColors.textSecondary, size: 22),
+            child: const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: AppColors.textSecondary,
+              size: 22,
+            ),
           ),
         ],
       ),
@@ -225,7 +222,9 @@ class _MessageBubble extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.only(bottom: 12.h),
       child: Column(
-        crossAxisAlignment: _isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: _isMe
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
           // Sender name (other only)
           if (!_isMe && message.senderName != null)
@@ -242,7 +241,9 @@ class _MessageBubble extends StatelessWidget {
             ),
 
           Row(
-            mainAxisAlignment: _isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment: _isMe
+                ? MainAxisAlignment.end
+                : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               // Avatar (other only)
@@ -254,7 +255,10 @@ class _MessageBubble extends StatelessWidget {
               // Bubble
               Flexible(
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 14.w,
+                    vertical: 10.h,
+                  ),
                   decoration: BoxDecoration(
                     color: _isMe ? AppColors.bubbleMe : AppColors.bubbleOther,
                     borderRadius: BorderRadius.only(
@@ -269,7 +273,7 @@ class _MessageBubble extends StatelessWidget {
                               color: AppColors.bubbleMe.withValues(alpha: 0.30),
                               blurRadius: 10.r,
                               offset: Offset(0, 4.h),
-                            )
+                            ),
                           ]
                         : null,
                   ),
@@ -389,7 +393,10 @@ class _InputBar extends StatelessWidget {
                     color: AppColors.textSecondary,
                   ),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 14.w,
+                    vertical: 12.h,
+                  ),
                 ),
               ),
             ),
@@ -413,13 +420,17 @@ class _InputBar extends StatelessWidget {
                         color: AppColors.bubbleMe.withValues(alpha: 0.35),
                         blurRadius: 10.r,
                         offset: Offset(0, 4.h),
-                      )
+                      ),
                     ]
                   : null,
             ),
             child: IconButton(
               onPressed: hasText ? onSend : null,
-              icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+              icon: const Icon(
+                Icons.send_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
               padding: EdgeInsets.zero,
             ),
           ),

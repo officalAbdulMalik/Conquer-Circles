@@ -37,41 +37,70 @@ class MapNotifier extends StateNotifier<MapState> {
   // Initialization
   // ---------------------------------------------------------------------------
 
-  Future<void> initialize() async {
-    state = state.copyWith(isLoading: true);
+  Future<void> initialize({bool forceRequest = false}) async {
+    state = state.copyWith(isLoading: true, error: null);
 
     // Check location service
-    if (!await Geolocator.isLocationServiceEnabled()) {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
       state = state.copyWith(
         isLoading: false,
-        error: 'Location services are disabled.',
+        error: 'Location services are disabled. Please enable GPS.',
       );
       return;
     }
 
     // Check / request permission
     var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
+    if (forceRequest || permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
+    
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
       state = state.copyWith(
         isLoading: false,
-        error: 'Location permission denied.',
+        permissionGranted: false,
+        error: 'Location permission denied. Map features limited.',
       );
+      // Even if denied, we can try to load a fallback home base if it exists
+      if (state.homeBase != null) {
+        state = state.copyWith(isLoading: false);
+      }
       return;
     }
 
     state = state.copyWith(permissionGranted: true);
 
-    final position = await Geolocator.getCurrentPosition();
-    state = state.copyWith(
-      userLocation: LatLng(position.latitude, position.longitude),
-    );
+    try {
+      // Fetch current position with a 10-second timeout
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
+      
+      state = state.copyWith(
+        userLocation: LatLng(position.latitude, position.longitude),
+        isLoading: false,
+      );
+    } catch (e) {
+      print('[Map] Initialization timeout or error: $e');
+      
+      // Fallback to London city center if no location available
+      const fallbackLoc = LatLng(51.5074, -0.1278);
+      
+      state = state.copyWith(
+        userLocation: state.userLocation ?? state.homeBase ?? fallbackLoc,
+        isLoading: false,
+        error: state.userLocation == null ? 'GPS timed out. Using default location.' : null,
+      );
+    }
 
     await _startLiveLocationTracking();
-    state = state.copyWith(isLoading: false);
+  }
+
+  Future<void> requestPermission() async {
+    await initialize(forceRequest: true);
   }
 
   // ---------------------------------------------------------------------------
@@ -154,7 +183,10 @@ class MapNotifier extends StateNotifier<MapState> {
 
   Future<void> getCurrentLocation() async {
     try {
-      final pos = await Geolocator.getCurrentPosition();
+      state = state.copyWith(isLoading: true, error: null);
+      final pos = await Geolocator.getCurrentPosition(
+        timeLimit: const Duration(seconds: 10),
+      );
       state = state.copyWith(
         userLocation: LatLng(pos.latitude, pos.longitude),
         isLoading: false,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:test_steps/features/map/widgets/hexa_tile_painter.dart';
 import 'package:test_steps/providers/map_provider.dart';
@@ -17,6 +18,9 @@ import '../widgets/attack_history_sheet.dart';
 import '../widgets/map_search_overlay.dart';
 import '../../chatbot/widgets/quick_action_chips.dart';
 import '../widgets/tile_handler.dart';
+import '../widgets/territory_label.dart';
+import '../widgets/territory_detail_sheet.dart';
+import '../widgets/location_indicator.dart';
 import '../../../services/attack_service.dart'; // stepProvider
 import '../../../services/supabase_service.dart';
 
@@ -30,7 +34,7 @@ class MapView extends ConsumerStatefulWidget {
 class _MapViewState extends ConsumerState<MapView> {
   GoogleMapController? _mapController;
   Set<Polygon> hexGrid = {};
-  
+
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   final MapTileHandler _tileHandler = MapTileHandler();
@@ -47,7 +51,7 @@ class _MapViewState extends ConsumerState<MapView> {
 [
   {
     "elementType": "geometry",
-    "stylers": [{"color": "#0f172a"}]
+    "stylers": [{"color": "#f2f2e8"}]
   },
   {
     "elementType": "labels.icon",
@@ -55,81 +59,81 @@ class _MapViewState extends ConsumerState<MapView> {
   },
   {
     "elementType": "labels.text.fill",
-    "stylers": [{"color": "#64748b"}]
+    "stylers": [{"color": "#757575"}]
   },
   {
     "elementType": "labels.text.stroke",
-    "stylers": [{"color": "#0f172a"}]
+    "stylers": [{"color": "#f2f2e8"}]
   },
   {
     "featureType": "administrative.land_parcel",
     "elementType": "labels.text.fill",
-    "stylers": [{"color": "#334155"}]
+    "stylers": [{"color": "#bdbdbd"}]
   },
   {
     "featureType": "poi",
     "elementType": "geometry",
-    "stylers": [{"color": "#1e293b"}]
+    "stylers": [{"color": "#e8ecd4"}]
   },
   {
     "featureType": "poi",
     "elementType": "labels.text.fill",
-    "stylers": [{"color": "#475569"}]
+    "stylers": [{"color": "#757575"}]
   },
   {
     "featureType": "poi.park",
     "elementType": "geometry",
-    "stylers": [{"color": "#0f2a1a"}]
+    "stylers": [{"color": "#d0e6d0"}]
   },
   {
     "featureType": "poi.park",
     "elementType": "labels.text.fill",
-    "stylers": [{"color": "#1e4d2b"}]
+    "stylers": [{"color": "#9e9e9e"}]
   },
   {
     "featureType": "road",
     "elementType": "geometry",
-    "stylers": [{"color": "#1e293b"}]
+    "stylers": [{"color": "#ffffff"}]
   },
   {
     "featureType": "road.arterial",
     "elementType": "labels.text.fill",
-    "stylers": [{"color": "#475569"}]
+    "stylers": [{"color": "#757575"}]
   },
   {
     "featureType": "road.highway",
     "elementType": "geometry",
-    "stylers": [{"color": "#1e3a5f"}]
+    "stylers": [{"color": "#dadada"}]
   },
   {
     "featureType": "road.highway",
     "elementType": "labels.text.fill",
-    "stylers": [{"color": "#94a3b8"}]
+    "stylers": [{"color": "#616161"}]
   },
   {
     "featureType": "road.local",
     "elementType": "labels.text.fill",
-    "stylers": [{"color": "#334155"}]
+    "stylers": [{"color": "#9e9e9e"}]
   },
   {
     "featureType": "transit.line",
     "elementType": "geometry",
-    "stylers": [{"color": "#1e293b"}]
+    "stylers": [{"color": "#e5e5e5"}]
   },
   {
     "featureType": "transit.station",
     "elementType": "geometry",
-    "stylers": [{"color": "#1e293b"}]
+    "stylers": [{"color": "#eeeeee"}]
   },
   {
     "featureType": "water",
     "elementType": "geometry",
-    "stylers": [{"color": "#0c1524"}]
+    "stylers": [{"color": "#aadaff"}]
   },
   {
     "featureType": "water",
     "elementType": "labels.text.fill",
-    "stylers": [{"color": "#1e3a5f"}]
+    "stylers": [{"color": "#9e9e9e"}]
   }
 ]
 ''';
@@ -209,22 +213,22 @@ class _MapViewState extends ConsumerState<MapView> {
 
   void _updateTileCenters() async {
     if (_mapController == null) return;
-    
+
     final mapState = ref.read(mapProvider);
     if (mapState.visibleTiles.isEmpty) return;
-    
+
     final Map<String, Offset> newCenters = {};
     for (final tile in mapState.visibleTiles) {
       final latLng = H3Utils.h3ToLatLng(tile.tileId);
       if (latLng != null) {
         final screenPos = await _mapController!.getScreenCoordinate(latLng);
         newCenters[tile.tileId] = Offset(
-          screenPos.x.toDouble(), 
+          screenPos.x.toDouble(),
           screenPos.y.toDouble(),
         );
       }
     }
-    
+
     if (mounted) {
       setState(() {
         _computedTileCenters = newCenters;
@@ -235,7 +239,7 @@ class _MapViewState extends ConsumerState<MapView> {
   void _handleMapTap(Offset localPos) {
     String? tappedTileId;
     double minDistance = 40.0; // Hex radius approximately
-    
+
     _computedTileCenters.forEach((tileId, screenPos) {
       final dist = (localPos - screenPos).distance;
       if (dist < minDistance) {
@@ -243,20 +247,29 @@ class _MapViewState extends ConsumerState<MapView> {
         tappedTileId = tileId;
       }
     });
-    
+
     if (tappedTileId != null) {
-      final tile = ref.read(mapProvider).visibleTiles
+      final tile = ref
+          .read(mapProvider)
+          .visibleTiles
           .firstWhere((t) => t.tileId == tappedTileId);
-      
+
       ref.read(mapProvider.notifier).selectTile(tappedTileId);
-      
+
       final userLoc = ref.read(mapProvider).userLocation;
       if (userLoc != null) {
-        _tileHandler.handleTileTap(
-          context: context,
+        TerritoryDetailSheet.show(
+          context,
           tile: tile,
-          lat: userLoc.latitude,
-          lng: userLoc.longitude,
+          currentUserId: _supabase.currentUser?.id,
+          onClaim: () {
+            _tileHandler.handleTileTap(
+              context: context,
+              tile: tile,
+              lat: userLoc.latitude,
+              lng: userLoc.longitude,
+            );
+          },
         );
       }
     } else {
@@ -278,7 +291,7 @@ class _MapViewState extends ConsumerState<MapView> {
   Widget build(BuildContext context) {
     final mapState = ref.watch(mapProvider);
     final mapNotifier = ref.read(mapProvider.notifier);
-    final attackEnergy = ref.watch(stepProvider.select((s) => s.attackEnergy));
+    final stepState = ref.watch(stepProvider);
 
     final hexPolygons = HexGridOverlay.build(
       mapState.nearbyTerritories,
@@ -286,8 +299,12 @@ class _MapViewState extends ConsumerState<MapView> {
       homeBase: mapState.homeBase,
     );
 
+    print("mapState.userLocation: ${mapState.userLocation}");
+    print("mapState.homeBase: ${mapState.homeBase}");
+    print("mapState.nearbyTerritories: ${mapState.nearbyTerritories}");
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: const Color(0xFFF2F2E8),
       body: Stack(
         children: [
           if (mapState.userLocation != null || mapState.homeBase != null)
@@ -296,16 +313,18 @@ class _MapViewState extends ConsumerState<MapView> {
                 target: mapState.userLocation ?? mapState.homeBase!,
                 zoom: 16.0,
               ),
-              style: _mapStyle,
+              // style: _mapStyle,
               myLocationEnabled: true,
               myLocationButtonEnabled: false,
               zoomControlsEnabled: false,
-              polylines: _buildPolylines(mapState, mapNotifier),
-              polygons: {...hexGrid, ...hexPolygons},
+              // polylines: _buildPolylines(mapState, mapNotifier),
+              // polygons: {...hexGrid, ...hexPolygons},
               onCameraIdle: () async {
                 final bounds = await _mapController?.getVisibleRegion();
                 if (bounds != null) {
-                  ref.read(mapProvider.notifier).loadTerritoriesForBounds(bounds);
+                  ref
+                      .read(mapProvider.notifier)
+                      .loadTerritoriesForBounds(bounds);
                 }
                 _updateTileCenters();
               },
@@ -314,15 +333,24 @@ class _MapViewState extends ConsumerState<MapView> {
                 _mapController = controller;
               },
             )
+          else if (mapState.error != null && !mapState.isLoading)
+            _buildErrorOverlay(context, mapState)
           else
             const Center(
               child: CircularProgressIndicator(color: Color(0xFF0D968B)),
             ),
 
           _buildMapInteractionLayer(),
+          _buildTerritoryLabels(context, mapState),
+          _buildLocationIndicator(context, mapState),
           _buildTopOverlays(context, mapState),
-          _buildSideControls(context, mapState, attackEnergy),
-          _buildBottomOverlays(context, mapState),
+          _buildSideControls(context, mapState, stepState.attackEnergy),
+          _buildBottomOverlays(
+            context,
+            mapState,
+            stepState.steps,
+            stepState.attackEnergy,
+          ),
         ],
       ),
     );
@@ -349,18 +377,74 @@ class _MapViewState extends ConsumerState<MapView> {
     );
   }
 
+  Widget _buildTerritoryLabels(BuildContext context, MapState mapState) {
+    return Stack(
+      children: mapState.visibleTiles.map((tile) {
+        final center = _computedTileCenters[tile.tileId];
+        if (center == null) return const SizedBox.shrink();
+
+        // Only show for some tiles to avoid clutter, or specifically for owned/enemy
+        if (tile.ownership == TileOwnership.neutral &&
+            tile.tileId.hashCode % 5 != 0) {
+          return const SizedBox.shrink();
+        }
+
+        final name =
+            tile.ownerUsername ?? 'Zone ${tile.tileId.substring(0, 4)}';
+
+        return Positioned(
+          left: center.dx - 50,
+          top: center.dy - 60,
+          child: IgnorePointer(
+            child: TerritoryLabel(
+              name: name,
+              progress: tile.energy.toDouble() * 1.6, // scale to 100
+              themeColor: tile.displayColor,
+              badgeText: tile.ownership == TileOwnership.mine ? '+15' : null,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildLocationIndicator(BuildContext context, MapState mapState) {
+    if (mapState.userLocation == null) return const SizedBox.shrink();
+
+    return FutureBuilder<ScreenCoordinate>(
+      future: _mapController?.getScreenCoordinate(mapState.userLocation!),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox.shrink();
+        final point = snapshot.data!;
+
+        return Stack(
+          children: [
+            Positioned(
+              left: point.x.toDouble() - 40,
+              top: point.y.toDouble() - 40,
+              child: const PulsingLocationIndicator(),
+            ),
+            Positioned(
+              left: point.x.toDouble() - 50,
+              top: point.y.toDouble() + 20,
+              child: const Center(child: YouAreHereLabel()),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildTopOverlays(BuildContext context, MapState mapState) {
     return Positioned(
-      top: 0,
+      top: 40.sp,
       left: 0,
       right: 0,
-      child: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 12),
         child: Column(
           children: [
-            MapHeader(
-              title: 'Conquer Circles',
-              subtitle: mapState.isWalking ? 'Live Session • Active' : 'Ready to Start',
-            ),
+            const MapHeader(),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: MapSearchOverlay(
@@ -387,7 +471,11 @@ class _MapViewState extends ConsumerState<MapView> {
     );
   }
 
-  Widget _buildSideControls(BuildContext context, MapState mapState, int attackEnergy) {
+  Widget _buildSideControls(
+    BuildContext context,
+    MapState mapState,
+    int attackEnergy,
+  ) {
     final speedMps = mapState.currentSpeedMps ?? 0.0;
     final speedKmh = speedMps * 3.6;
 
@@ -429,8 +517,10 @@ class _MapViewState extends ConsumerState<MapView> {
           child: Column(
             children: [
               MapActionControls(
-                onZoomIn: () => _mapController?.animateCamera(CameraUpdate.zoomIn()),
-                onZoomOut: () => _mapController?.animateCamera(CameraUpdate.zoomOut()),
+                onZoomIn: () =>
+                    _mapController?.animateCamera(CameraUpdate.zoomIn()),
+                onZoomOut: () =>
+                    _mapController?.animateCamera(CameraUpdate.zoomOut()),
                 onMyLocation: () {
                   if (mapState.userLocation != null) {
                     _mapController?.animateCamera(
@@ -442,16 +532,23 @@ class _MapViewState extends ConsumerState<MapView> {
               ),
               const SizedBox(height: 12),
               GestureDetector(
-                onTap: () => showAttackHistorySheet(context, attackEnergy: attackEnergy),
+                onTap: () =>
+                    showAttackHistorySheet(context, attackEnergy: attackEnergy),
                 child: Container(
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
                     color: const Color(0xFF1E1E2E).withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFFF9800).withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: const Color(0xFFFF9800).withValues(alpha: 0.3),
+                    ),
                   ),
-                  child: const Icon(Icons.history, color: Color(0xFFFF9800), size: 20),
+                  child: const Icon(
+                    Icons.history,
+                    color: Color(0xFFFF9800),
+                    size: 20,
+                  ),
                 ),
               ),
             ],
@@ -461,7 +558,12 @@ class _MapViewState extends ConsumerState<MapView> {
     );
   }
 
-  Widget _buildBottomOverlays(BuildContext context, MapState mapState) {
+  Widget _buildBottomOverlays(
+    BuildContext context,
+    MapState mapState,
+    int steps,
+    int attackEnergy,
+  ) {
     final mapNotifier = ref.read(mapProvider.notifier);
     final currentUserId = _supabase.currentUser?.id;
 
@@ -473,13 +575,15 @@ class _MapViewState extends ConsumerState<MapView> {
             left: 16,
             right: 16,
             child: MapStatsOverlay(
-              duration: _formatDuration(mapState),
-              distance: _formatDistance(mapState),
-              pace: '—',
-              territoryCount: mapState.nearbyTerritories
+              steps: steps.toString(),
+              kcal: (steps * 0.04).toStringAsFixed(0),
+              zones: mapState.nearbyTerritories
                   .where((t) => t.userId == currentUserId)
                   .length
                   .toString(),
+              energy: attackEnergy >= 1000
+                  ? '${(attackEnergy / 1000).toStringAsFixed(1)}k'
+                  : attackEnergy.toString(),
             ),
           ),
         Positioned(
@@ -487,7 +591,9 @@ class _MapViewState extends ConsumerState<MapView> {
           left: 16,
           right: 16,
           child: MapActionButton(
-            type: mapState.isWalking ? MapActionType.pause : MapActionType.start,
+            type: mapState.isWalking
+                ? MapActionType.pause
+                : MapActionType.start,
             onTap: () {
               if (mapState.isWalking) {
                 mapNotifier.stopWalk();
@@ -519,15 +625,64 @@ class _MapViewState extends ConsumerState<MapView> {
     );
   }
 
-  String _formatDuration(MapState state) => '0:00';
+  Widget _buildErrorOverlay(BuildContext context, MapState state) {
+    print("state.error: ${state.error}");
 
-  String _formatDistance(MapState state) {
-    if (state.activePath.length < 2) return '0.0';
-    double totalM = 0;
-    for (int i = 1; i < state.activePath.length; i++) {
-      totalM += H3Utils.distanceMeters(state.activePath[i - 1], state.activePath[i]);
-    }
-    return (totalM / 1000).toStringAsFixed(1);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              state.error?.contains('permission') == true
+                  ? Icons.location_off_outlined
+                  : Icons.error_outline_rounded,
+              size: 64,
+              color: const Color(0xFF94A3B8),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Oops!',
+              style: TextStyle(
+                fontSize: 24.sp,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF1E293B),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              state.error ?? 'Something went wrong while loading the map.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16.sp, color: const Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  ref.read(mapProvider.notifier).initialize(forceRequest: true);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0D968B),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  state.error?.contains('permission') == true
+                      ? 'Grant Permission'
+                      : 'Try Again',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Set<Polyline> _buildPolylines(MapState state, MapNotifier notifier) {
@@ -547,25 +702,31 @@ class _TerritoryLegend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A).withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: const [
-          _LegendItem(color: Color(0xFF0D968B), label: 'Yours'),
-          SizedBox(height: 4),
-          _LegendItem(color: Color(0xFF0D968B), label: 'Home Base', isHome: true),
-          SizedBox(height: 4),
-          _LegendItem(color: Color(0xFF06F5E9), label: 'Protected'),
-          SizedBox(height: 4),
-          _LegendItem(color: Color(0xFFFF6B35), label: 'Enemy'),
-          SizedBox(height: 4),
-          _LegendItem(color: Color(0xFF94A3B8), label: 'Neutral'),
+          _LegendItem(color: Color(0xFF7B6FD4), label: 'Yours'),
+          SizedBox(height: 8),
+          _LegendItem(color: Color(0xFFEF4444), label: 'Enemy'),
+          SizedBox(height: 8),
+          _LegendItem(color: Color(0xFF3B82F6), label: 'Protected'),
+          SizedBox(height: 8),
+          _LegendItem(color: Color(0xFFA855F7), label: 'Weakened'),
+          SizedBox(height: 8),
+          _LegendItem(color: Color(0xFFF1F5F9), label: 'Neutral'),
         ],
       ),
     );
@@ -575,8 +736,7 @@ class _TerritoryLegend extends StatelessWidget {
 class _LegendItem extends StatelessWidget {
   final Color color;
   final String label;
-  final bool isHome;
-  const _LegendItem({required this.color, required this.label, this.isHome = false});
+  const _LegendItem({required this.color, required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -584,18 +744,21 @@ class _LegendItem extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 10,
-          height: 10,
+          width: 12,
+          height: 12,
           decoration: BoxDecoration(
             color: color,
-            shape: BoxShape.circle,
-            border: isHome ? Border.all(color: Colors.white, width: 2) : null,
+            borderRadius: BorderRadius.circular(3),
           ),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: 8),
         Text(
           label,
-          style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 11, fontWeight: FontWeight.w500),
+          style: const TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );
@@ -606,7 +769,11 @@ class _SmallStatBadge extends StatelessWidget {
   final IconData icon;
   final String value;
   final Color color;
-  const _SmallStatBadge({required this.icon, required this.value, required this.color});
+  const _SmallStatBadge({
+    required this.icon,
+    required this.value,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -622,7 +789,14 @@ class _SmallStatBadge extends StatelessWidget {
         children: [
           Icon(icon, color: color, size: 14),
           const SizedBox(width: 4),
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );

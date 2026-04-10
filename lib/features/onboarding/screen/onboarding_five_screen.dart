@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:test_steps/features/login_screen.dart';
+import 'package:test_steps/features/auth/login_screen.dart';
 import 'package:test_steps/features/onboarding/widgets/onboarding_step_template.dart';
 
 class OnboardingFiveScreen extends StatelessWidget {

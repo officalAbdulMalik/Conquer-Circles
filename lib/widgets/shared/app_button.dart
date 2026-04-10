@@ -19,11 +19,12 @@ class AppButton extends StatelessWidget {
     this.borderRadius = 12,
     this.horizontalPadding = 14,
     this.textStyle,
+    this.isFullWidth = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
-  final IconData? icon;
+  final Widget? icon;
   final AppButtonVariant variant;
   final Color backgroundColor;
   final Color foregroundColor;
@@ -32,12 +33,14 @@ class AppButton extends StatelessWidget {
   final double borderRadius;
   final double horizontalPadding;
   final TextStyle? textStyle;
+  final bool isFullWidth;
 
   @override
   Widget build(BuildContext context) {
     final bool isFilled = variant == AppButtonVariant.filled;
     return SizedBox(
       height: height.h,
+      width: isFullWidth ? double.infinity : null,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
@@ -53,16 +56,8 @@ class AppButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (icon != null) ...[
-              Icon(icon, size: 16.sp),
-              6.horizontalSpace,
-            ],
-            Text(
-              label,
-              style: (textStyle ?? AppTextStyles.buttonLabel).copyWith(
-                color: isFilled ? foregroundColor : backgroundColor,
-              ),
-            ),
+            if (icon != null) ...[icon!, 6.horizontalSpace],
+            Text(label, style: (textStyle ?? AppTextStyles.buttonLabel)),
           ],
         ),
       ),

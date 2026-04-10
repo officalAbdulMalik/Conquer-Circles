@@ -36,12 +36,36 @@ final _stats = [
 ];
 
 const _members = [
-  GuildMember(avatarEmoji: AppEmojis.eagle, bgColor: AppColors.avatarNeutral, isOnline: true),
-  GuildMember(avatarEmoji: AppEmojis.wolf, bgColor: AppColors.avatarNeutral, isOnline: true),
-  GuildMember(avatarEmoji: AppEmojis.fire, bgColor: AppColors.avatarWarm, isOnline: true),
-  GuildMember(avatarEmoji: AppEmojis.lightning, bgColor: AppColors.avatarSun, isOnline: true),
-  GuildMember(avatarEmoji: AppEmojis.moon, bgColor: AppColors.avatarLavender, isOnline: false),
-  GuildMember(avatarEmoji: AppEmojis.shield, bgColor: AppColors.avatarCool, isOnline: false),
+  GuildMember(
+    avatarEmoji: AppEmojis.eagle,
+    bgColor: AppColors.avatarNeutral,
+    isOnline: true,
+  ),
+  GuildMember(
+    avatarEmoji: AppEmojis.wolf,
+    bgColor: AppColors.avatarNeutral,
+    isOnline: true,
+  ),
+  GuildMember(
+    avatarEmoji: AppEmojis.fire,
+    bgColor: AppColors.avatarWarm,
+    isOnline: true,
+  ),
+  GuildMember(
+    avatarEmoji: AppEmojis.lightning,
+    bgColor: AppColors.avatarSun,
+    isOnline: true,
+  ),
+  GuildMember(
+    avatarEmoji: AppEmojis.moon,
+    bgColor: AppColors.avatarLavender,
+    isOnline: false,
+  ),
+  GuildMember(
+    avatarEmoji: AppEmojis.shield,
+    bgColor: AppColors.avatarCool,
+    isOnline: false,
+  ),
 ];
 
 const _extraMembers = 18;
@@ -95,26 +119,20 @@ class GuildCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      guildName,
-                      style: AppTextStyles.poppins(
-                        size: 22,
-                        color: AppColors.textNavy,
-                        weight: FontWeight.w800,
-                        letterSpacing: -0.4,
-                      ),
-                    ),
-                    SizedBox(height: 3.h),
+                    Text(guildName, style: AppTextStyles.heading3),
+                    3.verticalSpace,
                     Row(
                       children: [
-                        Text(AppEmojis.crown, style: TextStyle(fontSize: 12.sp)),
+                        Text(
+                          AppEmojis.crown,
+                          style: TextStyle(fontSize: 12.sp),
+                        ),
                         SizedBox(width: 4.w),
                         Text(
                           '$ownerName · $leagueName',
-                          style: AppTextStyles.inter(
-                            size: 13,
-                            color: AppColors.textSecondary,
-                            weight: FontWeight.w500,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
@@ -123,26 +141,26 @@ class GuildCard extends StatelessWidget {
                 ),
               ),
               // Add button
-              GestureDetector(
-                onTap: onAddTap,
-                child: Container(
-                  width: 36.r,
-                  height: 36.r,
-                  decoration: BoxDecoration(
-                    color: AppColors.tabActiveBg,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.add_rounded,
-                    color: AppColors.accentPurple,
-                    size: 20.r,
-                  ),
-                ),
-              ),
+              // GestureDetector(
+              //   onTap: onAddTap,
+              //   child: Container(
+              //     width: 36.r,
+              //     height: 36.r,
+              //     decoration: BoxDecoration(
+              //       color: AppColors.tabActiveBg,
+              //       shape: BoxShape.circle,
+              //     ),
+              //     child: Icon(
+              //       Icons.add_rounded,
+              //       color: AppColors.accentPurple,
+              //       size: 20.r,
+              //     ),
+              //   ),
+              // ),
             ],
           ),
 
-          SizedBox(height: 18.h),
+          18.verticalSpace,
 
           // ── Stats row ─────────────────────────────────────────────────────
           Row(
@@ -157,12 +175,7 @@ class GuildCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Active Members',
-                style: AppTextStyles.cardTitle.copyWith(
-                  fontSize: 14.sp,
-                ),
-              ),
+              Text('Active Members', style: AppTextStyles.heading3),
               Row(
                 children: [
                   Container(
@@ -176,10 +189,10 @@ class GuildCard extends StatelessWidget {
                   SizedBox(width: 5.w),
                   Text(
                     '$onlineCount online',
-                    style: AppTextStyles.inter(
-                      size: 13,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      fontSize: 14.sp,
                       color: AppColors.accentPurple,
-                      weight: FontWeight.w600,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],

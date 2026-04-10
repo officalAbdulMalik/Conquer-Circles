@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
+import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/chat/models/chat_model.dart';
-
 
 class MemberAvatarTile extends StatelessWidget {
   final Member member;
@@ -35,7 +36,10 @@ class MemberAvatarTile extends StatelessWidget {
                 ],
               ),
               child: Center(
-                child: Text(member.avatar, style: const TextStyle(fontSize: 22)),
+                child: Text(
+                  member.avatar,
+                  style: AppTextStyles.bodySmall.copyWith(fontSize: 18.sp),
+                ),
               ),
             ),
             if (member.isOnline)
@@ -57,20 +61,18 @@ class MemberAvatarTile extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           member.isMe ? 'You' : member.name,
-          style: TextStyle(
-            fontSize: 10,
-            color: member.isMe
-                ? AppColors.purple
-                : const Color(0xFF888888),
+          style: AppTextStyles.bodySmall.copyWith(
+            fontSize: 11.sp,
+            color: member.isMe ? AppColors.purple : const Color(0xFF888888),
             fontWeight: member.isMe ? FontWeight.w600 : FontWeight.normal,
           ),
           overflow: TextOverflow.ellipsis,
         ),
         Text(
           member.score,
-          style: const TextStyle(
-            fontSize: 10,
-            color: Color(0xFF555555),
+          style: AppTextStyles.bodySmall.copyWith(
+            fontSize: 11.sp,
+            color: AppColors.textNavy,
             fontWeight: FontWeight.w600,
           ),
         ),

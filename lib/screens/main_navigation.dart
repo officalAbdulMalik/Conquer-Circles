@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
+import 'package:test_steps/core/theme/app_spacing.dart';
+import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/chatbot/view/chat_view.dart';
 import 'package:test_steps/features/profile/view/profile_view.dart';
 import 'package:test_steps/features/steps/view/steps_view.dart';
@@ -68,6 +71,49 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: (_selectedIndex == 1 || _selectedIndex == 3)
+          ? null
+          : AppBar(
+              toolbarHeight: 60.sp,
+              title: Padding(
+                padding: EdgeInsetsGeometry.symmetric(horizontal: 10.w),
+                child: (_selectedIndex == 3 || _selectedIndex == 1)
+                    ? null
+                    : TopGreetingSection(
+                        userName: "FitWarrior",
+                        subTitle: _selectedIndex == 0
+                            ? "Let's crush today's goals"
+                            : _selectedIndex == 1
+                            ? "Explore the world around you"
+                            : _selectedIndex == 2
+                            ? "Your squad, your territory"
+                            : _selectedIndex == 3
+                            ? "Manage your profile and settings"
+                            : "Try FitCoach AI",
+                        pulseValue: 0,
+                        title: _selectedIndex == 0
+                            ? "Good morning! 👋"
+                            : _selectedIndex == 1
+                            ? "Map"
+                            : _selectedIndex == 2
+                            ? "Circle"
+                            : _selectedIndex == 3
+                            ? "Profile"
+                            : "ChatBoat",
+                        trailing: _selectedIndex == 2
+                            ? Row(
+                                children: [
+                                  SvgPicture.asset(
+                                    'assets/icons/notification.svg',
+                                  ),
+                                  10.horizontalSpace,
+                                  SvgPicture.asset('assets/icons/persons.svg'),
+                                ],
+                              )
+                            : null,
+                      ),
+              ),
+            ),
       body: IndexedStack(index: _selectedIndex, children: _screens),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
@@ -144,6 +190,86 @@ class _MainNavigationState extends State<MainNavigation> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class TopGreetingSection extends StatelessWidget {
+  const TopGreetingSection({
+    super.key,
+    required this.userName,
+    required this.pulseValue,
+    required this.title,
+    required this.subTitle,
+    this.trailing,
+  });
+
+  final String title;
+  final String userName;
+  final double pulseValue;
+  final String subTitle;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, maxLines: 1, style: AppTextStyles.heading2),
+              Text(subTitle, maxLines: 1, style: AppTextStyles.bodySmall),
+            ],
+          ),
+        ),
+
+        trailing != null
+            ? trailing!
+            : Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    height: 40.sp,
+                    width: 40.sp,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.divider, width: 1.w),
+                      gradient: AppColors.primaryGradient,
+                    ),
+                    child: Icon(Icons.person, color: Colors.white),
+                  ),
+                  Positioned(
+                    right: -3.w,
+                    bottom: -2.h,
+                    child: Container(
+                      width: 20.w,
+                      height: 20.h,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16.r),
+                        border: Border.all(color: Colors.white, width: 1.9.w),
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '${(userName.length % 20) + 1}',
+                        style: AppTextStyles.style(
+                          fontFamily: 'Poppins',
+                          size: 10,
+                          weight: FontWeight.w700,
+                          color: Colors.white,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+      ],
     );
   }
 }

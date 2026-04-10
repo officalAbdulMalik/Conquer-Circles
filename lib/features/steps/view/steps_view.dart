@@ -60,12 +60,6 @@ class _StepsViewState extends ConsumerState<StepsView>
     );
     final pulseValue = _pulseController.value;
     return Scaffold(
-      appBar: AppBar(
-        title: Padding(
-          padding: AppSpacing.pagePadding,
-          child: TopGreetingSection(userName: userName, pulseValue: pulseValue),
-        ),
-      ),
       body: AnimatedBuilder(
         animation: _pulseController,
         builder: (context, _) {
@@ -76,8 +70,7 @@ class _StepsViewState extends ConsumerState<StepsView>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(height: MediaQuery.of(context).padding.top + 20.h),
-
-                ProfileCardSection(
+                ProfileProgressCard(
                   userName: userName,
                   xpCurrent: xpCurrent,
                   xpGoal: xpGoal,

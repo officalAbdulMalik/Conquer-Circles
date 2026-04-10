@@ -35,19 +35,12 @@ class AllCirclesPage extends StatelessWidget {
               children: [
                 Text(
                   'Browse Circles',
-                  style: AppTextStyles.poppins(
-                    size: 20,
-                    color: AppColors.textNavy,
-                    weight: FontWeight.w700,
-                  ),
+                  style: AppTextStyles.heading2.copyWith(fontSize: 22.sp),
                 ),
-                SizedBox(height: 2.h),
+                4.verticalSpace,
                 Text(
                   '8 circles · Find your squad',
-                  style: AppTextStyles.poppins(
-                    size: 13,
-                    color: AppColors.textSecondary,
-                  ),
+                  style: AppTextStyles.bodySmall,
                 ),
               ],
             ),
@@ -84,13 +77,7 @@ class AllCirclesPage extends StatelessWidget {
 
               10.verticalSpace,
 
-                Text(
-                  'Featured Circles',
-                  style: AppTextStyles.sectionTitle.copyWith(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16.sp,
-                ),
-              ),
+              Text('Featured Circles', style: AppTextStyles.heading3),
 
               10.verticalSpace,
 
@@ -98,13 +85,7 @@ class AllCirclesPage extends StatelessWidget {
 
               10.verticalSpace,
 
-              Text(
-                'All Circles',
-                style: AppTextStyles.sectionTitle.copyWith(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16.sp,
-                ),
-              ),
+              Text('All Circles', style: AppTextStyles.heading3),
               10.verticalSpace,
 
               // ── Cards ─────────────────────────────────────────────────────
@@ -139,17 +120,18 @@ class _CircleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        color: data.cardBgColor,
-        borderRadius: BorderRadius.circular(22.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 16.r,
-            offset: Offset(0, 4.h),
-          ),
-        ],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24.r),
+        border: Border.all(color: const Color(0x14675FAA), width: 0.7.w),
+        // boxShadow: [
+        //   BoxShadow(
+        //     color: const Color(0x1F675FAA),
+        //     blurRadius: 24.r,
+        //     offset: Offset(0, 4.h),
+        //   ),
+        // ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,9 +150,8 @@ class _CircleCard extends StatelessWidget {
                       children: [
                         Text(
                           data.name,
-                          style: AppTextStyles.bodyLarge.copyWith(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14.sp,
+                          style: AppTextStyles.heading2.copyWith(
+                            fontSize: 18.sp,
                           ),
                         ),
                         if (data.badge != null) ...[
@@ -182,10 +163,10 @@ class _CircleCard extends StatelessWidget {
                     SizedBox(height: 3.h),
                     Text(
                       data.quote,
-                      style: AppTextStyles.poppins(
-                        size: 12.5,
-                        color: AppColors.textSecondary,
-                      ).copyWith(fontStyle: FontStyle.italic),
+                      style: AppTextStyles.bodySmall.copyWith(
+                        fontStyle: FontStyle.italic,
+                        fontSize: 12.sp,
+                      ),
                     ),
                   ],
                 ),
@@ -249,10 +230,11 @@ class _LogoBox extends StatelessWidget {
       height: 52.r,
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(14.r),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0x1A000000), width: 0.5.w),
       ),
       child: Center(
-        child: Text(emoji, style: TextStyle(fontSize: 26.sp)),
+        child: Text(emoji, style: TextStyle(fontSize: 24.sp)),
       ),
     );
   }
@@ -408,17 +390,17 @@ class _StatItem extends StatelessWidget {
         SizedBox(width: 3.w),
         Text(
           '$value ',
-          style: AppTextStyles.poppins(
-            size: 12,
+          style: AppTextStyles.bodySmall.copyWith(
             color: AppColors.textNavy,
-            weight: FontWeight.w600,
+            fontWeight: FontWeight.w600,
+            fontSize: 12.sp,
           ),
         ),
         Text(
           label,
-          style: AppTextStyles.poppins(
-            size: 12,
-            color: AppColors.textSecondary,
+          style: AppTextStyles.bodySmall.copyWith(
+            fontSize: 12.sp,
+            fontWeight: FontWeight.w400,
           ),
         ),
       ],
@@ -521,7 +503,7 @@ class _ActionButton extends StatelessWidget {
     final isJoin = status == JoinStatus.join;
     return AppButton(
       label: _label,
-      icon: isJoin ? Icons.arrow_forward_ios : null,
+      icon: isJoin ? Icon(Icons.arrow_forward_ios) : null,
       variant: isFull ? AppButtonVariant.outlined : AppButtonVariant.filled,
       backgroundColor: isJoin ? AppColors.brandPurple : color,
       foregroundColor: AppColors.surface,

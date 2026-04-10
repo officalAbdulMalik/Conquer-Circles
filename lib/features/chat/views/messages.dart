@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
+import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/chat/models/chat_model.dart';
 import 'package:test_steps/features/chat/widget/avatar_tile.dart';
 import 'package:test_steps/features/chat/widget/message_input_bar.dart';
@@ -138,36 +139,20 @@ class _ChatScreenState extends State<ChatScreen> {
             const SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
                   'StormWalkers',
-                  style: TextStyle(
-                    color: AppColors.textNavy,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                  ),
+                  style: AppTextStyles.heading3.copyWith(fontSize: 18.sp),
                 ),
                 Text(
                   '6 online · 24 members',
-                  style: TextStyle(
-                    color: Color(0xFF888888),
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.normal,
-                  ),
+                  style: AppTextStyles.bodySmall.copyWith(fontSize: 12.sp),
                 ),
               ],
             ),
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.phone_outlined, color: Color(0xFF333355)),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.search, color: Color(0xFF333355)),
-            onPressed: () {},
-          ),
           IconButton(
             icon: const Icon(Icons.more_vert, color: Color(0xFF333355)),
             onPressed: () {},
@@ -180,10 +165,10 @@ class _ChatScreenState extends State<ChatScreen> {
             color: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 10),
             child: SizedBox(
-              height: 80.sp,
+              height: 90.sp,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.only(left: 16.w, right: 16.w, top: 10.sp),
                 itemCount: members.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 14),
                 itemBuilder: (context, i) => SizedBox(
@@ -235,7 +220,7 @@ class _ChatScreenState extends State<ChatScreen> {
           const Divider(height: 1, color: Color(0xFFEEEEEE)),
           const MessageInputBar(),
           // Safe area bottom padding
-          SizedBox(height: MediaQuery.of(context).padding.bottom),
+          SizedBox(height: 8.h),
         ],
       ),
     );

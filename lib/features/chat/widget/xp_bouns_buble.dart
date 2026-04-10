@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:test_steps/core/theme/app_text_styles.dart';
 
 class XpBonusBubble extends StatefulWidget {
   const XpBonusBubble({super.key});
@@ -64,11 +65,11 @@ class _XpBonusBubbleState extends State<XpBonusBubble>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   RichText(
-                    text: const TextSpan(
+                    text: TextSpan(
                       children: [
                         TextSpan(
                           text: '+2,400 Circle XP',
-                          style: TextStyle(
+                          style: AppTextStyles.bodyLarge.copyWith(
                             color: Color(0xFF2E7D32),
                             fontWeight: FontWeight.w700,
                             fontSize: 14,
@@ -77,9 +78,9 @@ class _XpBonusBubbleState extends State<XpBonusBubble>
                       ],
                     ),
                   ),
-                  const Text(
+                  Text(
                     'Cluster bonus activated · 6 zones owned',
-                    style: TextStyle(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: Color(0xFF66BB6A),
                       fontSize: 11.5,
                     ),
@@ -87,7 +88,13 @@ class _XpBonusBubbleState extends State<XpBonusBubble>
                 ],
               ),
               const Spacer(),
-              const Text('⚡', style: TextStyle(fontSize: 16, color: Color(0xFF66BB6A))),
+              Text(
+                '⚡',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: Color(0xFF66BB6A),
+                  fontSize: 16,
+                ),
+              ),
             ],
           ),
         ),

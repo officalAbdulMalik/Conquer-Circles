@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:test_steps/core/theme/app_text_styles.dart';
 
 class RaidRepelledBubble extends StatefulWidget {
   const RaidRepelledBubble({super.key});
@@ -56,29 +58,34 @@ class _RaidRepelledBubbleState extends State<RaidRepelledBubble>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF81C784), width: 1.5),
+                  border: Border.all(
+                    color: const Color(0xFF81C784),
+                    width: 1.5,
+                  ),
                 ),
-                child: const Center(
-                  child: Text('🛡️', style: TextStyle(fontSize: 16)),
+                child: Center(
+                  child: Text(
+                    '🛡️',
+                    style: AppTextStyles.bodySmall.copyWith(fontSize: 16),
+                  ),
                 ),
               ),
-              const SizedBox(width: 10),
+              10.horizontalSpace,
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'Raid Repelled! 🛡️',
-                    style: TextStyle(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: Color(0xFF2E7D32),
                       fontWeight: FontWeight.w700,
-                      fontSize: 13.5,
                     ),
                   ),
                   Text(
                     'IronStrider defended South Shore successfully',
-                    style: TextStyle(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: Color(0xFF43A047),
-                      fontSize: 11.5,
+                      fontSize: 11.sp,
                     ),
                   ),
                 ],

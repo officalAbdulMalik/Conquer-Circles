@@ -3,9 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-
 import 'package:test_steps/core/theme/app_colors.dart';
-import 'package:test_steps/core/theme/app_spacing.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/widgets/shared/animated_gradient_progress_bar.dart';
 
@@ -47,124 +45,8 @@ class SectionReveal extends StatelessWidget {
   }
 }
 
-class TopGreetingSection extends StatelessWidget {
-  const TopGreetingSection({
-    super.key,
-    required this.userName,
-    required this.pulseValue,
-  });
-
-  final String userName;
-  final double pulseValue;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Good morning! 👋',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.heading3,
-              ),
-              4.verticalSpace,
-              Text(
-                "Let's crush today's goals",
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.inter(
-                  size: 14,
-                  color: const Color(0xFF6B7280),
-                ),
-              ),
-            ],
-          ),
-        ),
-        10.horizontalSpace,
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              width: 50.w,
-              height: 50.h,
-              padding: EdgeInsets.all(AppSpacing.x2),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16.r),
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppColors.brandPurple, AppColors.brandCyan],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0x59675FAA),
-                    blurRadius: 16.r,
-                    offset: Offset(0, 4.h),
-                  ),
-                ],
-              ),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14.r),
-                ),
-                child: Center(
-                  child: SvgPicture.asset(
-                    'assets/icons/dashboard_profile_avatar.svg',
-                    width: 36.w,
-                    height: 36.h,
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              right: -3.w,
-              bottom: -2.h,
-              child: Container(
-                width: 25.w,
-                height: 25.h,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16.r),
-                  border: Border.all(color: Colors.white, width: 1.9.w),
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0x80FFA500),
-                      blurRadius: 8.r,
-                      offset: Offset(0, 2.h),
-                    ),
-                  ],
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  '${(userName.length % 20) + 1}',
-                  style: AppTextStyles.style(
-                    fontFamily: 'Poppins',
-                    size: 10,
-                    weight: FontWeight.w700,
-                    color: Colors.white,
-                    height: 1,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class ProfileCardSection extends StatelessWidget {
-  const ProfileCardSection({
+class ProfileProgressCard extends StatelessWidget {
+  const ProfileProgressCard({
     super.key,
     required this.userName,
     required this.xpCurrent,
@@ -209,12 +91,7 @@ class ProfileCardSection extends StatelessWidget {
                   children: [
                     Text(
                       userName,
-                      style: AppTextStyles.style(
-                        fontFamily: 'Poppins',
-                        size: 16,
-                        weight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
+                      style: AppTextStyles.heading2.copyWith(fontSize: 18.sp),
                     ),
                     4.verticalSpace,
                     Row(
@@ -230,22 +107,20 @@ class ProfileCardSection extends StatelessWidget {
                           ),
                           child: Text(
                             '⚔️ Level 15',
-                            style: AppTextStyles.style(
-                              fontFamily: 'Inter',
-                              size: 12,
-                              weight: FontWeight.w600,
+                            style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.brandPurple,
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                         8.horizontalSpace,
                         Text(
                           '${formatNumber(xpCurrent)} / ${formatNumber(xpGoal)} XP',
-                          style: AppTextStyles.style(
-                            fontFamily: 'Inter',
-                            size: 12,
-                            weight: FontWeight.w600,
+                          style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.brandPurple,
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
@@ -258,26 +133,21 @@ class ProfileCardSection extends StatelessWidget {
                   children: [
                     Text(
                       'Progress',
-                      style: AppTextStyles.style(
-                        fontFamily: 'Inter',
-                        size: 12,
-                        color: const Color(0xFF6B7280),
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                     Text(
                       '${(xpProgress * 100).round()}%',
-                      style: AppTextStyles.style(
-                        fontFamily: 'Poppins',
-                        size: 16,
-                        weight: FontWeight.w700,
-                        color: AppColors.brandPurple,
-                      ),
+                      style: AppTextStyles.heading3,
                     ),
                   ],
                 ),
               ],
             ),
-            16.verticalSpace,
+            10.verticalSpace,
             AnimatedGradientProgressBar(
               value: xpProgress,
               height: 12.h,
@@ -289,19 +159,19 @@ class ProfileCardSection extends StatelessWidget {
               children: [
                 Text(
                   '0 XP',
-                  style: AppTextStyles.style(
-                    fontFamily: 'Inter',
-                    size: 12,
-                    color: const Color(0xFF9CA3AF),
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
                 const Spacer(),
                 Text(
                   '3,000 XP',
-                  style: AppTextStyles.style(
-                    fontFamily: 'Inter',
-                    size: 12,
-                    color: const Color(0xFF9CA3AF),
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
               ],
@@ -542,10 +412,10 @@ class SmallStatCard extends StatelessWidget {
                 8.horizontalSpace,
                 Text(
                   title,
-                  style: AppTextStyles.style(
-                    fontFamily: 'Inter',
-                    size: 12,
-                    color: const Color(0xFF9CA3AF),
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
               ],
@@ -553,20 +423,18 @@ class SmallStatCard extends StatelessWidget {
             6.verticalSpace,
             Text(
               value,
-              style: AppTextStyles.style(
-                fontFamily: 'Poppins',
-                size: 32,
-                weight: FontWeight.w700,
+              style: AppTextStyles.heading3.copyWith(
                 color: AppColors.textPrimary,
-                height: 1.2,
+                fontSize: 22.sp,
+                fontWeight: FontWeight.w700,
               ),
             ),
             Text(
               subtitle,
-              style: AppTextStyles.style(
-                fontFamily: 'Inter',
-                size: 12,
-                color: const Color(0xFF9CA3AF),
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w400,
               ),
             ),
           ],
@@ -607,12 +475,7 @@ class AchievementsCardSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(
-                'Achievements',
-                style: AppTextStyles.bodyLarge.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              Text('Achievements', style: AppTextStyles.heading3.copyWith()),
               const Spacer(),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
@@ -622,10 +485,10 @@ class AchievementsCardSection extends StatelessWidget {
                 ),
                 child: Text(
                   '3/4 Unlocked',
-                  style: AppTextStyles.style(
-                    fontFamily: 'Inter',
-                    size: 10,
-                    color: const Color(0xFF6B7280),
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
               ),
@@ -675,9 +538,7 @@ class AchievementBadge extends StatelessWidget {
               width: 52.w,
               height: 52.h,
               decoration: BoxDecoration(
-                color: unlocked
-                    ? AppColors.divider
-                    : AppColors.tileNeutral,
+                color: unlocked ? AppColors.divider : AppColors.tileNeutral,
                 borderRadius: BorderRadius.circular(16.r),
               ),
               child: Center(
@@ -700,10 +561,10 @@ class AchievementBadge extends StatelessWidget {
         Text(
           label,
           textAlign: TextAlign.center,
-          style: AppTextStyles.style(
-            fontFamily: 'Inter',
-            size: 10,
-            color: const Color(0xFF6B7280),
+          style: AppTextStyles.bodySmall.copyWith(
+            color: AppColors.textSecondary,
+            fontSize: 10.sp,
+            fontWeight: FontWeight.w400,
           ),
         ),
       ],
@@ -754,10 +615,7 @@ class SummaryGridSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "Today's Summary",
-          style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600),
-        ),
+        Text("Today's Summary", style: AppTextStyles.heading3),
         10.verticalSpace,
         GridView.builder(
           padding: EdgeInsets.zero,
@@ -799,7 +657,11 @@ class SummaryGridSection extends StatelessWidget {
                         child: Text(
                           item.$1,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.inter(size: 12),
+                          style: AppTextStyles.bodySmall.copyWith(
+                            fontSize: 14.sp,
+                            color: AppColors.bgDark,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ],
@@ -807,12 +669,13 @@ class SummaryGridSection extends StatelessWidget {
                   const Spacer(),
                   Text(
                     item.$2,
-                    style:
-                        AppTextStyles.heading2.copyWith(
-                          color: index == 1
-                              ? const Color(0xFFFB2C36)
-                              : AppColors.brandPurple,
-                        ),
+                    style: AppTextStyles.heading3.copyWith(
+                      color: index == 1
+                          ? const Color(0xFFFB2C36)
+                          : AppColors.textPrimary,
+                      fontSize: 22.sp,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ],
               ),
@@ -887,18 +750,14 @@ class DailyMissionsSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(
-              'Daily Missions',
-              style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600),
-            ),
+            Text('Daily Missions', style: AppTextStyles.heading3),
             const Spacer(),
             Text(
               '${missionCards.where((e) => e.progress >= 1).length}/3 Done',
-              style: AppTextStyles.style(
-                fontFamily: 'Inter',
-                size: 12,
-                weight: FontWeight.w600,
-                color: AppColors.brandPurple,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w400,
               ),
             ),
           ],
@@ -960,10 +819,8 @@ class DailyMissionsSection extends StatelessWidget {
                           child: Center(
                             child: Text(
                               mission.emoji,
-                              style: AppTextStyles.style(
-                                fontFamily: 'Poppins',
-                                size: 20,
-                                color: AppColors.textPrimary,
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                fontSize: 20.sp,
                               ),
                             ),
                           ),
@@ -975,25 +832,15 @@ class DailyMissionsSection extends StatelessWidget {
                             children: [
                               Text(
                                 mission.title,
-                                style:
-                                    AppTextStyles.style(
-                                      fontFamily: 'Poppins',
-                                      size: 14,
-                                      weight: FontWeight.w600,
-                                      color: AppColors.textPrimary,
-                                    ).copyWith(
-                                      color:
-                                          mission.tint ==
-                                              const Color(0xFF16A34A)
-                                          ? const Color(0xFF16A34A)
-                                          : AppColors.textPrimary,
-                                    ),
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: mission.tint == const Color(0xFF16A34A)
+                                      ? const Color(0xFF16A34A)
+                                      : AppColors.textPrimary,
+                                ),
                               ),
                               Text(
                                 mission.subtitle,
-                                style: AppTextStyles.style(
-                                  fontFamily: 'Inter',
-                                  size: 12,
+                                style: AppTextStyles.bodySmall.copyWith(
                                   color: const Color(0xFF9CA3AF),
                                 ),
                               ),
@@ -1018,12 +865,9 @@ class DailyMissionsSection extends StatelessWidget {
                           ),
                           child: Text(
                             mission.xp,
-                            style: AppTextStyles.style(
-                              fontFamily: 'Poppins',
-                              size: 12,
-                              weight: FontWeight.w700,
-                              color: AppColors.brandPurple,
-                            ).copyWith(color: mission.tint),
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: mission.tint,
+                            ),
                           ),
                         ),
                       ],
@@ -1033,24 +877,17 @@ class DailyMissionsSection extends StatelessWidget {
                       children: [
                         Text(
                           mission.progressLabel,
-                          style: AppTextStyles.style(
-                            fontFamily: 'Inter',
-                            size: 12,
+                          style: AppTextStyles.bodySmall.copyWith(
                             color: const Color(0xFF9CA3AF),
                           ),
                         ),
                         const Spacer(),
                         Text(
                           mission.progressPercent,
-                          style:
-                              AppTextStyles.style(
-                                fontFamily: 'Inter',
-                                size: 12,
-                                color: const Color(0xFF9CA3AF),
-                              ).copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: mission.tint,
-                              ),
+                          style: AppTextStyles.bodySmall.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: mission.tint,
+                          ),
                         ),
                       ],
                     ),
@@ -1064,7 +901,10 @@ class DailyMissionsSection extends StatelessWidget {
                         end: Alignment.centerRight,
                         colors: mission.tint == const Color(0xFF16A34A)
                             ? const [AppColors.success, Color(0xFF4ADE80)]
-                            : const [AppColors.brandPurple, AppColors.brandCyan],
+                            : const [
+                                AppColors.brandPurple,
+                                AppColors.brandCyan,
+                              ],
                       ),
                       showShimmer: true,
                     ),

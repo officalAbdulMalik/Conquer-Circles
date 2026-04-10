@@ -71,7 +71,9 @@ const _users = [
 ];
 
 class LeaderboardCard extends StatefulWidget {
-  const LeaderboardCard({super.key});
+  const LeaderboardCard({super.key, this.isMemebers});
+
+  final bool? isMemebers;
 
   @override
   State<LeaderboardCard> createState() => _LeaderboardCardState();
@@ -101,76 +103,86 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
             padding: EdgeInsets.fromLTRB(16.w, 16.h, 12.w, 8.h),
             child: Row(
               children: [
-                SvgPicture.asset('assets/icons/arrow.svg'),
-                SizedBox(width: 6.w),
+                if (widget.isMemebers == false) ...[
+                  SvgPicture.asset('assets/icons/arrow.svg'),
+                  6.horizontalSpace,
+                ],
                 Text(
-                  'Leaderboard',
-                  style: AppTextStyles.cardTitle.copyWith(
-                    fontSize: 16.sp,
-                    letterSpacing: -0.2,
-                  ),
+                  widget.isMemebers == true ? 'Members' : 'Leaderboard',
+                  style: AppTextStyles.heading3,
                 ),
-                SizedBox(width: 12.w),
-                Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: List.generate(_tabs.length, (i) {
-                        final (label, icon) = _tabs[i];
-                        final active = i == _selectedTab;
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() => _selectedTab = i);
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            margin: EdgeInsets.only(right: 6.w),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 10.w,
-                              vertical: 5.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: active
-                                  ? AppColors.tabActiveBg
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(20).r,
-                            ),
-                            child: Row(
-                              children: [
-                                Text(
-                                  icon,
-                                  style: AppTextStyles.inter(
-                                    size: 11,
-                                    color: active
-                                        ? AppColors.accentPurple
-                                        : AppColors.textSecondary,
-                                  ),
-                                ),
-                                SizedBox(width: 3.w),
-                                Text(
-                                  label,
-                                  style: AppTextStyles.inter(
-                                    size: 12,
-                                    weight: active
-                                        ? FontWeight.w600
-                                        : FontWeight.w400,
-                                    color: active
-                                        ? AppColors.accentPurple
-                                        : AppColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }),
+                if (widget.isMemebers == true) ...[
+                  10.horizontalSpace,
+                  Text(
+                    '100',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.accentPurple,
                     ),
                   ),
-                ),
+                ],
+                if (widget.isMemebers != true) ...[
+                  12.horizontalSpace,
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: List.generate(_tabs.length, (i) {
+                          final (label, icon) = _tabs[i];
+                          final active = i == _selectedTab;
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() => _selectedTab = i);
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              margin: EdgeInsets.only(right: 6.w),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 10.w,
+                                vertical: 5.h,
+                              ),
+                              decoration: BoxDecoration(
+                                color: active
+                                    ? AppColors.tabActiveBg
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(20).r,
+                              ),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    icon,
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      fontSize: 12.sp,
+                                      color: active
+                                          ? AppColors.accentPurple
+                                          : AppColors.textSecondary,
+                                    ),
+                                  ),
+                                  3.horizontalSpace,
+                                  Text(
+                                    label,
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      fontSize: 14.sp,
+                                      fontWeight: active
+                                          ? FontWeight.w600
+                                          : FontWeight.w400,
+                                      color: active
+                                          ? AppColors.accentPurple
+                                          : AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
-          SizedBox(height: 4.h),
+          4.verticalSpace,
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -188,10 +200,9 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
                             ? MedalBadge(rank: _users[i].rank)
                             : Text(
                                 '#${_users[i].rank}',
-                                style: AppTextStyles.inter(
-                                  size: 13,
-                                  color: AppColors.textSecondary,
-                                  weight: FontWeight.w600,
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  fontSize: 13.sp,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                       ),
@@ -210,14 +221,14 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
                             children: [
                               TextSpan(
                                 text: _users[i].username,
-                                style: AppTextStyles.poppins(
-                                  size: 14,
-                                  color: AppColors.textNavy,
-                                  weight: FontWeight.w600,
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                               TextSpan(
-                                text: '  ${_users[i].badgeEmoji ?? AppEmojis.emptyBadge}',
+                                text:
+                                    '  ${_users[i].badgeEmoji ?? AppEmojis.emptyBadge}',
                                 style: TextStyle(fontSize: 13.sp),
                               ),
                             ],
@@ -227,10 +238,10 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
                       ),
                       Text(
                         '${_users[i].score}',
-                        style: AppTextStyles.poppins(
-                          size: 16,
+                        style: AppTextStyles.heading3.copyWith(
+                          fontSize: 18.sp,
                           color: AppColors.accentIndigo,
-                          weight: FontWeight.w700,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],

@@ -6,7 +6,6 @@ import 'package:test_steps/features/seasons/view/season_recap_view.dart';
 import 'package:test_steps/features/social/view/browse_cicle.dart';
 import 'package:test_steps/features/social/widgets/chat_preview.dart';
 import 'package:test_steps/features/social/widgets/circle_card.dart';
-import 'package:test_steps/features/social/widgets/header_widget.dart';
 import 'package:test_steps/features/social/widgets/leader_board.dart';
 import 'package:test_steps/features/social/widgets/ranking.dart';
 import 'package:test_steps/features/social/widgets/red_alerts.dart';
@@ -33,51 +32,42 @@ class CirclesScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 10.h),
+                SizedBox(height: MediaQuery.of(context).padding.top + 20.h),
 
-                /// HEADER
-                const CirclesHeader(),
-
-                SizedBox(height: 20.h),
-
-                /// SEASON CARD
                 SeasonCountdownCard(
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const SeasonRecapView(
-                          seasonId: 4,
-                          seasonName: '4',
-                        ),
+                        builder: (_) =>
+                            const SeasonRecapView(seasonId: 4, seasonName: '4'),
                       ),
                     );
                   },
                 ),
-
-                SizedBox(height: 16.h),
+                16.verticalSpace,
 
                 /// CIRCLE CARD
                 const GuildCard(),
 
-                SizedBox(height: 16.h),
+                16.verticalSpace,
 
                 /// LEADERBOARD
                 const LeaderboardCard(),
 
-                SizedBox(height: 16.h),
+                16.verticalSpace,
 
                 /// SPECIAL RANKINGS
                 const SpecialRankingsSection(),
 
-                SizedBox(height: 16.h),
+                16.verticalSpace,
                 RaidAlertsCard(),
-                SizedBox(height: 16.h),
+                16.verticalSpace,
 
                 /// CHAT PREVIEW
                 CircleChatCard(),
 
-                SizedBox(height: 20.h),
+                20.verticalSpace,
 
                 /// JOIN BUTTON
                 SizedBox(
@@ -87,10 +77,9 @@ class CirclesScreen extends StatelessWidget {
                     variant: AppButtonVariant.outlined,
                     backgroundColor: AppColors.brandPurple,
                     borderColor: AppColors.brandPurple.withValues(alpha: 0.3),
-                    textStyle: AppTextStyles.poppins(
-                      size: 14,
+                    textStyle: AppTextStyles.buttonLabel.copyWith(
                       color: AppColors.brandPurple,
-                      weight: FontWeight.w600,
+                      fontSize: 14.sp,
                     ),
                     onPressed: () {
                       Navigator.push(

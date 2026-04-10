@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
+import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/chat/models/chat_model.dart';
 import 'package:test_steps/features/chat/widget/reaction_row.dart';
-
 
 class SentMessageBubble extends StatefulWidget {
   final ChatMessageModel message;
@@ -57,7 +58,9 @@ class _SentMessageBubbleState extends State<SentMessageBubble>
                   Flexible(
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.sentBubble,
                         borderRadius: const BorderRadius.only(
@@ -76,9 +79,9 @@ class _SentMessageBubbleState extends State<SentMessageBubble>
                       ),
                       child: Text(
                         widget.message.text,
-                        style: const TextStyle(
+                        style: AppTextStyles.bodyMedium.copyWith(
                           color: AppColors.sentText,
-                          fontSize: 14.5,
+                          fontSize: 14.sp,
                         ),
                       ),
                     ),
@@ -88,10 +91,7 @@ class _SentMessageBubbleState extends State<SentMessageBubble>
               const SizedBox(height: 3),
               Text(
                 widget.message.time,
-                style: const TextStyle(
-                  color: AppColors.timeText,
-                  fontSize: 11,
-                ),
+                style: const TextStyle(color: AppColors.timeText, fontSize: 11),
               ),
               if (widget.message.reactions.isNotEmpty) ...[
                 const SizedBox(height: 4),

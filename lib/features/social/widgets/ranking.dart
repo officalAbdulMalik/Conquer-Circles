@@ -50,10 +50,7 @@ final _ranks = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 class SpecialRankingsSection extends StatelessWidget {
-  const SpecialRankingsSection({
-    super.key,
-    this.ranks,
-  });
+  const SpecialRankingsSection({super.key, this.ranks});
 
   final List<SpecialRank>? ranks;
 
@@ -76,14 +73,7 @@ class SpecialRankingsSection extends StatelessWidget {
                 size: 20.r,
               ),
               SizedBox(width: 6.w),
-              Text(
-                'Special Rankings',
-                style: AppTextStyles.sectionTitle.copyWith(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.3,
-                ),
-              ),
+              Text('Special Rankings', style: AppTextStyles.heading3),
             ],
           ),
         ),
@@ -93,14 +83,14 @@ class SpecialRankingsSection extends StatelessWidget {
         // ── Cards row ────────────────────────────────────────────────────────
         Row(
           children: list
-              .map((r) => Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        right: r == list.last ? 0 : 10.w,
-                      ),
-                      child: _RankCard(rank: r),
-                    ),
-                  ))
+              .map(
+                (r) => Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: r == list.last ? 0 : 10.w),
+                    child: _RankCard(rank: r),
+                  ),
+                ),
+              )
               .toList(),
         ),
       ],
@@ -136,34 +126,34 @@ class _RankCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Category icon
-          Text(rank.iconEmoji, style: TextStyle(fontSize: 22.sp)),
+          Text(rank.iconEmoji, style: AppTextStyles.bodySmall),
 
-          SizedBox(height: 8.h),
+          8.verticalSpace,
 
           // Title
           Text(
             rank.title,
-            style: AppTextStyles.poppins(
-              size: 13,
+            style: AppTextStyles.bodySmall.copyWith(
+              fontSize: 13.sp,
               color: rank.titleColor,
-              weight: FontWeight.w700,
+              fontWeight: FontWeight.w700,
             ),
           ),
 
-          SizedBox(height: 6.h),
+          6.verticalSpace,
 
           // Player row
           Row(
             children: [
-              Text(rank.playerEmoji, style: TextStyle(fontSize: 13.sp)),
-              SizedBox(width: 4.w),
+              Text(rank.playerEmoji, style: AppTextStyles.bodySmall),
+              4.horizontalSpace,
               Flexible(
                 child: Text(
                   rank.playerName,
-                  style: AppTextStyles.poppins(
-                    size: 12,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    fontSize: 12.sp,
                     color: AppColors.textNavy,
-                    weight: FontWeight.w600,
+                    fontWeight: FontWeight.w600,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -171,27 +161,26 @@ class _RankCard extends StatelessWidget {
             ],
           ),
 
-          SizedBox(height: 8.h),
+          8.verticalSpace,
 
           // Stat value
           Text(
             rank.statValue,
-            style: AppTextStyles.poppins(
-              size: 13,
+            style: AppTextStyles.bodySmall.copyWith(
+              fontSize: 13.sp,
               color: rank.statColor,
-              weight: FontWeight.w800,
+              fontWeight: FontWeight.w800,
             ),
           ),
 
-          SizedBox(height: 2.h),
+          2.verticalSpace,
 
           // Stat description
           Text(
             rank.statDescription,
-            style: AppTextStyles.inter(
-              size: 10.5,
-              color: AppColors.textSecondary,
-              weight: FontWeight.w400,
+            style: AppTextStyles.bodySmall.copyWith(
+              fontSize: 10.5.sp,
+              fontWeight: FontWeight.w400,
             ),
           ),
         ],

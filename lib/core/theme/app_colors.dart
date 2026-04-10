@@ -9,6 +9,7 @@ class AppColors {
   static const Color brandPurple = Color(0xFF675FAA);
   static const Color brandCyan = Color(0xFF53E4F3);
   static const Color brandLightCyan = Color(0xFF99D7E9);
+  static Color iconColor = Color(0xFF675FAA).withValues(alpha: 0.4);
 
   // ── Text Colors ───────────────────────────────────────────────────────────
   static const Color textPrimary = Color(0xFF2D2D2D);
@@ -20,7 +21,7 @@ class AppColors {
   // ── Background & Surface ─────────────────────────────────────────────────
   static const Color bgDeep = Color(0xFF251B56);
   static const Color surface = Color(0xFFFFFFFF);
-  static const Color bgLight = Color(0xFFF8FAFC);
+  static const Color bgLight = Color(0xFFFFFFFF);
   static const Color bgDark = Color(0xFF0F172A);
   static const Color bgSoftPurple = Color(0xFFF0EEFF);
   static const Color bgProgress = Color(0xFFEEEEF5);
@@ -101,6 +102,8 @@ class AppColors {
   static const Color tileNeutral = Color(0xFFE5E7EB);
   static const Color online = green;
 
+  static const Color dividerColor = Color(0xFFE5E7F0);
+
   // Avatar swatches
   static const Color avatarNeutral = Color(0xFFE8E8E8);
   static const Color avatarWarm = Color(0xFFFFE0CC);
@@ -109,7 +112,7 @@ class AppColors {
   static const Color avatarLavender = Color(0xFFF0EAFF);
 
   static Gradient primaryGradient = LinearGradient(
-    colors: [brandPurple, brandPurple.withAlpha(0x80)],
+    colors: [Color(0xff675FAA), Color(0xff675FAA), Color(0xff55D7EC)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

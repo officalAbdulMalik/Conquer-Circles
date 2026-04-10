@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
+import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/social/models/guild_models.dart';
 
 class StatTile extends StatelessWidget {
@@ -19,22 +21,21 @@ class StatTile extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           stat.icon,
-          const SizedBox(height: 6),
+          6.verticalSpace,
           Text(
             stat.value,
-            style: const TextStyle(
-              color: AppColors.textNavy,
-              fontWeight: FontWeight.w800,
-              fontSize: 16,
+            style: AppTextStyles.bodyMedium.copyWith(
+              fontWeight: FontWeight.w600,
+              fontSize: 18,
             ),
           ),
-          const SizedBox(height: 2),
+          2.verticalSpace,
           Text(
             stat.label,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 10.5,
+            style: AppTextStyles.bodySmall.copyWith(
               fontWeight: FontWeight.w500,
+              fontSize: 12,
+              color: AppColors.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),

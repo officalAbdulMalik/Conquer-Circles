@@ -9,10 +9,10 @@ import 'package:test_steps/core/theme/app_text_styles.dart';
 // ─────────────────────────────────────────────
 
 enum TileVariant {
-  stat,         // Icon + big number + label (e.g., 14/20 Members)
-  requirement,  // Check icon + label + status badge
-  leaderboard,  // Rank + avatar + name + XP
-  chatMessage,  // Avatar + username + time + message
+  stat, // Icon + big number + label (e.g., 14/20 Members)
+  requirement, // Check icon + label + status badge
+  leaderboard, // Rank + avatar + name + XP
+  chatMessage, // Avatar + username + time + message
 }
 
 class InfoTile extends StatelessWidget {
@@ -150,7 +150,8 @@ class _StatTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: padding ?? const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+        padding:
+            padding ?? const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
         decoration: BoxDecoration(
           color: backgroundColor ?? AppColors.primaryLighter,
           borderRadius: BorderRadius.circular(10.sp),
@@ -159,7 +160,7 @@ class _StatTile extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, color: iconColor, size: 20),
-            const SizedBox(height: 6),
+            6.verticalSpace,
             Row(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -167,9 +168,8 @@ class _StatTile extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
+                  style: AppTextStyles.heading3.copyWith(
+                    fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                     letterSpacing: -0.5,
                   ),
@@ -177,16 +177,19 @@ class _StatTile extends StatelessWidget {
                 if (subValue != null)
                   Text(
                     subValue!,
-                    style: const TextStyle(
-                      fontSize: 13,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
                       color: AppColors.textSecondary,
                     ),
                   ),
               ],
             ),
-            const SizedBox(height: 2),
-            Text(label, style: AppTextStyles.caption),
+            2.verticalSpace,
+            Text(
+              label,
+              style: AppTextStyles.bodySmall.copyWith(fontSize: 10.sp),
+            ),
           ],
         ),
       ),
@@ -224,7 +227,9 @@ class _RequirementTile extends StatelessWidget {
               width: 22,
               height: 22,
               decoration: BoxDecoration(
-                color: isMet ? AppColors.green.withValues(alpha: 0.12) : AppColors.textMuted.withValues(alpha: 0.12),
+                color: isMet
+                    ? AppColors.green.withValues(alpha: 0.12)
+                    : AppColors.textMuted.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -233,13 +238,11 @@ class _RequirementTile extends StatelessWidget {
                 color: isMet ? AppColors.green : AppColors.textMuted,
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(label, style: AppTextStyles.bodyMedium),
-            ),
+            10.horizontalSpace,
+            Expanded(child: Text(label, style: AppTextStyles.bodyMedium)),
             Text(
               '✓ $statusText',
-              style: TextStyle(
+              style: AppTextStyles.bodyMedium.copyWith(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: isMet ? AppColors.green : AppColors.textMuted,
@@ -281,7 +284,8 @@ class _LeaderboardTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: padding ?? const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+        padding:
+            padding ?? const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(color: AppColors.divider, width: 1),
@@ -293,22 +297,19 @@ class _LeaderboardTile extends StatelessWidget {
               width: 28,
               child: Text(
                 '#$rank',
-                style: const TextStyle(
+                style: AppTextStyles.bodyMedium.copyWith(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textSecondary,
                 ),
               ),
             ),
-            const SizedBox(width: 10),
-            if (leadingWidget != null) ...[
-              leadingWidget!,
-              const SizedBox(width: 10),
-            ],
+            10.horizontalSpace,
+            if (leadingWidget != null) ...[leadingWidget!, 10.horizontalSpace],
             Expanded(
               child: Text(
                 name,
-                style: TextStyle(
+                style: AppTextStyles.bodyMedium.copyWith(
                   fontSize: 14,
                   fontWeight: isCurrentUser ? FontWeight.w700 : FontWeight.w500,
                   color: AppColors.textPrimary,
@@ -317,14 +318,14 @@ class _LeaderboardTile extends StatelessWidget {
             ),
             Text(
               xp,
-              style: TextStyle(
+              style: AppTextStyles.bodyMedium.copyWith(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: xpColor,
               ),
             ),
             if (isCurrentUser) ...[
-              const SizedBox(width: 6),
+              6.horizontalSpace,
               Container(
                 width: 8,
                 height: 8,
@@ -384,13 +385,13 @@ class _ChatTile extends StatelessWidget {
                     children: [
                       Text(
                         username,
-                        style: const TextStyle(
+                        style: AppTextStyles.bodyMedium.copyWith(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary,
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      6.horizontalSpace,
                       Text(timeAgo, style: AppTextStyles.caption),
                     ],
                   ),

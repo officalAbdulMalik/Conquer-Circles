@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
+import 'package:test_steps/core/theme/app_text_styles.dart';
 
 class MessageInputBar extends StatefulWidget {
   const MessageInputBar({super.key});
@@ -34,7 +35,10 @@ class _MessageInputBarState extends State<MessageInputBar> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
-          _IconButton(icon: Icons.sentiment_satisfied_alt_outlined, onTap: () {}),
+          _IconButton(
+            icon: Icons.sentiment_satisfied_alt_outlined,
+            onTap: () {},
+          ),
           const SizedBox(width: 6),
           _IconButton(icon: Icons.attach_file, onTap: () {}),
           const SizedBox(width: 8),
@@ -47,13 +51,18 @@ class _MessageInputBarState extends State<MessageInputBar> {
               ),
               child: TextField(
                 controller: _controller,
-                style: const TextStyle(fontSize: 14.5, color: AppColors.textNavy),
-                decoration: const InputDecoration(
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  color: AppColors.textNavy,
+                ),
+                decoration: InputDecoration(
                   hintText: 'Message StormWalkers...',
-                  hintStyle: TextStyle(color: Color(0xFFBBBBCC), fontSize: 14),
+                  hintStyle: AppTextStyles.bodySmall,
                   border: InputBorder.none,
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                 ),
               ),
             ),
@@ -72,8 +81,11 @@ class _MessageInputBarState extends State<MessageInputBar> {
                         color: AppColors.purple,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.send_rounded,
-                          color: Colors.white, size: 18),
+                      child: const Icon(
+                        Icons.send_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                     ),
                   )
                 : GestureDetector(
@@ -86,8 +98,11 @@ class _MessageInputBarState extends State<MessageInputBar> {
                         color: AppColors.purple,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.send_rounded,
-                          color: Colors.white, size: 18),
+                      child: const Icon(
+                        Icons.send_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                     ),
                   ),
           ),
