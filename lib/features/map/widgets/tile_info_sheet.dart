@@ -244,9 +244,9 @@ class _OwnTileContent extends StatelessWidget {
 
         const SizedBox(height: 12),
 
-        if (territory.lastVisited != null)
+        if (territory.lastActivityTime != null)
           Text(
-            'Last visited ${_timeAgo(territory.lastVisited!)}',
+            'Last active ${_timeAgo(territory.lastActivityTime!)}',
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.4),
               fontSize: 11,

@@ -2,10 +2,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/widgets/shared/animated_gradient_progress_bar.dart';
+import 'package:test_steps/models/badge_model.dart';
 
 String formatNumber(int value) {
   return value.toString().replaceAllMapped(
@@ -53,6 +54,7 @@ class ProfileProgressCard extends StatelessWidget {
     required this.xpGoal,
     required this.xpProgress,
     required this.pulseValue,
+    required this.level,
   });
 
   final String userName;
@@ -60,6 +62,7 @@ class ProfileProgressCard extends StatelessWidget {
   final int xpGoal;
   final double xpProgress;
   final double pulseValue;
+  final int level;
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +109,7 @@ class ProfileProgressCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(999.r),
                           ),
                           child: Text(
-                            '⚔️ Level 15',
+                            '⚔️ Level $level',
                             style: AppTextStyles.bodySmall.copyWith(
                               color: AppColors.brandPurple,
                               fontSize: 12.sp,
@@ -167,7 +170,7 @@ class ProfileProgressCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  '3,000 XP',
+                  '${formatNumber(xpGoal)} XP',
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondary,
                     fontSize: 12.sp,
@@ -445,16 +448,13 @@ class SmallStatCard extends StatelessWidget {
 }
 
 class AchievementsCardSection extends StatelessWidget {
-  const AchievementsCardSection({super.key});
+  const AchievementsCardSection({super.key, required this.badges});
+
+  final List<BadgeModel> badges;
 
   @override
   Widget build(BuildContext context) {
-    final badges = [
-      ('10K Steps', 'assets/icons/dashboard_trophy_icon.svg', true),
-      ('Week Warrior', 'assets/icons/dashboard_week_warrior_icon.svg', true),
-      ('Marathon', 'assets/icons/dashboard_star_icon.svg', false),
-      ('Consistency', 'assets/icons/dashboard_consistency_icon.svg', true),
-    ];
+    final displayBadges = badges.take(4).toList();
 
     return Container(
       width: double.infinity,
@@ -484,7 +484,7 @@ class AchievementsCardSection extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999.r),
                 ),
                 child: Text(
-                  '3/4 Unlocked',
+                  '${badges.length} Unlocked',
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondary,
                     fontSize: 12.sp,
@@ -497,16 +497,32 @@ class AchievementsCardSection extends StatelessWidget {
           16.verticalSpace,
           Row(
             children: [
-              for (final badge in badges) ...[
-                Expanded(
-                  child: AchievementBadge(
-                    label: badge.$1,
-                    icon: badge.$2,
-                    unlocked: badge.$3,
+              if (displayBadges.isEmpty)
+                const Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Center(
+                      child: Text(
+                        'No badges unlocked yet. Keep walking!',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                if (badge != badges.last) 8.horizontalSpace,
-              ],
+                )
+              else
+                for (final badge in displayBadges) ...[
+                  Expanded(
+                    child: AchievementBadge(
+                      label: badge.title,
+                      icon: badge.icon,
+                      unlocked: true,
+                    ),
+                  ),
+                  if (badge != displayBadges.last) 8.horizontalSpace,
+                ],
             ],
           ),
         ],
@@ -542,7 +558,11 @@ class AchievementBadge extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16.r),
               ),
               child: Center(
-                child: SvgPicture.asset(icon, width: 30.w, height: 30.h),
+                child: icon.startsWith('assets')
+                    ? (icon.endsWith('.svg')
+                          ? SvgPicture.asset(icon, width: 30.w, height: 30.h)
+                          : Image.asset(icon, width: 30.w, height: 30.h))
+                    : Text(icon, style: TextStyle(fontSize: 24.sp)),
               ),
             ),
             if (unlocked)

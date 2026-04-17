@@ -107,9 +107,10 @@ class Territory {
   final LatLng? center;
 
   final DateTime? captureTime;
-  final DateTime? lastVisited;
+  final DateTime? lastActivityTime;
   final DateTime? protectedUntil;
   final DateTime? shieldUntil;
+  final DateTime? cooldownUntil; // When territory attack cooldown expires
 
   Territory({
     required this.id,
@@ -120,9 +121,10 @@ class Territory {
     this.polygonPoints = const [],
     this.center,
     this.captureTime,
-    this.lastVisited,
+    this.lastActivityTime,
     this.protectedUntil,
     this.shieldUntil,
+    this.cooldownUntil,
   });
 
   factory Territory.fromJson(Map<String, dynamic> json) {
@@ -201,9 +203,10 @@ class Territory {
       polygonPoints: polygonPoints,
       center: center,
       captureTime: parseDate(json['capture_time']),
-      lastVisited: parseDate(json['last_visited']),
+      lastActivityTime: parseDate(json['last_activity_time']),
       protectedUntil: parseDate(json['protected_until']),
       shieldUntil: parseDate(json['shield_until']),
+      cooldownUntil: parseDate(json['cooldown_until']),
     );
   }
 
@@ -217,9 +220,10 @@ class Territory {
       // polygon_points is read-only from the DB — never write it from Flutter.
       // The SQL end_walking_session function owns the geom column.
       'capture_time': captureTime?.toIso8601String(),
-      'last_visited': lastVisited?.toIso8601String(),
+      'last_activity_time': lastActivityTime?.toIso8601String(),
       'protected_until': protectedUntil?.toIso8601String(),
       'shield_until': shieldUntil?.toIso8601String(),
+      'cooldown_until': cooldownUntil?.toIso8601String(),
     };
   }
 
@@ -232,9 +236,10 @@ class Territory {
     List<LatLng>? polygonPoints,
     LatLng? center,
     DateTime? captureTime,
-    DateTime? lastVisited,
+    DateTime? lastActivityTime,
     DateTime? protectedUntil,
     DateTime? shieldUntil,
+    DateTime? cooldownUntil,
   }) {
     return Territory(
       id: id ?? this.id,
@@ -245,9 +250,10 @@ class Territory {
       polygonPoints: polygonPoints ?? this.polygonPoints,
       center: center ?? this.center,
       captureTime: captureTime ?? this.captureTime,
-      lastVisited: lastVisited ?? this.lastVisited,
+      lastActivityTime: lastActivityTime ?? this.lastActivityTime,
       protectedUntil: protectedUntil ?? this.protectedUntil,
       shieldUntil: shieldUntil ?? this.shieldUntil,
+      cooldownUntil: cooldownUntil ?? this.cooldownUntil,
     );
   }
 
@@ -269,9 +275,9 @@ class Territory {
   int calculateEnergy(String currentUserId, LatLng? homeBase, DateTime now) {
     int e = energy == 0 ? 10 : energy;
 
-    if (lastVisited != null) {
-      final lv = lastVisited!;
-      if (lv.year == now.year && lv.month == now.month && lv.day == now.day) {
+    if (lastActivityTime != null) {
+      final la = lastActivityTime!;
+      if (la.year == now.year && la.month == now.month && la.day == now.day) {
         e += 5;
       }
     }

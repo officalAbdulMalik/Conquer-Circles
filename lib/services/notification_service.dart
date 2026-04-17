@@ -68,11 +68,11 @@ class NotificationService {
     );
 
     final token = await _messaging.getToken();
+    print('FCM TOKEN: $token');
     if (token != null) await _saveTokenToSupabase(token);
     _messaging.onTokenRefresh.listen(_saveTokenToSupabase);
 
     _setupMessageHandlers();
-    await fireScheduledNotifications();
 
     if (kDebugMode) print('[FCM] Ready');
   }
@@ -170,7 +170,8 @@ class NotificationService {
 
   /// Call from: NotificationsScreen on init + pull-to-refresh
   static Future<List<Map<String, dynamic>>> getMyNotifications({
-    int limit = 30,
+    int from = 0,
+    int to = 29,
   }) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return [];
@@ -180,7 +181,7 @@ class NotificationService {
           .select()
           .eq('user_id', userId)
           .order('created_at', ascending: false)
-          .limit(limit);
+          .range(from, to);
       return List<Map<String, dynamic>>.from(res as List);
     } catch (e) {
       if (kDebugMode) print('[Notifications] getMyNotifications: $e');
@@ -254,68 +255,62 @@ class NotificationService {
   // 1. ONBOARDING
   // ---------------------------------------------------------------------------
 
-  static Future<void> _sendDirectNotification({
-    required String userId,
-    required String type,
-    required String title,
-    required String message,
-    Map<String, dynamic>? data,
-  }) async {
-    try {
-      // 1. Insert into DB for in-app notifications screen/stream
-      await _client.from('notifications').insert({
-        'user_id': userId,
-        'type': type,
-        'title': title,
-        'message': message,
-      });
+  // static Future<void> _sendDirectNotification({
+  //   required String userId,
+  //   required String type,
+  //   required String title,
+  //   required String message,
+  //   Map<String, dynamic>? data,
+  // }) async {
+  //   try {
+  //     // 1. Insert into DB for in-app notifications screen/stream
+  //     await _client.from('notifications').insert({
+  //       'user_id': userId,
+  //       'type': type,
+  //       'title': title,
+  //       'message': message,
+  //     });
 
-      // 2. Send direct push notification via FCM
-      await SupabaseService().sendNotification(
-        userId,
-        title,
-        message,
-        type: type,
-        data: data,
-      );
-    } catch (e) {
-      if (kDebugMode) print('[Notifications] _sendDirectNotification: $e');
-    }
-  }
+  //     // 2. Send direct push notification via FCM
+  //     await SupabaseService().sendNotification(
+  //       userId,
+  //       title,
+  //       message,
+  //       type: type,
+  //       data: data,
+  //     );
+  //   } catch (e) {
+  //     if (kDebugMode) print('[Notifications] _sendDirectNotification: $e');
+  //   }
+  // }
 
   static Future<void> sendWelcomeNotification() async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'welcome',
-      title: 'Welcome to Conquer Circles 🗺️',
-      message:
-          'Your territory awaits. Take your first walk and start claiming the streets around you.',
+    await SupabaseService().sendNotification(
+      userId,
+      'Welcome to Conquer Circles 🗺️',
+      'Your territory awaits. Take your first walk and start claiming the streets around you.',
     );
   }
 
   static Future<void> notifyFirstTerritoryClaim() async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'first_territory',
-      title: 'You claimed your first territory!',
-      message:
-          'Nice start. Keep walking to expand your control and build your first cluster.',
+    await SupabaseService().sendNotification(
+      userId,
+      'You claimed your first territory!',
+      'Nice start. Keep walking to expand your control and build your first cluster.',
     );
   }
 
   static Future<void> sendJoinCircleReminder() async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'join_circle_reminder',
-      title: 'Play with friends',
-      message:
-          'Create a circle or invite friends to start competing for territory.',
+    await SupabaseService().sendNotification(
+      userId,
+      'Play with friends',
+      'Create a circle or invite friends to start competing for territory.',
     );
   }
 
@@ -326,35 +321,30 @@ class NotificationService {
   static Future<void> sendDailyWalkReminder() async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'daily_walk_reminder',
-      title: 'Your territory needs you',
-      message:
-          'Take a quick walk today to strengthen your tiles and earn attack energy.',
+    await SupabaseService().sendNotification(
+      userId,
+      'Your territory needs you',
+      'Take a quick walk today to strengthen your tiles and earn attack energy.',
     );
   }
 
   static Future<void> notifyEnergyFull() async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'energy_full',
-      title: 'Your energy is full',
-      message:
-          'You’ve reached max attack energy. Use it to conquer nearby territory.',
+    await SupabaseService().sendNotification(
+      userId,
+      'Your energy is full',
+      'You’ve reached max attack energy. Use it to conquer nearby territory.',
     );
   }
 
   static Future<void> notifyPowerHourStarted() async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'power_hour',
-      title: 'Power Hour activated ⚡',
-      message: 'Your steps now generate double energy for the next hour.',
+    await SupabaseService().sendNotification(
+      userId,
+      'Power Hour activated ⚡',
+      'Your steps now generate double energy for the next hour.',
     );
   }
 
@@ -363,12 +353,10 @@ class NotificationService {
   // ---------------------------------------------------------------------------
 
   static Future<void> notifyTerritoryUnderAttack(String ownerId) async {
-    await _sendDirectNotification(
-      userId: ownerId,
-      type: 'territory_under_attack',
-      title: 'Your territory is under attack',
-      message:
-          'A rival is trying to capture one of your tiles. Walk nearby to defend it.',
+    await SupabaseService().sendNotification(
+      ownerId,
+      'Your territory is under attack',
+      'A rival is trying to capture one of your tiles. Walk nearby to defend it.',
     );
   }
 
@@ -376,32 +364,28 @@ class NotificationService {
     String ownerId,
     String rivalUsername,
   ) async {
-    await _sendDirectNotification(
-      userId: ownerId,
-      type: 'territory_lost',
-      title: 'You lost a tile',
-      message:
-          '$rivalUsername captured one of your territories. Walk there to take it back.',
+    await SupabaseService().sendNotification(
+      ownerId,
+      'You lost a tile',
+      '$rivalUsername captured one of your territories. Walk there to take it back.',
     );
   }
 
   static Future<void> notifyTerritoryDefended(String ownerId) async {
-    await _sendDirectNotification(
-      userId: ownerId,
-      type: 'territory_defended',
-      title: 'Defense successful 🛡️',
-      message: 'Your tile resisted an attack. Your territory remains secure.',
+    await SupabaseService().sendNotification(
+      ownerId,
+      'Defense successful 🛡️',
+      'Your tile resisted an attack. Your territory remains secure.',
     );
   }
 
   static Future<void> notifyTerritoryStrengthened() async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'territory_strengthened',
-      title: 'Your territory just got stronger',
-      message: 'Walking through your tiles increased their defense energy.',
+    await SupabaseService().sendNotification(
+      userId,
+      'Your territory just got stronger',
+      'Walking through your tiles increased their defense energy.',
     );
   }
 
@@ -415,11 +399,10 @@ class NotificationService {
     required String rivalUsername,
   }) async {
     try {
-      await _sendDirectNotification(
-        userId: ownerUserId,
-        type: 'rival_nearby',
-        title: 'A rival is nearby',
-        message: '$rivalUsername is walking close to your territory.',
+      await SupabaseService().sendNotification(
+        ownerUserId,
+        'A rival is nearby',
+        '$rivalUsername is walking close to your territory.',
       );
     } catch (e) {
       if (kDebugMode) print('[Notifications] notifyRivalNearby: $e');
@@ -430,11 +413,10 @@ class NotificationService {
     String userId,
     String rivalUsername,
   ) async {
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'rival_expansion',
-      title: 'A rival is expanding',
-      message: '$rivalUsername just captured new tiles in your circle.',
+    await SupabaseService().sendNotification(
+      userId,
+      'A rival is expanding',
+      '$rivalUsername just captured new tiles in your circle.',
     );
   }
 
@@ -452,12 +434,10 @@ class NotificationService {
           .neq('user_id', leaderUserId);
 
       for (final m in members as List) {
-        await _sendDirectNotification(
-          userId: m['user_id'],
-          type: 'rival_dominating',
-          title: 'Someone is dominating the map',
-          message: '$leaderUsername is leading your circle leaderboard.',
-          data: {'leader_id': leaderUserId, 'circle_id': circleId},
+        await SupabaseService().sendNotification(
+          m['user_id'],
+          'Someone is dominating the map',
+          '$leaderUsername is leading your circle leaderboard.',
         );
       }
     } catch (e) {
@@ -494,35 +474,24 @@ class NotificationService {
     String userId,
     String victimUsername,
   ) async {
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'raid_victory',
-      title: 'Territory captured 🎉',
-      message: 'You successfully conquered a tile from $victimUsername.',
+    await SupabaseService().sendNotification(
+      userId,
+      'Territory captured 🎉',
+      'You successfully conquered a tile from $victimUsername.',
     );
   }
 
   static Future<void> notifyRaidFailed(String userId) async {
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'raid_failed',
-      title: 'Raid failed',
-      message: 'That tile was stronger than expected. Walk more and try again.',
+    await SupabaseService().sendNotification(
+      userId,
+      'Raid failed',
+      'That tile was stronger than expected. Walk more and try again.',
     );
   }
 
   // ---------------------------------------------------------------------------
   // UTILITIES & SCHEDULING
   // ---------------------------------------------------------------------------
-
-  /// Fire pending scheduled notifications (reminders, come back, etc.)
-  static Future<void> fireScheduledNotifications() async {
-    try {
-      await _client.rpc('fire_scheduled_notifications');
-    } catch (e) {
-      if (kDebugMode) print('[Notifications] fireScheduledNotifications: $e');
-    }
-  }
 
   /// End-of-day steps + captures summary.
   static Future<void> sendDailySummary() async {
@@ -544,12 +513,10 @@ class NotificationService {
     final userId = _client.auth.currentUser?.id;
     if (userId == null || currentStreak == 0 || todaySteps >= goalSteps) return;
     try {
-      await _sendDirectNotification(
-        userId: userId,
-        type: 'streak_reminder',
-        title: 'Don’t break your streak 🔥',
-        message: 'A short walk today will keep your walking streak alive.',
-        data: {'streak': currentStreak, 'steps_today': todaySteps},
+      await SupabaseService().sendNotification(
+        userId,
+        'Don’t break your streak 🔥',
+        'A short walk today will keep your walking streak alive.',
       );
     } catch (e) {
       if (kDebugMode) print('[Notifications] checkStreakReminder: $e');
@@ -563,20 +530,18 @@ class NotificationService {
   static Future<void> notifyClusterCreated() async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'cluster_created',
-      title: 'You formed a cluster',
-      message: 'Connected tiles now give you a defense bonus.',
+    await SupabaseService().sendNotification(
+      userId,
+      'You formed a cluster',
+      'Connected tiles now give you a defense bonus.',
     );
   }
 
   static Future<void> notifyClusterBroken(String ownerId) async {
-    await _sendDirectNotification(
-      userId: ownerId,
-      type: 'cluster_broken',
-      title: 'Cluster broken',
-      message: 'A rival captured a tile and broke your territory cluster.',
+    await SupabaseService().sendNotification(
+      ownerId,
+      'Cluster broken',
+      'A rival captured a tile and broke your territory cluster.',
     );
   }
 
@@ -588,12 +553,10 @@ class NotificationService {
     String userId,
     String inviterUsername,
   ) async {
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'circle_invite',
-      title: 'You’ve been invited',
-      message:
-          '$inviterUsername invited you to join their circle. Compete for territory.',
+    await SupabaseService().sendNotification(
+      userId,
+      'You’ve been invited',
+      '$inviterUsername invited you to join their circle. Compete for territory.',
     );
   }
 
@@ -601,11 +564,10 @@ class NotificationService {
     String userId,
     String friendUsername,
   ) async {
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'friend_joined_circle',
-      title: 'A new challenger arrives',
-      message: '$friendUsername joined your circle.',
+    await SupabaseService().sendNotification(
+      userId,
+      'A new challenger arrives',
+      '$friendUsername joined your circle.',
     );
   }
 
@@ -613,11 +575,10 @@ class NotificationService {
     String userId,
     String friendUsername,
   ) async {
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'friend_stole_tile',
-      title: 'Your friend stole your tile',
-      message: '$friendUsername just captured your territory.',
+    await SupabaseService().sendNotification(
+      userId,
+      'Your friend stole your tile',
+      '$friendUsername just captured your territory.',
     );
   }
 
@@ -631,11 +592,10 @@ class NotificationService {
   }) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
-    await _sendDirectNotification(
-      userId: userId,
-      type: isRare ? 'rare_badge' : 'badge_unlocked',
-      title: isRare ? 'Legendary achievement' : 'Badge unlocked 🏆',
-      message: isRare
+    await SupabaseService().sendNotification(
+      userId,
+      isRare ? 'Legendary achievement' : 'Badge unlocked 🏆',
+      isRare
           ? 'You unlocked the rare "$badgeName" badge.'
           : 'You earned the "$badgeName" badge.',
     );
@@ -648,44 +608,40 @@ class NotificationService {
   static Future<void> notifySeasonStarting() async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'season_starting',
-      title: 'New season begins',
-      message: 'The map resets today. Start walking and conquer new territory.',
+    await SupabaseService().sendNotification(
+      userId,
+      'New season begins',
+      'The map resets today. Start walking and conquer new territory.',
     );
   }
 
   static Future<void> notifyMidSeasonReminder() async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'mid_season_reminder',
-      title: 'Halfway through the season',
-      message: 'You still have time to climb the leaderboard.',
+    await SupabaseService().sendNotification(
+      userId,
+      'Halfway through the season',
+      'You still have time to climb the leaderboard.',
     );
   }
 
   static Future<void> notifySeasonEndingSoon() async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'season_ending_soon',
-      title: 'Season ending soon',
-      message: 'Only 3 days left. Capture more tiles to secure your rank.',
+    await SupabaseService().sendNotification(
+      userId,
+      'Season ending soon',
+      'Only 3 days left. Capture more tiles to secure your rank.',
     );
   }
 
   static Future<void> notifySeasonResults() async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'season_results',
-      title: 'Season results are in',
-      message: 'Check your final rank and unlock your rewards.',
+    await SupabaseService().sendNotification(
+      userId,
+      'Season results are in',
+      'Check your final rank and unlock your rewards.',
     );
   }
 
@@ -696,22 +652,20 @@ class NotificationService {
   static Future<void> notifyPremiumTrialOffer() async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'premium_trial',
-      title: 'Unlock premium rewards',
-      message: 'Upgrade to premium and expand your circles and stats.',
+    await SupabaseService().sendNotification(
+      userId,
+      'Unlock premium rewards',
+      'Upgrade to premium and expand your circles and stats.',
     );
   }
 
   static Future<void> notifySeasonPassAvailable() async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'season_pass',
-      title: 'Season Pass unlocked',
-      message: 'Unlock exclusive cosmetics and bonus rewards this season.',
+    await SupabaseService().sendNotification(
+      userId,
+      'Season Pass unlocked',
+      'Unlock exclusive cosmetics and bonus rewards this season.',
     );
   }
 
@@ -722,23 +676,20 @@ class NotificationService {
   static Future<void> notifyComeBack() async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'come_back',
-      title: 'Your territory misses you',
-      message:
-          'Some of your tiles are weakening. Take a walk to strengthen them.',
+    await SupabaseService().sendNotification(
+      userId,
+      'Your territory misses you',
+      'Some of your tiles are weakening. Take a walk to strengthen them.',
     );
   }
 
   static Future<void> notifyRivalTookArea(String rivalUsername) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
-    await _sendDirectNotification(
-      userId: userId,
-      type: 'rival_took_area',
-      title: 'Someone took your street',
-      message: '$rivalUsername captured your territory while you were away.',
+    await SupabaseService().sendNotification(
+      userId,
+      'Someone took your street',
+      '$rivalUsername captured your territory while you were away.',
     );
   }
 
@@ -798,11 +749,10 @@ class NotificationService {
 
     print('Notification test called');
     try {
-      await _sendDirectNotification(
-        userId: userId,
-        type: 'test',
-        title: 'Test Notification 🧪',
-        message: 'If you see this, the notification system is working!',
+      await SupabaseService().sendNotification(
+        userId,
+        'Test Notification 🧪',
+        'If you see this, the notification system is working!',
       );
     } catch (e) {
       print('[Notifications] sendTestNotification: $e');

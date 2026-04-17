@@ -1,3 +1,5 @@
+import 'package:test_steps/models/badge_model.dart';
+
 /// State model for the step tracking provider.
 /// Add attackEnergy here so the UI can read it from the same provider.
 class StepState {
@@ -12,6 +14,7 @@ class StepState {
   final int stepGoal;
   final int calories;
   final double distanceKm;
+  final List<BadgeModel> badges; // NEW — real badges from Supabase
   final bool isLoading;
   final bool permissionsGranted;
   final String? error;
@@ -28,6 +31,7 @@ class StepState {
     required this.stepGoal,
     required this.calories,
     required this.distanceKm,
+    required this.badges,
     required this.isLoading,
     required this.permissionsGranted,
     this.error,
@@ -45,6 +49,7 @@ class StepState {
     stepGoal: 10000,
     calories: 0,
     distanceKm: 0.0,
+    badges: [],
     isLoading: false,
     permissionsGranted: false,
   );
@@ -61,6 +66,7 @@ class StepState {
     int? stepGoal,
     int? calories,
     double? distanceKm,
+    List<BadgeModel>? badges,
     bool? isLoading,
     bool? permissionsGranted,
     String? error,
@@ -76,6 +82,7 @@ class StepState {
     stepGoal: stepGoal ?? this.stepGoal,
     calories: calories ?? this.calories,
     distanceKm: distanceKm ?? this.distanceKm,
+    badges: badges ?? this.badges,
     isLoading: isLoading ?? this.isLoading,
     permissionsGranted: permissionsGranted ?? this.permissionsGranted,
     error: error,

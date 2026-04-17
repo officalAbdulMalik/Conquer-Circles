@@ -21,16 +21,35 @@ class BadgeModel {
   bool get isUnlocked => unlockedAt != null;
 
   factory BadgeModel.fromJson(Map<String, dynamic> json) {
+    final id = (json['id'] ?? json['badge_id'] ?? 'unknown_badge') as String;
+    
+    // Use server-provided metadata if available, otherwise fallback to local mapping
+    final title = json['name'] as String? ?? getTitle(id);
+    final description = json['description'] as String? ?? _getDescription(id);
+    final icon = json['icon_url'] as String? ?? _getIcon(id);
+    final categoryStr = json['category'] as String?;
+    
     return BadgeModel(
-      id: json['badge_id'] as String,
-      title: getTitle(json['badge_id'] as String),
-      description: _getDescription(json['badge_id'] as String),
-      icon: _getIcon(json['badge_id'] as String),
-      category: _getCategory(json['badge_id'] as String),
+      id: id,
+      title: title,
+      description: description,
+      icon: icon,
+      category: categoryStr != null ? _parseCategory(categoryStr) : _getCategory(id),
       unlockedAt: json['unlocked_at'] != null 
           ? DateTime.parse(json['unlocked_at'] as String) 
           : null,
     );
+  }
+
+  static BadgeCategory _parseCategory(String category) {
+    switch (category.toLowerCase()) {
+      case 'steps': return BadgeCategory.steps;
+      case 'territory': return BadgeCategory.territory;
+      case 'raid':
+      case 'raids': return BadgeCategory.raids;
+      case 'social': return BadgeCategory.social;
+      default: return BadgeCategory.special;
+    }
   }
 
   static String getTitle(String id) {

@@ -1,0 +1,175 @@
+================================================================================
+                    TERRITORY SYSTEM GAP ANALYSIS
+                              COMPLETED
+================================================================================
+
+STATUS: ✅ Complete analysis generated
+FOCUS: Territory Attack System (Hex Tiles DEPRECATED)
+DATE: April 14, 2026
+
+================================================================================
+                          KEY FINDINGS
+================================================================================
+
+🎯 OVERALL STATUS: 80% IMPLEMENTED (Ready for Core Attack Logic)
+
+DATABASE:        ████████████░░░░░░ 80% (Cooldown table missing)
+MODELS:          ██████████████░░░░ 90% (All fields defined)
+GAME LOGIC:      ██░░░░░░░░░░░░░░░░ 10% (Attack RPC missing)
+APP CODE:        ██░░░░░░░░░░░░░░░░ 10% (Waiting for RPC)
+
+================================================================================
+                    THE 3 MISSING PIECES
+================================================================================
+
+1️⃣  No `attack_or_claim_territory()` RPC
+    → Handles all attack logic
+    → Size: ~120 lines SQL
+    → Time: 120 minutes
+
+2️⃣  No `territory_attack_cooldowns` table
+    → Tracks 30-min cooldown per territory
+    → Size: 1 migration file
+    → Time: 20 minutes
+
+3️⃣  No `SupabaseService.attackOrClaimTerritory()` method
+    → App service method to call RPC
+    → Size: ~20 lines Dart
+    → Time: 30 minutes
+
++ Map provider integration (30 min) = 3.5 HOURS TOTAL
+
+================================================================================
+                      DOCUMENTS CREATED
+================================================================================
+
+📄 START_HERE.md (⭐ Read This First)
+   └─ 90-second overview of gaps & timeline
+   └─ What to do first
+
+📄 SUMMARY_TERRITORIES_ONLY.md
+   └─ System overview: what's implemented vs. missing
+   └─ Simple flow diagrams
+   └─ Quick priority list
+
+📄 TERRITORY_GAPS_VISUAL.md
+   └─ Visual diagrams of implemented vs. missing
+   └─ Dependency flows
+   └─ Status visualization
+
+📄 MECHANICS_IMPLEMENTED_VS_MISSING.md
+   └─ Game mechanic checklist
+   └─ Feature completion map
+   └─ What blocks each action
+
+📄 TERRITORY_DATABASE_GAPS.md
+   └─ Exact database table status
+   └─ All columns listed
+   └─ Missing tables identified
+
+📄 TERRITORY_GAPS.md (⭐ For Implementation)
+   └─ Complete 5-phase implementation guide
+   └─ Full SQL code (ready to copy)
+   └─ Full Dart code (ready to copy)
+   └─ Testing checklist
+
+📄 README_ANALYSIS.md
+   └─ Navigation guide to all documents
+   └─ Quick lookup table
+
+════════════════════════════════════════════════════════════════════════════════
+
+✅ WHAT'S WORKING (Don't need to touch)
+────────────────────────────────────────
+
+  ✅ GPS & Location Tracking
+  ✅ Speed Validation (2-15 km/h)
+  ✅ Territory Loading (getNearbyTerritories)
+  ✅ Territory Boundaries (Polygon checking)
+  ✅ Energy Generation (Steps → Energy)
+  ✅ Walking Sessions (Convex hull merging)
+  ✅ Notification Framework
+  ✅ Data Models (Territory class)
+  ✅ Friend System (Invite/accept)
+  ✅ Leaderboards (Infrastructure)
+  ✅ Badge System (Framework)
+  ✅ Seasons (Framework)
+
+════════════════════════════════════════════════════════════════════════════════
+
+❌ WHAT'S MISSING (Must implement)
+──────────────────────────────────
+
+  ❌ Attack RPC (attack_or_claim_territory)
+  ❌ Cooldown Table (territory_attack_cooldowns)
+  ❌ Attack Log Table (territory_attack_log)
+  ❌ App Service Method (attackOrClaimTerritory)
+  ❌ Map Provider Integration (call attack method)
+
+OPTIONAL (Nice to have):
+  ⚠️  Energy Modifiers (+5/+10/+15/+10)
+  ⚠️  Cluster Detection (+5/+10/+20 bonuses)
+  ⚠️  Territory Decay (-2 energy/day system)
+
+════════════════════════════════════════════════════════════════════════════════
+
+📋 IMPLEMENTATION ROADMAP
+─────────────────────────
+
+PHASE 1: Core Attack System (3.5 hours) ← START HERE
+  ├─ Create territory_attack_cooldowns table (20 min) ✅ Ready
+  ├─ Create territory_attack_log table (20 min) ✅ Ready
+  ├─ Create attack_or_claim_territory RPC (120 min) ✅ SQL provided
+  ├─ Add SupabaseService method (30 min) ✅ Code snippet provided
+  └─ Integrate into MapProvider (30 min) ✅ Integration point identified
+
+PHASE 2: Optional Enhancements (2.5 hours)
+  ├─ Cluster Bonuses (90 min)
+  ├─ Territory Decay (60 min)
+  └─ Advanced Testing (30 min)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🚀 NEXT STEPS
+────────────
+
+1️⃣  Read START_HERE.md (2 min)
+2️⃣  Choose your document:
+     • Want visuals? → TERRITORY_GAPS_VISUAL.md
+     • Want details? → TERRITORY_GAPS.md
+     • Want checklist? → MECHANICS_IMPLEMENTED_VS_MISSING.md
+     • Want schema? → TERRITORY_DATABASE_GAPS.md
+3️⃣  Ready to code? → Follow Phase 1 in TERRITORY_GAPS.md
+4️⃣  Need help? → All SQL & Dart code in TERRITORY_GAPS.md ready to copy-paste
+
+═══════════════════════════════════════════════════════════════════════════════
+
+❓ FAQ
+──────
+
+Q: How much is already built?
+A: 80% - all infrastructure, models, GPS, energy system ready. Just missing 
+   the attack logic RPC.
+
+Q: How long to get it working?
+A: 3.5 hours for Phase 1 (working attack system).
+
+Q: What's the main blocker?
+A: The attack_or_claim_territory() RPC doesn't exist. Once that's created,
+   everything else plugs in.
+
+Q: Should I implement all optional features?
+A: Start with Phase 1 (3.5h). Then decide if you need clusters/decay for 
+   your game balance.
+
+Q: Where's the code?
+A: SQL code is in TERRITORY_GAPS.md
+   Dart code is in TERRITORY_GAPS.md
+   All ready to copy-paste.
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Analysis generated by GitHub Copilot
+Territory System Focus (Hex Tiles Deprecated)
+April 14, 2026
+

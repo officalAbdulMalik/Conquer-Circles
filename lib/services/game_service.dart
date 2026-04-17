@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:convert';
+import 'dart:developer';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Handles all circle, invite, leaderboard, season, and anti-cheat logic.
@@ -167,6 +171,38 @@ class GameService {
     }
   }
 
+  Future<Map<String, dynamic>?> getCircleDetails(String circleId) async {
+    final user = currentUser;
+    if (user == null) return null;
+    try {
+      final res = await _client.functions.invoke(
+        'get-circle-details',
+        body: {'circle_id': circleId, 'user_id': user.id},
+        headers: {
+          'Authorization': 'Bearer ${_client.auth.currentSession?.accessToken}',
+        },
+      );
+
+      if (res.status >= 400) {
+        throw Exception('Status ${res.status}: ${res.data}');
+      }
+
+      final payload = res.data;
+      log('getCircleDetails payload type: $payload');
+
+      if (payload is Map) {
+        return Map<String, dynamic>.from(payload);
+      } else if (payload is String) {
+        // Rare case where it's not pre-parsed
+        return Map<String, dynamic>.from(jsonDecode(payload));
+      }
+      return null;
+    } catch (e) {
+      _log('getCircleDetails', e);
+      return null;
+    }
+  }
+
   /// Returns all circles the current user belongs to.
   /// Call from: CirclesScreen on init
   Future<List<Map<String, dynamic>>> getMyCircles() async {
@@ -183,6 +219,24 @@ class GameService {
       return List<Map<String, dynamic>>.from(res as List);
     } catch (e) {
       _log('getMyCircles', e);
+      return [];
+    }
+  }
+
+  /// Returns all active circles for browsing and joining.
+  /// Call from: BrowseCirclesScreen on init
+  Future<List<Map<String, dynamic>>> getAllCircles() async {
+    try {
+      final res = await _client
+          .from('circles')
+          .select(
+            'id, name, invite_code, max_members, min_members, owner_id, is_active, created_at',
+          )
+          .eq('is_active', true)
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(res as List);
+    } catch (e) {
+      _log('getAllCircles', e);
       return [];
     }
   }
@@ -211,23 +265,131 @@ class GameService {
   // ---------------------------------------------------------------------------
 
   /// Sends a message to a circle's group chat.
+  /// Returns the inserted message row when available.
   /// Call from: CircleChatScreen send button
-  Future<void> sendCircleMessage(String circleId, String message) async {
+  Future<Map<String, dynamic>> sendCircleMessage(
+    String circleId,
+    String message,
+  ) async {
     final session = _client.auth.currentSession;
-    if (session == null) return;
+    final user = currentUser;
+    if (session == null || user == null) {
+      return {'success': false, 'error': 'Not signed in'};
+    }
 
     try {
-      await _client.functions.invoke(
+      final response = await _client.functions.invoke(
         'send-circle-message',
-        body: {
-          'circle_id': circleId,
-          "user_id": currentUser?.id,
-          'message': message,
-        },
+        body: {'circle_id': circleId, 'user_id': user.id, 'message': message},
         headers: {'Authorization': 'Bearer ${session.accessToken}'},
       );
+      if (response.status < 200 || response.status >= 300) {
+        return {
+          'success': false,
+          'error': 'send-circle-message failed: ${response.status}',
+        };
+      }
+
+      final payload = response.data;
+      if (payload is Map<String, dynamic>) {
+        return {'success': true, 'message': payload};
+      }
+      if (payload is Map) {
+        return {'success': true, 'message': Map<String, dynamic>.from(payload)};
+      }
+
+      return {'success': true};
     } catch (e) {
       _log('sendCircleMessage', e);
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Fetches recent chat messages for a circle.
+  Future<List<Map<String, dynamic>>> getCircleMessages(
+    String circleId, {
+    int limit = 50,
+  }) async {
+    try {
+      final rows = await _client
+          .from('circle_messages')
+          .select(
+            'id, circle_id, user_id, message, sender_info, created_at, '
+            'circle_message_reactions(emoji, user_id, created_at)',
+          )
+          .eq('circle_id', circleId)
+          .order('created_at', ascending: false)
+          .limit(limit);
+      return List<Map<String, dynamic>>.from(rows as List);
+    } catch (e) {
+      _log('getCircleMessages', e);
+      return [];
+    }
+  }
+
+  /// Toggle a reaction on a circle chat message. Adds or removes the reaction for the current user.
+  Future<Map<String, dynamic>> toggleCircleMessageReaction(
+    String messageId,
+    String emoji,
+  ) async {
+    final user = currentUser;
+    if (user == null) {
+      return {'success': false, 'error': 'Not signed in'};
+    }
+
+    try {
+      final existingReaction = await _client
+          .from('circle_message_reactions')
+          .select('id')
+          .eq('message_id', messageId)
+          .eq('user_id', user.id)
+          .eq('emoji', emoji)
+          .maybeSingle();
+
+      if (existingReaction != null) {
+        final deleteResponse = await _client
+            .from('circle_message_reactions')
+            .delete()
+            .eq('message_id', messageId)
+            .eq('user_id', user.id)
+            .eq('emoji', emoji);
+
+        if (deleteResponse.error != null) {
+          return {'success': false, 'error': deleteResponse.error!.message};
+        }
+      } else {
+        final insertResponse = await _client
+            .from('circle_message_reactions')
+            .insert({
+              'message_id': messageId,
+              'user_id': user.id,
+              'emoji': emoji,
+            });
+        if (insertResponse.error != null) {
+          return {'success': false, 'error': insertResponse.error!.message};
+        }
+      }
+
+      final updatedReactions = await _client
+          .from('circle_message_reactions')
+          .select('emoji, user_id')
+          .eq('message_id', messageId);
+
+      final reactionRows = List<dynamic>.from(updatedReactions as List? ?? []);
+      return {
+        'success': true,
+        'reactions': reactionRows
+            .map<Map<String, dynamic>>((raw) {
+              if (raw is Map<String, dynamic>) return raw;
+              if (raw is Map) return Map<String, dynamic>.from(raw);
+              return <String, dynamic>{};
+            })
+            .where((raw) => raw.isNotEmpty)
+            .toList(),
+      };
+    } catch (e) {
+      _log('toggleCircleMessageReaction', e);
+      return {'success': false, 'error': e.toString()};
     }
   }
 
@@ -332,7 +494,6 @@ class GameService {
   /// Generates and returns the season recap including territory snapshot.
   /// Call from: RecapScreen on init
   Future<Map<String, dynamic>?> getMySeasonRecap(int seasonId) async {
-    print("seasonId: $seasonId");
     final user = currentUser;
     if (user == null) return null;
     try {

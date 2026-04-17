@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
-import 'package:test_steps/features/social/mock_data/circles_mock_data.dart';
 import 'package:test_steps/features/social/models/circle_models.dart';
-import 'package:test_steps/features/social/view/circle_details.dart';
+import 'package:test_steps/features/social/view/create_circle_onboarding_view.dart';
+import 'package:test_steps/features/social/view/social_screen.dart';
+import 'package:test_steps/providers/circles_provider.dart';
 import 'package:test_steps/widgets/search_text_field.dart';
 import 'package:test_steps/widgets/shared/app_avatar_stack.dart';
 import 'package:test_steps/widgets/shared/app_button.dart';
@@ -18,12 +20,61 @@ import 'package:test_steps/widgets/shared/app_button.dart';
 ///
 /// This page shows circles in a scrollable list with detailed information
 /// including stats, tags, and join options.
-class AllCirclesPage extends StatelessWidget {
+class AllCirclesPage extends ConsumerStatefulWidget {
   /// Creates an [AllCirclesPage].
   const AllCirclesPage({super.key});
 
   @override
+  ConsumerState<AllCirclesPage> createState() => _AllCirclesPageState();
+}
+
+class _AllCirclesPageState extends ConsumerState<AllCirclesPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetch all circles when the page loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(circlesProvider.notifier).refreshAllCircles();
+    });
+  }
+
+  /// Converts database circle data to CircleData for UI display
+  CircleData _convertToCircleData(Map<String, dynamic> circle) {
+    final name = circle['name'] as String? ?? 'Unknown Circle';
+    final maxMembers = circle['max_members'] as int? ?? 25;
+    final minMembers = circle['min_members'] as int? ?? 3;
+    
+    // Generate some basic data for display
+    final memberCount = (minMembers + maxMembers) ~/ 2; // Estimate
+    
+    return CircleData(
+      name: name,
+      quote: '"Join the adventure!"',
+      logoEmoji: '🎯', // Default emoji
+      logoBgColor: const Color(0xFFD4F5E2),
+      cardBgColor: const Color(0xFFEDFDF4),
+      rank: 0, // Not available from DB
+      rankTrend: 0,
+      members: memberCount,
+      maxMembers: maxMembers,
+      zones: 0, // Not available from DB
+      wins: 0, // Not available from DB
+      xp: '0k', // Not available from DB
+      tags: const [
+        CircleTag(label: 'Open', color: AppColors.success, icon: '👥'),
+      ],
+      memberEmojis: ['🎯', '⚡', '🏆'],
+      joinStatus: memberCount >= maxMembers ? JoinStatus.full : JoinStatus.join,
+      joinColor: AppColors.success,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final circlesState = ref.watch(circlesProvider);
+        final allCircles = circlesState.allCircles;
     return Scaffold(
       appBar: AppBar(
         title: // ── Sticky header ─────────────────────────────────────────────
@@ -39,26 +90,31 @@ class AllCirclesPage extends StatelessWidget {
                 ),
                 4.verticalSpace,
                 Text(
-                  '8 circles · Find your squad',
+                  '${allCircles.length} circles · Find your squad',
                   style: AppTextStyles.bodySmall,
                 ),
               ],
             ),
-            Container(
-              padding: EdgeInsets.all(12.sp),
-              decoration: BoxDecoration(
-                color: AppColors.fillColor,
-                shape: BoxShape.circle,
-              ),
-              child: SvgPicture.asset(
-                'assets/icons/filter.svg',
-                width: 16.w,
-                height: 16.h,
-                colorFilter: const ColorFilter.mode(
-                  AppColors.brandPurple,
-                  BlendMode.srcIn,
+            Row(
+              children: [
+               
+                Container(
+                  padding: EdgeInsets.all(12.sp),
+                  decoration: BoxDecoration(
+                    color: AppColors.fillColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: SvgPicture.asset(
+                    'assets/icons/filter.svg',
+                    width: 16.w,
+                    height: 16.h,
+                    colorFilter: const ColorFilter.mode(
+                      AppColors.brandPurple,
+                      BlendMode.srcIn,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -68,6 +124,39 @@ class AllCirclesPage extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
           child: ListView(
             children: [
+              AppButton(
+                label: 'Create New Circle',
+                isFullWidth: true,
+                backgroundColor: AppColors.brandPurple,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CreateCircleOnboardingView(),
+                    ),
+                  );
+                },
+              ),
+
+              10.verticalSpace,
+              AppButton(
+                label: circlesState.isJoining
+                    ? 'Joining...'
+                    : 'Join Circle by Code',
+                isFullWidth: true,
+                variant: AppButtonVariant.outlined,
+                backgroundColor: AppColors.brandPurple,
+                borderColor: AppColors.brandPurple.withValues(alpha: 0.4),
+                textStyle: AppTextStyles.buttonLabel.copyWith(
+                  color: AppColors.brandPurple,
+                ),
+                onPressed: circlesState.isJoining
+                    ? null
+                    : () => _showJoinCodeDialog(context, ref),
+              ),
+
+              10.verticalSpace,
+
               CustomTextFormField(
                 hintText: 'Search circles, tags, regions...',
                 onChanged: (value) {
@@ -81,7 +170,11 @@ class AllCirclesPage extends StatelessWidget {
 
               10.verticalSpace,
 
-              _CircleCard(data: sampleCircles[1]),
+              // Show first circle as featured if available
+              if (allCircles.isNotEmpty)
+                _CircleCard(data: _convertToCircleData(allCircles.first), circleData: allCircles.first)
+              else
+                const Center(child: Text('No circles available')),
 
               10.verticalSpace,
 
@@ -89,21 +182,72 @@ class AllCirclesPage extends StatelessWidget {
               10.verticalSpace,
 
               // ── Cards ─────────────────────────────────────────────────────
-              Column(
-                children: List.generate(
-                  sampleCircles.length,
-                  (i) => Padding(
-                    padding: EdgeInsets.only(bottom: 14.h),
-                    child: _CircleCard(data: sampleCircles[i]),
+              if (circlesState.isLoading)
+                const Center(child: CircularProgressIndicator())
+              else if (allCircles.isEmpty)
+                const Center(child: Text('No circles found'))
+              else
+                Column(
+                  children: List.generate(
+                    allCircles.length,
+                    (i) => Padding(
+                      padding: EdgeInsets.only(bottom: 14.h),
+                      child: _CircleCard(data: _convertToCircleData(allCircles[i]), circleData: allCircles[i]),
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
       ),
     );
+      },
+    );
   }
+}
+
+Future<void> _showJoinCodeDialog(BuildContext context, WidgetRef ref) async {
+  final TextEditingController codeController = TextEditingController();
+
+  await showDialog<void>(
+    context: context,
+    builder: (dialogContext) {
+      return AlertDialog(
+        title: const Text('Join Circle'),
+        content: TextField(
+          controller: codeController,
+          textCapitalization: TextCapitalization.characters,
+          decoration: const InputDecoration(hintText: 'Enter invite code'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final response = await ref
+                  .read(circlesProvider.notifier)
+                  .joinCircleByCode(codeController.text);
+              if (!context.mounted) return;
+              if (!dialogContext.mounted) return;
+              Navigator.of(dialogContext).pop();
+              final success = response['success'] == true;
+              final message = success
+                  ? 'Joined ${response['circle_name'] ?? 'circle'}'
+                  : (response['error']?.toString() ?? 'Failed to join circle');
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(message)));
+            },
+            child: const Text('Join'),
+          ),
+        ],
+      );
+    },
+  );
+
+  codeController.dispose();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -113,9 +257,10 @@ class AllCirclesPage extends StatelessWidget {
 /// A card widget displaying detailed information about a circle.
 class _CircleCard extends StatelessWidget {
   /// Creates a [_CircleCard].
-  const _CircleCard({required this.data});
+  const _CircleCard({required this.data, required this.circleData});
 
   final CircleData data;
+  final Map<String, dynamic> circleData;
 
   @override
   Widget build(BuildContext context) {
@@ -202,7 +347,7 @@ class _CircleCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _MemberAvatars(emojis: data.memberEmojis),
-              _ActionButton(status: data.joinStatus, color: data.joinColor),
+              _ActionButton(status: data.joinStatus, color: data.joinColor, circleData: circleData),
             ],
           ),
         ],
@@ -481,10 +626,11 @@ class _MemberAvatars extends StatelessWidget {
 /// A button for joining or requesting to join a circle.
 class _ActionButton extends StatelessWidget {
   /// Creates an [_ActionButton].
-  const _ActionButton({required this.status, required this.color});
+  const _ActionButton({required this.status, required this.color, required this.circleData});
 
   final JoinStatus status;
   final Color color;
+  final Map<String, dynamic> circleData;
 
   String get _label {
     switch (status) {
@@ -519,9 +665,14 @@ class _ActionButton extends StatelessWidget {
       onPressed: isFull
           ? null
           : () {
-              Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => CircleProfileScreen()));
+              final circleId = circleData['id'] as String? ?? '';
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => CirclesScreen(
+                    circleId: circleId,
+                  ),
+                ),
+              );
             },
     );
   }

@@ -1,0 +1,231 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    RPC ANALYSIS - DOCUMENTS CREATED
+═══════════════════════════════════════════════════════════════════════════════
+
+Four comprehensive analysis documents have been created to document the
+critical gaps in the current claim_or_attack_tile RPC and provide a complete
+implementation guide for the new attack_or_claim_territory RPC.
+
+───────────────────────────────────────────────────────────────────────────────
+DOCUMENT SUMMARY
+───────────────────────────────────────────────────────────────────────────────
+
+1. RPC_ANALYSIS_INDEX.md (6.5 KB) - THIS FILE
+   Purpose: Navigation guide + quick reference
+   Read Time: 5-10 minutes
+   Contains:
+   • Document table with read times
+   • Quick navigation for different roles
+   • 1-2 minute problem/solution summaries
+   • Complete implementation checklist
+   • Common Q&A section
+
+2. RPC_ANALYSIS_SUMMARY.md (3.2 KB) - START HERE FIRST
+   Purpose: Executive summary for decision-makers
+   Read Time: 5 minutes
+   Contains:
+   • The problem (11 gaps, 4 logical issues)
+   • Critical table summary
+   • Design intent explanation
+   • Action items (Priority 1-4)
+   • Time estimates
+
+3. CLAIM_ATTACK_RPC_ANALYSIS.md (14 KB) - DEEP DIVE
+   Purpose: Detailed technical analysis
+   Read Time: 15 minutes
+   Contains:
+   • 11 critical gaps (each with explanation + code)
+   • 4 logical issues described
+   • What app can do vs what RPC must do
+   • Required fixes (Priority 1-4)
+   • Key takeaway
+
+4. NEW_RPC_IMPLEMENTATION.md (18 KB) - COPY-PASTE READY CODE
+   Purpose: Complete working implementation
+   Read Time: 20 minutes
+   Contains:
+   • New RPC signature
+   • Complete RPC implementation (150 lines)
+   • Migration SQL for 3 new tables
+   • Return value examples (all cases)
+   • Comparison table (old vs new)
+   • Dart app integration code
+
+5. APP_SIDE_VALIDATION_FLOW.md (12 KB) - ARCHITECTURE GUIDE
+   Purpose: Explain app-side vs RPC-side validation
+   Read Time: 15 minutes
+   Contains:
+   • Flow diagram (ASCII art)
+   • Data fetching explanation
+   • Pseudocode example (full method)
+   • Data flow diagram
+   • UI messaging examples
+   • What app should NOT validate
+
+───────────────────────────────────────────────────────────────────────────────
+CRITICAL FINDINGS
+───────────────────────────────────────────────────────────────────────────────
+
+PROBLEM:
+  The app calls claim_or_attack_tile() which is for HEX TILES,
+  but the game uses TERRITORIES (polygon-based system).
+
+IMPACT: 11 Critical Gaps
+  ✗ Wrong table (hex_tiles vs territories)
+  ✗ No speed validation (easy to cheat)
+  ✗ Wrong energy model (fixed 10 damage vs full energy)
+  ✗ Broken protection logic (shields bypass-able)
+  ✗ Wrong capture logic (doesn't account for energy)
+  ✗ Cooldown checks wrong table
+  ✗ Friend check backwards
+  ✗ Log table mismatch
+  ✗ Notifications broken
+  ✗ Cluster logic wrong
+  ✗ No decay system
+
+SEVERITY: 🔴 CRITICAL (Game completely broken)
+
+SOLUTION: Create new RPC (attack_or_claim_territory)
+  ✓ Targets territories table
+  ✓ Validates speed 2-15 km/h server-side
+  ✓ Full energy consumption model
+  ✓ Proper protection + shield checks
+  ✓ Correct capture logic
+  ✓ Uses territory_attack_cooldowns table
+
+IMPLEMENTATION TIME: ~2 hours total
+  • Database: 10 min
+  • Dart code: 25 min
+  • Testing: 20 min
+  • Code review: 10 min
+
+───────────────────────────────────────────────────────────────────────────────
+USER'S DESIGN INTENT
+───────────────────────────────────────────────────────────────────────────────
+
+"Validation of speed countdown and protected will be on app side on the
+data from supabase not on the backend so app can easily trigger the conditions"
+
+THIS MEANS:
+✓ App validates FIRST (for UX feedback)
+  • Check speed, protection, shield instantly
+  • Show helpful messages without RPC latency
+  • Prevent unnecessary network calls
+
+✓ RPC validates SECOND (for security)
+  • Even if app is bypassed/hacked
+  • All checks happen server-side
+  • Final authority on game state
+
+KEY DATA NEEDED FROM APP:
+  • Current speed (from GPS deltas)
+  • Territory data with:
+    - protection_until (timestamp)
+    - shield_until (timestamp)
+    - energy (0-60)
+  • My attack energy
+  • Cooldown status
+
+───────────────────────────────────────────────────────────────────────────────
+QUICK START GUIDE
+───────────────────────────────────────────────────────────────────────────────
+
+For Decision Makers (5 min):
+  1. Read: RPC_ANALYSIS_SUMMARY.md
+  2. Skim: "Critical Gaps Summary" table
+  3. Check: "Time Estimates" section
+
+For Backend Developers (35 min):
+  1. Read: CLAIM_ATTACK_RPC_ANALYSIS.md (15 min)
+  2. Read: NEW_RPC_IMPLEMENTATION.md (20 min)
+  3. Copy: All SQL code (ready to paste)
+
+For Mobile Developers (30 min):
+  1. Read: APP_SIDE_VALIDATION_FLOW.md (15 min)
+  2. Study: Pseudocode example
+  3. Reference: Code examples
+
+For Project Managers (10 min):
+  1. Read: RPC_ANALYSIS_SUMMARY.md (5 min)
+  2. Check: "Action Items" section (3 min)
+  3. Review: "Time Estimates" (2 min)
+
+───────────────────────────────────────────────────────────────────────────────
+IMPLEMENTATION ROADMAP
+───────────────────────────────────────────────────────────────────────────────
+
+Phase 1: Database (10 min) - Backend
+  ☐ Copy migration SQL from NEW_RPC_IMPLEMENTATION.md
+  ☐ Run migrations (creates: territory_attack_cooldowns, territory_attack_log, territory_events)
+  ☐ Copy new RPC code (attack_or_claim_territory function)
+  ☐ Create RPC in database
+
+Phase 2: App Code (25 min) - Frontend
+  ☐ Update SupabaseService.attackOrClaimTerritory() method
+     • Add speedKmh parameter
+     • Pass to RPC call
+  ☐ Update MapProvider._processTerritoryEntry()
+     • Add app-side validation (protection, shield, cooldown)
+     • Call new RPC with speedKmh
+  ☐ Update onEnterTile() method signature
+  ☐ Remove old claimOrAttackTile() references
+
+Phase 3: Testing (20 min) - QA/Developer
+  ☐ Test attack succeeds at valid speed (2-5 km/h)
+  ☐ Test attack fails at invalid speed (0.5, 25 km/h)
+  ☐ Test protection blocks attacks
+  ☐ Test shield blocks attacks (with steps > 0)
+  ☐ Test cooldown prevents spam
+  ☐ Test energy consumption
+  ☐ Test notifications
+
+Phase 4: Deploy (5 min) - DevOps
+  ☐ Verify all migrations applied
+  ☐ Verify RPC exists in prod database
+  ☐ Monitor logs for errors
+
+───────────────────────────────────────────────────────────────────────────────
+FILE LOCATIONS
+───────────────────────────────────────────────────────────────────────────────
+
+All files created in: /Users/apple/StudioProjects/test_steps/
+
+  • RPC_ANALYSIS_INDEX.md (this file)
+  • RPC_ANALYSIS_SUMMARY.md (START HERE)
+  • CLAIM_ATTACK_RPC_ANALYSIS.md (detailed analysis)
+  • NEW_RPC_IMPLEMENTATION.md (complete code + SQL)
+  • APP_SIDE_VALIDATION_FLOW.md (architecture guide)
+
+Other related docs:
+  • TERRITORY_GAPS.md (overall system)
+  • START_HERE.md (quick intro)
+  • MECHANICS_IMPLEMENTED_VS_MISSING.md (what works/doesn't)
+
+───────────────────────────────────────────────────────────────────────────────
+NEXT ACTIONS
+───────────────────────────────────────────────────────────────────────────────
+
+TODAY:
+  1. Review RPC_ANALYSIS_SUMMARY.md (5 min)
+  2. Share with team (backend + frontend)
+
+THIS WEEK:
+  1. Backend implements new RPC (1-2 hours)
+  2. Frontend updates app code (30 min)
+  3. Test end-to-end (30 min)
+  4. Deploy to production
+
+NEXT WEEK:
+  1. Monitor for edge cases
+  2. Add cluster bonus calculation (if needed)
+  3. Add decay system (if needed)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Questions? Review the specific document for your role:
+  • Architecture question → APP_SIDE_VALIDATION_FLOW.md
+  • Technical gap detail → CLAIM_ATTACK_RPC_ANALYSIS.md
+  • Implementation code → NEW_RPC_IMPLEMENTATION.md
+  • Overview/summary → RPC_ANALYSIS_SUMMARY.md
+
+═══════════════════════════════════════════════════════════════════════════════

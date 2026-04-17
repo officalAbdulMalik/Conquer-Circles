@@ -8,89 +8,82 @@ import 'package:test_steps/features/social/widgets/guild/guild_logo.dart';
 import 'package:test_steps/features/social/widgets/guild/member_avatar_row.dart';
 import 'package:test_steps/features/social/widgets/guild/stat_tile.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Sample data
-// ─────────────────────────────────────────────────────────────────────────────
-
-final _stats = [
-  GuildStat(
-    icon: Text(AppEmojis.members, style: TextStyle(fontSize: 18.sp)),
-    value: '24',
-    label: 'Members',
-  ),
-  GuildStat(
-    icon: Text(AppEmojis.map, style: TextStyle(fontSize: 18.sp)),
-    value: '186',
-    label: 'Territories',
-  ),
-  GuildStat(
-    icon: Text(AppEmojis.swords, style: TextStyle(fontSize: 18.sp)),
-    value: '142',
-    label: 'Raids',
-  ),
-  GuildStat(
-    icon: Text(AppEmojis.trophy, style: TextStyle(fontSize: 18.sp)),
-    value: '#2',
-    label: 'Rank',
-  ),
-];
-
-const _members = [
-  GuildMember(
-    avatarEmoji: AppEmojis.eagle,
-    bgColor: AppColors.avatarNeutral,
-    isOnline: true,
-  ),
-  GuildMember(
-    avatarEmoji: AppEmojis.wolf,
-    bgColor: AppColors.avatarNeutral,
-    isOnline: true,
-  ),
-  GuildMember(
-    avatarEmoji: AppEmojis.fire,
-    bgColor: AppColors.avatarWarm,
-    isOnline: true,
-  ),
-  GuildMember(
-    avatarEmoji: AppEmojis.lightning,
-    bgColor: AppColors.avatarSun,
-    isOnline: true,
-  ),
-  GuildMember(
-    avatarEmoji: AppEmojis.moon,
-    bgColor: AppColors.avatarLavender,
-    isOnline: false,
-  ),
-  GuildMember(
-    avatarEmoji: AppEmojis.shield,
-    bgColor: AppColors.avatarCool,
-    isOnline: false,
-  ),
-];
-
-const _extraMembers = 18;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Main card widget
-// ─────────────────────────────────────────────────────────────────────────────
-
 class GuildCard extends StatelessWidget {
   const GuildCard({
     super.key,
-    this.guildName = 'StormWalkers',
-    this.ownerName = 'FitWarrior',
+    this.circle,
+    this.leaderboard,
     this.leagueName = 'Gold League',
     this.onAddTap,
   });
 
-  final String guildName;
-  final String ownerName;
+  final Map<String, dynamic>? circle;
+  final List<dynamic>? leaderboard;
   final String leagueName;
   final VoidCallback? onAddTap;
 
   @override
   Widget build(BuildContext context) {
-    final onlineCount = _members.where((m) => m.isOnline).length;
+    final circleName = circle?['name']?.toString() ?? 'Unknown Circle';
+    
+    String ownerName = 'Unknown';
+    if (leaderboard != null) {
+      for (final m in leaderboard!) {
+        if (m['role'] == 'owner') {
+          ownerName = m['username']?.toString() ?? 'Unknown';
+          break;
+        }
+      }
+    }
+
+    final int membersCount = leaderboard?.length ?? 0;
+    
+    // Calculate total territories and raids
+    int territories = 0;
+    int raids = 0;
+    if (leaderboard != null) {
+      for (final m in leaderboard!) {
+        territories += (m['territories'] as num?)?.toInt() ?? 0;
+        raids += (m['raids_won'] as num?)?.toInt() ?? 0;
+      }
+    }
+
+    final stats = [
+      GuildStat(
+        icon: Text(AppEmojis.members, style: TextStyle(fontSize: 18.sp)),
+        value: '$membersCount',
+        label: 'Members',
+      ),
+      GuildStat(
+        icon: Text(AppEmojis.map, style: TextStyle(fontSize: 18.sp)),
+        value: '$territories',
+        label: 'Territories',
+      ),
+      GuildStat(
+        icon: Text(AppEmojis.swords, style: TextStyle(fontSize: 18.sp)),
+        value: '$raids',
+        label: 'Raids',
+      ),
+      GuildStat(
+        icon: Text(AppEmojis.trophy, style: TextStyle(fontSize: 18.sp)),
+        value: '#-',
+        label: 'Rank',
+      ),
+    ];
+
+    final displayMembers = leaderboard?.take(6).map((m) {
+      return GuildMember(
+        avatarEmoji: AppEmojis.eagle, // default fallback
+        bgColor: AppColors.avatarNeutral, // default fallback
+        isOnline: true, // assume online for now
+      );
+    }).toList() ?? [];
+
+    final onlineCount = displayMembers.where((m) => m.isOnline).length;
+    final extraMembers = (leaderboard != null && leaderboard!.length > 6) 
+        ? leaderboard!.length - 6 
+        : 0;
+
 
     return Container(
       padding: EdgeInsets.all(16.r),
@@ -119,7 +112,7 @@ class GuildCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(guildName, style: AppTextStyles.heading3),
+                    Text(circleName, style: AppTextStyles.heading3),
                     3.verticalSpace,
                     Row(
                       children: [
@@ -164,7 +157,7 @@ class GuildCard extends StatelessWidget {
 
           // ── Stats row ─────────────────────────────────────────────────────
           Row(
-            children: _stats
+            children: stats
                 .map((s) => Expanded(child: StatTile(stat: s)))
                 .toList(),
           ),
@@ -203,7 +196,7 @@ class GuildCard extends StatelessWidget {
           SizedBox(height: 12.h),
 
           // ── Member avatars row ───────────────────────────────────────────
-          MemberAvatarRow(members: _members, extraCount: _extraMembers),
+          MemberAvatarRow(members: displayMembers, extraCount: extraMembers),
         ],
       ),
     );

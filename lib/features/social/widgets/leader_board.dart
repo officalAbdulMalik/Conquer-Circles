@@ -8,72 +8,11 @@ import 'package:test_steps/features/social/models/leaderboard_user.dart';
 import 'package:test_steps/widgets/shared/animated_gradient_progress_bar.dart';
 import 'package:test_steps/widgets/shared/user_avatar.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Sample data
-// ─────────────────────────────────────────────────────────────────────────────
-
-const _users = [
-  LeaderboardUser(
-    rank: 1,
-    username: 'FitWarrior',
-    score: 142,
-    progressValue: 0.90,
-    avatarEmoji: AppEmojis.eagle,
-    avatarBgColor: AppColors.avatarNeutral,
-    badgeEmoji: AppEmojis.crown,
-    isOnline: true,
-  ),
-  LeaderboardUser(
-    rank: 2,
-    username: 'IronStrider',
-    score: 128,
-    progressValue: 0.75,
-    avatarEmoji: AppEmojis.wolf,
-    avatarBgColor: AppColors.avatarNeutral,
-    isOnline: true,
-  ),
-  LeaderboardUser(
-    rank: 3,
-    username: 'SwiftBlaze',
-    score: 98,
-    progressValue: 0.58,
-    avatarEmoji: AppEmojis.fire,
-    avatarBgColor: AppColors.avatarWarm,
-    isOnline: false,
-  ),
-  LeaderboardUser(
-    rank: 4,
-    username: 'TitanWalk',
-    score: 95,
-    progressValue: 0.54,
-    avatarEmoji: AppEmojis.shield,
-    avatarBgColor: AppColors.avatarCool,
-    isOnline: true,
-  ),
-  LeaderboardUser(
-    rank: 5,
-    username: 'NeonPath',
-    score: 85,
-    progressValue: 0.44,
-    avatarEmoji: AppEmojis.lightning,
-    avatarBgColor: AppColors.avatarSun,
-    isOnline: true,
-  ),
-  LeaderboardUser(
-    rank: 6,
-    username: 'ShadowStep',
-    score: 72,
-    progressValue: 0.35,
-    avatarEmoji: AppEmojis.moon,
-    avatarBgColor: AppColors.avatarLavender,
-    isOnline: false,
-  ),
-];
-
 class LeaderboardCard extends StatefulWidget {
-  const LeaderboardCard({super.key, this.isMemebers});
+  const LeaderboardCard({super.key, this.isMemebers, this.leaderboard});
 
   final bool? isMemebers;
+  final List<dynamic>? leaderboard;
 
   @override
   State<LeaderboardCard> createState() => _LeaderboardCardState();
@@ -89,8 +28,45 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
     ('Energy', AppEmojis.lightning),
   ];
 
+  int _getScore(Map<String, dynamic> user, int tab) {
+    if (tab == 0) return (user['territories'] as num?)?.toInt() ?? 0;
+    if (tab == 1) return (user['steps'] as num?)?.toInt() ?? 0;
+    if (tab == 2) return (user['raids_won'] as num?)?.toInt() ?? 0;
+    if (tab == 3) return (user['attack_energy'] as num?)?.toInt() ?? 0;
+    return 0;
+  }
+
   @override
   Widget build(BuildContext context) {
+    List<LeaderboardUser> displayUsers = [];
+    if (widget.leaderboard != null) {
+      // filter valid entries and parse
+      final lb = List<Map<String, dynamic>>.from(widget.leaderboard!);
+      
+      // Sort based on selected tab
+      lb.sort((a, b) => _getScore(b, _selectedTab).compareTo(_getScore(a, _selectedTab)));
+
+      int maxScore = 1;
+      if (lb.isNotEmpty) {
+        maxScore = _getScore(lb.first, _selectedTab);
+        if (maxScore <= 0) maxScore = 1; // avoid division by zero
+      }
+
+      for (int i = 0; i < lb.length; i++) {
+        final m = lb[i];
+        final score = _getScore(m, _selectedTab);
+        displayUsers.add(LeaderboardUser(
+          rank: i + 1,
+          username: m['username']?.toString() ?? 'User',
+          score: score,
+          progressValue: (score / maxScore).clamp(0.0, 1.0),
+          avatarEmoji: AppEmojis.eagle, // default
+          avatarBgColor: AppColors.avatarNeutral, // default
+          isOnline: true,
+        ));
+      }
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -186,7 +162,7 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: _users.length,
+            itemCount: displayUsers.length,
             itemBuilder: (_, i) => Padding(
               padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 5.h),
               child: Column(
@@ -196,10 +172,10 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
                     children: [
                       SizedBox(
                         width: 32.w,
-                        child: _users[i].rank <= 3
-                            ? MedalBadge(rank: _users[i].rank)
+                        child: displayUsers[i].rank <= 3
+                            ? MedalBadge(rank: displayUsers[i].rank)
                             : Text(
-                                '#${_users[i].rank}',
+                                '#${displayUsers[i].rank}',
                                 style: AppTextStyles.bodySmall.copyWith(
                                   fontSize: 13.sp,
                                   fontWeight: FontWeight.w600,
@@ -208,10 +184,10 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
                       ),
                       SizedBox(width: 6.w),
                       UserAvatar(
-                        avatarEmoji: _users[i].avatarEmoji,
-                        bgColor: _users[i].avatarBgColor,
-                        isOnline: _users[i].isOnline,
-                        badgeEmoji: _users[i].badgeEmoji,
+                        avatarEmoji: displayUsers[i].avatarEmoji,
+                        bgColor: displayUsers[i].avatarBgColor,
+                        isOnline: displayUsers[i].isOnline,
+                        badgeEmoji: displayUsers[i].badgeEmoji,
                         size: 40,
                       ),
                       SizedBox(width: 10.w),
@@ -220,7 +196,7 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
                           TextSpan(
                             children: [
                               TextSpan(
-                                text: _users[i].username,
+                                text: displayUsers[i].username,
                                 style: AppTextStyles.bodyMedium.copyWith(
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.w600,
@@ -228,7 +204,7 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
                               ),
                               TextSpan(
                                 text:
-                                    '  ${_users[i].badgeEmoji ?? AppEmojis.emptyBadge}',
+                                    '  ${displayUsers[i].badgeEmoji ?? AppEmojis.emptyBadge}',
                                 style: TextStyle(fontSize: 13.sp),
                               ),
                             ],
@@ -237,7 +213,7 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
                         ),
                       ),
                       Text(
-                        '${_users[i].score}',
+                        '${displayUsers[i].score}',
                         style: AppTextStyles.heading3.copyWith(
                           fontSize: 18.sp,
                           color: AppColors.accentIndigo,
@@ -250,7 +226,7 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
                   Padding(
                     padding: EdgeInsets.only(left: 38.w),
                     child: AnimatedGradientProgressBar(
-                      value: _users[i].progressValue,
+                      value: displayUsers[i].progressValue,
                     ),
                   ),
                 ],

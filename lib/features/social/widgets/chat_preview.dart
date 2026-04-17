@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/chat/views/messages.dart';
 import 'package:test_steps/features/social/mock_data/chat_messages_mock_data.dart';
 import 'package:test_steps/features/social/models/chat_models.dart';
+import 'package:test_steps/features/social/view/circle_comms_view.dart';
+import 'package:test_steps/providers/circles_provider.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main widget
@@ -24,7 +27,7 @@ import 'package:test_steps/features/social/models/chat_models.dart';
 ///   onCollapse: () => collapseChat(),
 /// )
 /// ```
-class CircleChatCard extends StatefulWidget {
+class CircleChatCard extends ConsumerStatefulWidget {
   /// Creates a [CircleChatCard].
   ///
   /// [circleTitle] - The title of the circle chat.
@@ -45,10 +48,10 @@ class CircleChatCard extends StatefulWidget {
   final VoidCallback? onCollapse;
 
   @override
-  State<CircleChatCard> createState() => _CircleChatCardState();
+  ConsumerState<CircleChatCard> createState() => _CircleChatCardState();
 }
 
-class _CircleChatCardState extends State<CircleChatCard> {
+class _CircleChatCardState extends ConsumerState<CircleChatCard> {
   final _controller = TextEditingController();
   final _scrollCtrl = ScrollController();
   final List<ChatMessage> _messages = List.from(sampleChatMessages);
@@ -69,12 +72,25 @@ class _CircleChatCardState extends State<CircleChatCard> {
     super.dispose();
   }
 
-  void _send() {
+  void _send(String? circleId, String circleName) {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const ChatScreen()),
-    ); // Close the chat card
+
+    if (circleId != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => CircleCommsView(
+            circleId: circleId,
+            circleName: circleName,
+          ),
+        ),
+      );
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (context) => const ChatScreen()),
+      );
+    }
+
     setState(() {
       _messages.add(
         ChatMessage(
@@ -98,6 +114,11 @@ class _CircleChatCardState extends State<CircleChatCard> {
 
   @override
   Widget build(BuildContext context) {
+    final circlesState = ref.watch(circlesProvider);
+    final currentCircle = circlesState.circles.isNotEmpty ? circlesState.circles.first : null;
+    final circleId = currentCircle?['circle_id']?.toString();
+    final circleName = currentCircle?['circles']?['name']?.toString() ?? widget.circleTitle;
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -134,7 +155,7 @@ class _CircleChatCardState extends State<CircleChatCard> {
             ),
           ),
           const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F6)),
-          _InputBar(controller: _controller, hasText: _hasText, onSend: _send),
+          _InputBar(controller: _controller, hasText: _hasText, onSend: () => _send(circleId, circleName)),
         ],
       ),
     );

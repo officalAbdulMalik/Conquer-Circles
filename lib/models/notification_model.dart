@@ -48,4 +48,28 @@ class UserNotification {
       'created_at': createdAt.toIso8601String(),
     };
   }
+
+  UserNotification copyWith({
+    String? id,
+    String? userId,
+    String? type,
+    String? territoryId,
+    String? title,
+    String? message,
+    bool? isRead,
+    DateTime? sentDate,
+    DateTime? createdAt,
+  }) {
+    return UserNotification(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      type: type ?? this.type,
+      territoryId: territoryId ?? this.territoryId,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      isRead: isRead ?? this.isRead,
+      sentDate: sentDate ?? this.sentDate,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }

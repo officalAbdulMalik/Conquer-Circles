@@ -1,11 +1,7 @@
-import 'dart:convert';
-import 'package:flutter/services.dart';
-import 'package:googleapis_auth/auth_io.dart';
-import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 import '../models/invite_model.dart';
 import '../models/notification_model.dart';
+import '../models/profile_data_model.dart';
 import '../models/walk_models.dart';
 
 /// Central service for all Supabase interactions.
@@ -158,11 +154,11 @@ class SupabaseService {
     }
   }
 
-  /// Upserts today's step count and triggers attack_energy conversion.
-  /// Returns the updated attack_energy value (0 on failure).
-  Future<int> upsertSteps(int steps) async {
+  /// Upserts today's step count and triggers attack_energy and XP conversion.
+  /// Returns a map with { attack_energy, xp_gained, level_up, new_level }
+  Future<Map<String, dynamic>> upsertSteps(int steps) async {
     final user = currentUser;
-    if (user == null) return 0;
+    if (user == null) return {};
     final date = DateTime.now().toIso8601String().split('T').first;
     try {
       // 1. Persist step count
@@ -174,11 +170,23 @@ class SupabaseService {
       }, onConflict: 'user_id,date');
 
       // 2. Convert steps → attack_energy via RPC
-      final result = await convertStepsToEnergy(steps);
-      return result['attack_energy'] as int? ?? 0;
+      final energyResult = await convertStepsToEnergy(steps);
+
+      // 3. Convert steps → XP via RPC (with level progression)
+      final xpResult = await convertStepsToXP(steps);
+
+      return {
+        'success': true,
+        'attack_energy': energyResult['attack_energy'] as int? ?? 0,
+        'xp_gained': xpResult['xp_gained'] as int? ?? 0,
+        'current_xp': xpResult['current_xp'] as int? ?? 0,
+        'current_level': xpResult['current_level'] as int? ?? 1,
+        'xp_goal': xpResult['xp_goal'] as int? ?? 1000,
+        'level_up': xpResult['level_up'] as bool? ?? false,
+      };
     } catch (e) {
       _log('upsertSteps', e);
-      return 0;
+      return {'success': false, 'error': e.toString()};
     }
   }
 
@@ -204,6 +212,24 @@ class SupabaseService {
     }
   }
 
+  /// Calls the Supabase RPC that converts steps to XP with level progression.
+  /// 1 step = 0.1 XP. Daily goal bonus: +50 XP if 10000+ steps.
+  /// Returns { xp_gained, current_xp, current_level, xp_goal, level_up }
+  Future<Map<String, dynamic>> convertStepsToXP(int stepsToday) async {
+    final user = currentUser;
+    if (user == null) return {};
+    try {
+      final response = await _client.rpc(
+        'convert_steps_to_xp',
+        params: {'p_user_id': user.id, 'p_steps_today': stepsToday},
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      _log('convertStepsToXP', e);
+      return {};
+    }
+  }
+
   /// Returns the current attack_energy for the signed-in user.
   Future<int> getAttackEnergy() async {
     final user = currentUser;
@@ -221,21 +247,143 @@ class SupabaseService {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Walk Sessions
-  // ---------------------------------------------------------------------------
+  Future<ProfileDataModel> getProfileData() async {
+    final user = currentUser;
+    if (user == null) throw Exception('No active user');
 
-  /// Fetches unified dashboard data from the Edge Function.
-  Future<Map<String, dynamic>> getStepsDashboardData() async {
+    final currentSession = _client.auth.currentSession;
+    final token = currentSession?.accessToken;
+
     try {
-      final response = await _client.functions.invoke('get-steps-dashboard');
-      if (response.status != 200) {
-        throw Exception('Function returned status ${response.status}: ${response.data}');
+      final response = await _client.functions.invoke(
+        'get-profile-data',
+        body: {"user_id": user.id},
+        headers: token != null ? {'Authorization': 'Bearer $token'} : null,
+      );
+
+      if (response.status != 200 && response.status != 201) {
+        throw Exception(
+          'Function returned status ${response.status}: ${response.data}',
+        );
       }
-      return Map<String, dynamic>.from(response.data as Map);
+
+      return ProfileDataModel.fromJson(
+        Map<String, dynamic>.from(response.data as Map),
+      );
+    } catch (e) {
+      _log('getProfileData', e);
+      rethrow;
+    }
+  }
+
+  Future<void> updateNotificationSettings(bool enabled) async {
+    final user = currentUser;
+    if (user == null) return;
+    try {
+      await _client
+          .from('profiles')
+          .update({'notifications_enabled': enabled})
+          .eq('id', user.id);
+    } catch (e) {
+      _log('updateNotificationSettings', e);
+      rethrow;
+    }
+  }
+
+  /// Fetches unified dashboard data from the Edge Function with retry logic.
+  Future<Map<String, dynamic>> getStepsDashboardData() async {
+    var session = _client.auth.currentSession;
+    if (session == null) {
+      throw Exception('No active session');
+    }
+
+    try {
+      return await _invokeFunction();
+    } on FunctionException catch (e) {
+      if (e.status == 401) {
+        _log('getStepsDashboardData - Got 401, attempting token refresh', null);
+      }
+
+      _log('getStepsDashboardData - FunctionException', e);
+      rethrow;
     } catch (e) {
       _log('getStepsDashboardData', e);
       rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> checkAndAwardBadges(
+    String eventType, [
+    Map<String, dynamic>? payload,
+  ]) async {
+    final user = currentUser;
+    if (user == null) return {'success': false, 'error': 'not signed in'};
+
+    final currentSession = _client.auth.currentSession;
+    final token = currentSession?.accessToken;
+
+    try {
+      final response = await _client.functions.invoke(
+        'add-badge',
+        body: {
+          "user_id": user.id,
+          "event_type": eventType,
+          if (payload != null) "payload": payload,
+        },
+        headers: token != null ? {'Authorization': 'Bearer $token'} : null,
+      );
+
+      _log(
+        'checkAndAwardBadges response: ${response.data}',
+        'checkAndAwardBadges',
+      );
+
+      if (response.status != 200 && response.status != 201) {
+        throw Exception(
+          'Function returned status ${response.status}: ${response.data}',
+        );
+      }
+
+      return Map<String, dynamic>.from(response.data as Map);
+    } catch (e) {
+      _log('checkAndAwardBadges', e);
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> _invokeFunction() async {
+    // Always read the freshest session token at call time
+    final currentSession = _client.auth.currentSession;
+    final token = currentSession?.accessToken;
+
+    final response = await _client.functions.invoke(
+      'get-steps-dashboard',
+      body: {"user_id": currentUser?.id},
+      headers: token != null ? {'Authorization': 'Bearer $token'} : null,
+    );
+
+    _log(
+      'getStepsDashboardData response: ${response.data}',
+      'getStepsDashboardData',
+    );
+
+    if (response.status != 200 && response.status != 201) {
+      throw Exception(
+        'Function returned status ${response.status}: ${response.data}',
+      );
+    }
+
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  /// Safe sign out that doesn't throw (prevents breaking auth listeners)
+  Future<void> _safeSiginOut() async {
+    try {
+      await _client.auth.signOut();
+      _log('Safely signed out user', null);
+    } catch (e) {
+      _log('Error during safe sign out', e);
+      // Don't rethrow - we already have an error to report
     }
   }
 
@@ -369,20 +517,59 @@ class SupabaseService {
   }
 
   // ---------------------------------------------------------------------------
-  // Hex Tile Attack System
+  // Territory Attack System
   // ---------------------------------------------------------------------------
 
-  /// Main game action. Call when the user walks through a hex tile at valid speed.
+  /// Attack or reinforce a territory. Call when the user walks at valid speed (2-15 km/h).
+  ///
+  /// - If territory is owned by attacker: reinforces (adds energy, costs 0-20 energy)
+  /// - If territory is owned by friend: attacks (costs full energy, can capture or damage)
+  /// - If neutral: claims (costs 0-20 energy)
   ///
   /// Possible [action] values in the returned map:
-  ///   'claimed'     — neutral or own tile reinforced
-  ///   'captured'    — enemy tile taken
-  ///   'damaged'     — enemy tile energy reduced, not yet captured
-  ///   'protected'   — tile is in its protection window
-  ///   'cooldown'    — attacker is on 30-min cooldown for this tile
+  ///   'reinforced'  — own territory reinforced with energy
+  ///   'damaged'     — enemy territory energy reduced (not captured)
+  ///   'captured'    — enemy territory taken (new owner)
+  ///   'protected'   — territory in 12h protection window
+  ///   'shielded'    — territory in 24h absence shield
+  ///   'cooldown'    — attacker on 30-min cooldown for this territory
   ///   'no_energy'   — attacker has 0 attack energy
-  ///   'not_friends' — tile owner is not a friend; attack not allowed
-  ///   'error'       — RPC failure
+  ///   'error'       — validation failed (speed, friend, not_found, etc)
+  Future<Map<String, dynamic>> attackOrClaimTerritory({
+    required String territoryId,
+    required double speedKmh,
+    required double lat,
+    required double lng,
+  }) async {
+    final user = currentUser;
+    if (user == null) return {'action': 'error', 'message': 'not signed in'};
+    try {
+      final response = await _client.rpc(
+        'attack_or_claim_territory',
+        params: {
+          'p_territory_id': territoryId,
+          'p_user_id': user.id,
+          'p_speed_kmh': speedKmh,
+          'p_lat': lat,
+          'p_lng': lng,
+        },
+      );
+      final result = Map<String, dynamic>.from(response as Map);
+      return result;
+    } catch (e) {
+      _log('attackOrClaimTerritory', e);
+      return {'action': 'error', 'message': e.toString()};
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // (DEPRECATED) Hex Tile Attack System - DO NOT USE
+  // ---------------------------------------------------------------------------
+  // The following methods are for the old hex tile system and are deprecated.
+  // Use attackOrClaimTerritory() instead for the new territory system.
+
+  /// (DEPRECATED) Main game action for hex tiles. DO NOT USE.
+  /// Use attackOrClaimTerritory() instead.
   Future<Map<String, dynamic>> claimOrAttackTile({
     required String tileId,
     required double lat,
@@ -663,70 +850,27 @@ class SupabaseService {
     Map<String, dynamic>? data,
   }) async {
     try {
-      final profile = await _client
-          .from('profiles')
-          .select('fcm_token')
-          .eq('id', userId)
-          .maybeSingle();
-
-      final fcmToken = profile?['fcm_token'] as String?;
-      if (fcmToken == null || fcmToken.isEmpty) return;
-
-      final accessToken = await _getFcmAccessToken();
-      
-      final payloadData = {'type': type};
-      if (data != null) {
-        data.forEach((key, value) {
-          payloadData[key] = value.toString();
-        });
-      }
-
-      final response = await http.post(
-        Uri.parse(
-          'https://fcm.googleapis.com/v1/projects/fitness-app-343c3/messages:send',
-        ),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $accessToken',
+      final response = await _client.functions.invoke(
+        'send-push-notification',
+        body: {
+          'user_id': userId,
+          'title': title,
+          'body': body,
+          'type': type,
+          'data': data,
         },
-        body: jsonEncode({
-          'message': {
-            'token': fcmToken,
-            'notification': {'title': title, 'body': body},
-            'data': payloadData,
-            'android': {
-              'notification': {'click_action': 'FLUTTER_NOTIFICATION_CLICK'},
-            },
-          },
-        }),
       );
-
-      if (response.statusCode != 200) {
-        _log(
-          'sendNotification FCM',
-          '${response.statusCode} — ${response.body}',
-        );
+      if (response.status == 200) {
+        return response.data;
+      } else {
+        _log('sendNotification', response.data);
       }
     } catch (e) {
       _log('sendNotification', e);
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Private helpers
-  // ---------------------------------------------------------------------------
-
-  Future<String> _getFcmAccessToken() async {
-    final jsonStr = await rootBundle.loadString('assets/service.json');
-    final account = ServiceAccountCredentials.fromJson(jsonStr);
-    final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
-    final httpClient = await clientViaServiceAccount(account, scopes);
-    final token = httpClient.credentials.accessToken.data;
-    httpClient.close();
-    return token;
-  }
-
-  void _log(String method, Object error) {
+  void _log(String method, Object? error) {
     // Replace with your logger of choice (e.g. logger package).
     // ignore: avoid_print
     print('[SupabaseService.$method] $error');

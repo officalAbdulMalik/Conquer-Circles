@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
-import 'package:test_steps/core/theme/app_spacing.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/chatbot/view/chat_view.dart';
 import 'package:test_steps/features/profile/view/profile_view.dart';
+import 'package:test_steps/features/social/view/browse_cicle.dart';
 import 'package:test_steps/features/steps/view/steps_view.dart';
 import 'package:test_steps/features/map/view/map_view.dart';
-import 'package:test_steps/features/social/view/social_view.dart';
+import 'package:test_steps/screens/notifications_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key, this.initialIndex = 0});
@@ -28,7 +28,7 @@ class _MainNavigationState extends State<MainNavigation> {
   final List<Widget> _screens = const [
     StepsView(),
     MapView(),
-    CirclesScreen(),
+    AllCirclesPage(),
     ProfileView(),
     ChatView(),
   ];
@@ -103,8 +103,18 @@ class _MainNavigationState extends State<MainNavigation> {
                         trailing: _selectedIndex == 2
                             ? Row(
                                 children: [
-                                  SvgPicture.asset(
-                                    'assets/icons/notification.svg',
+                                  InkWell(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const NotificationsScreen(),
+                                        ),
+                                      );
+                                    },
+                                    child: SvgPicture.asset(
+                                      'assets/icons/notification.svg',
+                                    ),
                                   ),
                                   10.horizontalSpace,
                                   SvgPicture.asset('assets/icons/persons.svg'),

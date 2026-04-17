@@ -23,7 +23,85 @@ class NotificationsContentTile extends StatefulWidget {
 }
 
 class NotificationsContentTileState extends State<NotificationsContentTile> {
+  final ScrollController _scrollController = ScrollController();
   NotificationFilterMode selectedFilter = NotificationFilterMode.all;
+  
+  List<UserNotification> _allNotifications = [];
+  bool _isLoading = true;
+  bool _isFetchingMore = false;
+  bool _hasMore = true;
+  int _currentIndex = 0;
+  static const int _pageSize = 30;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchNotifications();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    
+    if (_scrollController.position.pixels >= 
+        _scrollController.position.maxScrollExtent - 200) {
+      if (!_isFetchingMore && _hasMore) {
+        _fetchNotifications();
+      }
+    }
+  }
+
+  Future<void> _fetchNotifications({bool isRefresh = false}) async {
+    if (isRefresh) {
+      setState(() {
+        _currentIndex = 0;
+        _hasMore = true;
+        _isLoading = true;
+      });
+    } else if (_isFetchingMore || !_hasMore) {
+      return;
+    }
+
+    if (_currentIndex > 0) {
+      setState(() => _isFetchingMore = true);
+    }
+
+    try {
+      final rawList = await NotificationService.getMyNotifications(
+        from: _currentIndex,
+        to: _currentIndex + _pageSize - 1,
+      );
+      
+      final List<UserNotification> newItems = rawList
+          .map(UserNotification.fromJson)
+          .toList();
+
+      setState(() {
+        if (isRefresh) {
+          _allNotifications = newItems;
+        } else {
+          _allNotifications.addAll(newItems);
+        }
+        
+        _hasMore = newItems.length == _pageSize;
+        _currentIndex += newItems.length;
+        _isLoading = false;
+        _isFetchingMore = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _isFetchingMore = false;
+      });
+      _showMessage('Error loading notifications');
+    }
+  }
 
   void onFilterChanged(NotificationFilterMode mode) {
     if (selectedFilter == mode) {
@@ -37,6 +115,12 @@ class NotificationsContentTileState extends State<NotificationsContentTile> {
   Future<void> _handleNotificationTap(UserNotification notification) async {
     if (!notification.isRead) {
       await NotificationService.markAsRead(notification.id);
+      setState(() {
+        final index = _allNotifications.indexWhere((n) => n.id == notification.id);
+        if (index != -1) {
+          _allNotifications[index] = _allNotifications[index].copyWith(isRead: true);
+        }
+      });
     }
 
     await HapticFeedback.selectionClick();
@@ -69,6 +153,14 @@ class NotificationsContentTileState extends State<NotificationsContentTile> {
       return;
     }
     await NotificationService.markAsRead(notification.id);
+    
+    setState(() {
+      final index = _allNotifications.indexWhere((n) => n.id == notification.id);
+      if (index != -1) {
+        _allNotifications[index] = _allNotifications[index].copyWith(isRead: true);
+      }
+    });
+
     if (!mounted) {
       return;
     }
@@ -136,9 +228,10 @@ class NotificationsContentTileState extends State<NotificationsContentTile> {
                 NotificationQuickActionTile(
                   icon: Icons.done_all_rounded,
                   title: 'Mark all as read',
-                  onTap: () {
+                  onTap: () async {
                     Navigator.of(sheetContext).pop();
-                    NotificationService.markAllRead();
+                    await NotificationService.markAllRead();
+                    await _fetchNotifications(isRefresh: true);
                   },
                 ),
               ],
@@ -171,130 +264,136 @@ class NotificationsContentTileState extends State<NotificationsContentTile> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: NotificationService.notificationsStream(),
-      builder:
-          (
-            BuildContext context,
-            AsyncSnapshot<List<Map<String, dynamic>>> snapshot,
-          ) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const NotificationsLoadingTile();
-            }
+    final int unreadCount = _allNotifications
+        .where((n) => !n.isRead)
+        .length;
+    final int totalCount = _allNotifications.length;
+    final NotificationCategoryMetrics metrics =
+        NotificationCategoryMetrics.from(_allNotifications);
+    final Map<NotificationFilterMode, int> filterCounts =
+        <NotificationFilterMode, int>{
+          NotificationFilterMode.all: totalCount,
+          NotificationFilterMode.unread: unreadCount,
+          NotificationFilterMode.alerts:
+              NotificationFilterResolver.apply(
+                NotificationFilterMode.alerts,
+                _allNotifications,
+              ).length,
+        };
 
-            if (snapshot.hasError) {
-              return NotificationsStateMessageTile(
-                icon: Icons.error_outline_rounded,
-                title: 'Unable to load notifications',
-                message: 'Please try again in a moment.',
-                iconColor: AppColors.error,
-              );
-            }
+    final List<UserNotification> filteredNotifications =
+        NotificationFilterResolver.apply(
+          selectedFilter,
+          _allNotifications,
+        );
+    final List<NotificationDayGroup> groups =
+        NotificationDayGrouping.createGroups(filteredNotifications);
 
-            final List<Map<String, dynamic>> rawList =
-                snapshot.data ?? <Map<String, dynamic>>[];
-            final List<UserNotification> allNotifications = rawList
-                .map(UserNotification.fromJson)
-                .toList();
-            final int unreadCount = allNotifications
-                .where((n) => !n.isRead)
-                .length;
-            final int totalCount = allNotifications.length;
-            final NotificationCategoryMetrics metrics =
-                NotificationCategoryMetrics.from(allNotifications);
-            final Map<NotificationFilterMode, int> filterCounts =
-                <NotificationFilterMode, int>{
-                  NotificationFilterMode.all: totalCount,
-                  NotificationFilterMode.unread: unreadCount,
-                  NotificationFilterMode.alerts:
-                      NotificationFilterResolver.apply(
-                        NotificationFilterMode.alerts,
-                        allNotifications,
-                      ).length,
-                };
-
-            final List<UserNotification> filteredNotifications =
-                NotificationFilterResolver.apply(
-                  selectedFilter,
-                  allNotifications,
-                );
-            final List<NotificationDayGroup> groups =
-                NotificationDayGrouping.createGroups(filteredNotifications);
-
-            return Column(
-              children: [
-                NotificationsHeaderTile(
-                  unreadCount: unreadCount,
-                  totalCount: totalCount,
-                  selectedFilter: selectedFilter,
-                  filterCounts: filterCounts,
-                  onFilterChanged: onFilterChanged,
-                  onMarkAllRead: () => NotificationService.markAllRead(),
-                  onOptionsTap: _openOptionsSheet,
-                ),
-                Expanded(
-                  child: totalCount == 0
-                      ? const NotificationsStateMessageTile(
-                          icon: Icons.notifications_off_outlined,
-                          title: 'No notifications found',
-                          message:
-                              'New updates from your circles will appear here.',
-                          iconColor: AppColors.textSecondary,
-                        )
-                      : ListView(
-                          physics: const BouncingScrollPhysics(),
-                          padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 20.h),
-                          children: [
-                            NotificationsSummarySectionTile(
-                              raidsCount: metrics.raids,
-                              awardsCount: metrics.awards,
-                              questsCount: metrics.quests,
-                              xpEventsCount: metrics.xpEvents,
-                              onRaidsTap: () {
-                                onFilterChanged(NotificationFilterMode.alerts);
-                                _showMessage('Showing alert notifications');
-                              },
-                              onAwardsTap: () => _openFirstCategoryNotification(
-                                NotificationCategoryTypes.awards,
-                                allNotifications,
-                                'award',
-                              ),
-                              onQuestsTap: () => _openFirstCategoryNotification(
-                                NotificationCategoryTypes.quests,
-                                allNotifications,
-                                'quest',
-                              ),
-                              onXpEventsTap: () =>
-                                  _openFirstCategoryNotification(
-                                    NotificationCategoryTypes.xpEvents,
-                                    allNotifications,
-                                    'XP event',
+    return Column(
+      children: [
+        NotificationsHeaderTile(
+          unreadCount: unreadCount,
+          totalCount: totalCount,
+          selectedFilter: selectedFilter,
+          filterCounts: filterCounts,
+          onFilterChanged: onFilterChanged,
+          onMarkAllRead: () async {
+            await NotificationService.markAllRead();
+            await _fetchNotifications(isRefresh: true);
+          },
+          onOptionsTap: _openOptionsSheet,
+        ),
+        Expanded(
+          child: _isLoading && totalCount == 0
+              ? const NotificationsLoadingTile()
+              : totalCount == 0
+                  ? const NotificationsStateMessageTile(
+                      icon: Icons.notifications_off_outlined,
+                      title: 'No notifications found',
+                      message:
+                          'New updates from your circles will appear here.',
+                      iconColor: AppColors.textNavy,
+                    )
+                  : RefreshIndicator(
+                      color: AppColors.brandPrimary,
+                      onRefresh: () => _fetchNotifications(isRefresh: true),
+                      child: ListView(
+                        controller: _scrollController,
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 20.h),
+                        children: [
+                          NotificationsSummarySectionTile(
+                            raidsCount: metrics.raids,
+                            awardsCount: metrics.awards,
+                            questsCount: metrics.quests,
+                            xpEventsCount: metrics.xpEvents,
+                            onRaidsTap: () {
+                              onFilterChanged(NotificationFilterMode.alerts);
+                              _showMessage('Showing alert notifications');
+                            },
+                            onAwardsTap: () => _openFirstCategoryNotification(
+                              NotificationCategoryTypes.awards,
+                              _allNotifications,
+                              'award',
+                            ),
+                            onQuestsTap: () => _openFirstCategoryNotification(
+                              NotificationCategoryTypes.quests,
+                              _allNotifications,
+                              'quest',
+                            ),
+                            onXpEventsTap: () =>
+                                _openFirstCategoryNotification(
+                                  NotificationCategoryTypes.xpEvents,
+                                  _allNotifications,
+                                  'XP event',
+                                ),
+                          ),
+                          SizedBox(height: 14.h),
+                          if (groups.isEmpty)
+                            const NotificationsInlineMessageTile(
+                              message:
+                                  'No updates in this filter right now. Try another tab.',
+                            )
+                          else
+                            ...groups.map(
+                              (NotificationDayGroup group) =>
+                                  NotificationDayGroupTile(
+                                    group: group,
+                                    onNotificationTap: _handleNotificationTap,
+                                    onNotificationActionTap:
+                                        _handleNotificationTap,
+                                    onNotificationLongPress:
+                                        _handleNotificationLongPress,
                                   ),
                             ),
-                            SizedBox(height: 14.h),
-                            if (groups.isEmpty)
-                              const NotificationsInlineMessageTile(
-                                message:
-                                    'No updates in this filter right now. Try another tab.',
-                              )
-                            else
-                              ...groups.map(
-                                (NotificationDayGroup group) =>
-                                    NotificationDayGroupTile(
-                                      group: group,
-                                      onNotificationTap: _handleNotificationTap,
-                                      onNotificationActionTap:
-                                          _handleNotificationTap,
-                                      onNotificationLongPress:
-                                          _handleNotificationLongPress,
-                                    ),
+                          if (_isFetchingMore)
+                            Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16.h),
+                              child: const Center(
+                                child: CircularProgressIndicator(
+                                  color: AppColors.brandPrimary,
+                                ),
                               ),
-                          ],
-                        ),
-                ),
-              ],
-            );
-          },
+                            ),
+                          if (!_hasMore && totalCount > 0)
+                            Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16.h),
+                              child: Center(
+                                child: Text(
+                                  'No more notifications to show',
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+        ),
+      ],
     );
   }
 }

@@ -1,26 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/chat/models/chat_model.dart';
 import 'package:test_steps/features/chat/widget/avatar_tile.dart';
 import 'package:test_steps/features/chat/widget/message_input_bar.dart';
 import 'package:test_steps/features/chat/widget/quick_reaction_bar.dart';
-import 'package:test_steps/features/chat/widget/raid_reply_bubble.dart';
 import 'package:test_steps/features/chat/widget/recived_message_bublle.dart';
 import 'package:test_steps/features/chat/widget/sent_message_bubble.dart';
-import 'package:test_steps/features/chat/widget/typing_editor.dart';
-import 'package:test_steps/features/chat/widget/xp_bouns_buble.dart';
+import 'package:test_steps/providers/circle_messages_provider.dart';
+import 'package:test_steps/providers/circles_provider.dart';
 
-class ChatScreen extends StatefulWidget {
+class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends ConsumerState<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _messageController = TextEditingController();
 
   final List<Member> members = const [
     Member(
@@ -34,69 +36,100 @@ class _ChatScreenState extends State<ChatScreen> {
     Member(name: 'NeonPatf', avatar: '⚡', score: '6.2k', isOnline: true),
     Member(name: 'TitanWalk', avatar: '🛡️', score: '9.1k', isOnline: true),
     Member(name: 'SwiftBlaz', avatar: '🔥', score: '14k', isOnline: true),
-    Member(name: 'ShadowS', avatar: '🌙', score: '5.4k'),
-    Member(name: 'intE', avatar: '🖥️', score: '7.8k', isOnline: true),
-    Member(name: 'son', avatar: '🐊', score: '10.3k', isOnline: true),
-  ];
-
-  // Message list — using a sealed-like approach with type enum
-  // Each item is either a ChatMessage or a special widget key
-  // We use a list of dynamic and check type in build
-  final List<dynamic> chatItems = [
-    'xp_bonus',
-    const ChatMessageModel(
-      text: 'South Shore is under attack! DarkCircle is pushing hard 🤯',
-      time: '9:14 AM',
-      type: MessageType.sent,
-    ),
-    const ChatMessageModel(
-      senderName: 'IronStrider',
-      senderAvatar: '🐗',
-      text: 'Already there. 2v1 but I\'m holding it 🔥',
-      time: '9:15 AM',
-      type: MessageType.received,
-      replyPreview: 'You: South Shore is under attack! DarkCircl...',
-      reactions: [
-        Reaction(emoji: '⚡', count: 7),
-        Reaction(emoji: '💪', count: 3),
-      ],
-      senderNameColor: AppColors.senderIronStrider,
-    ),
-    const ChatMessageModel(
-      senderName: 'NeonPath',
-      senderAvatar: '⚡',
-      text: 'On the way, give me 4 mins ⚡',
-      time: '9:16 AM',
-      type: MessageType.received,
-      senderNameColor: AppColors.senderNeonPath,
-    ),
-    'raid_repelled',
-    const ChatMessageModel(
-      text: 'LETS GOOO 🎉 IronStrider MVP no cap',
-      time: '9:23 AM',
-      type: MessageType.sent,
-      reactions: [
-        Reaction(emoji: '👏', count: 4),
-        Reaction(emoji: '🔥', count: 3),
-      ],
-    ),
-    'typing',
   ];
 
   @override
   void dispose() {
+    _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
+  ChatMessageModel _mapMessage(Map<String, dynamic> row, String? currentUserId) {
+    final senderInfo = row['sender_info'] as Map<String, dynamic>?;
+    final username = senderInfo?['username']?.toString() ?? 'Anonymous';
+    final avatar = senderInfo?['avatar_url']?.toString();
+    final avatarEmoji = avatar?.isNotEmpty == true ? avatar : username.isNotEmpty ? username[0] : '👤';
+    final createdAt = row['created_at']?.toString() ?? '';
+    final timeLabel = createdAt.isNotEmpty
+        ? DateTime.tryParse(createdAt)
+            ?.toLocal()
+            .toString()
+            .split(' ')[1]
+            .split('.')
+            .first
+        : '';
+    final isMe = row['user_id']?.toString() == currentUserId;
+    final reactions = <Reaction>[];
+    if (row['reactions'] is List) {
+      for (final rawReaction in row['reactions'] as List) {
+        if (rawReaction is Map) {
+          final emoji = rawReaction['emoji']?.toString() ?? '';
+          final count = rawReaction['count'] is int
+              ? rawReaction['count'] as int
+              : int.tryParse('${rawReaction['count']}') ?? 0;
+          if (emoji.isNotEmpty) {
+            reactions.add(Reaction(emoji: emoji, count: count));
+          }
+        }
+      }
+    }
+
+    return ChatMessageModel(
+      senderName: isMe ? null : username,
+      senderAvatar: isMe ? null : avatarEmoji,
+      text: row['message']?.toString() ?? '',
+      time: timeLabel??'',
+      type: isMe ? MessageType.sent : MessageType.received,
+      reactions: reactions,
+      senderNameColor: AppColors.senderIronStrider,
+    );
+  }
+
+  Future<void> _sendMessage(String circleId) async {
+    final content = _messageController.text.trim();
+    if (content.isEmpty) return;
+    _messageController.clear();
+    await ref.read(circleMessagesProvider(circleId).notifier).sendMessage(content);
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final circlesState = ref.watch(circlesProvider);
+    final currentCircle = circlesState.circles.isNotEmpty ? circlesState.circles.first : null;
+    final circleId = currentCircle?['circle_id']?.toString();
+    final circleName = currentCircle?['circles']?['name']?.toString() ?? 'Circle Chat';
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+
+    if (circleId == null || circleId.isEmpty) {
+      return Scaffold(
+        backgroundColor: AppColors.scaffoldBg,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          titleSpacing: 0,
+          title: Text('Circle Chat', style: AppTextStyles.heading3.copyWith(fontSize: 18.sp)),
+        ),
+        body: const Center(
+          child: Text('No active circle found. Join or create a circle first.'),
+        ),
+      );
+    }
+
+    final messagesState = ref.watch(circleMessagesProvider(circleId));
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-
         titleSpacing: 0,
         title: Row(
           children: [
@@ -141,11 +174,11 @@ class _ChatScreenState extends State<ChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'StormWalkers',
+                  circleName,
                   style: AppTextStyles.heading3.copyWith(fontSize: 18.sp),
                 ),
                 Text(
-                  '6 online · 24 members',
+                  '${circlesState.circles.length} circle member(s)',
                   style: AppTextStyles.bodySmall.copyWith(fontSize: 12.sp),
                 ),
               ],
@@ -180,46 +213,35 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           const Divider(height: 1, color: Color(0xFFEEEEEE)),
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              itemCount: chatItems.length,
-              itemBuilder: (context, i) {
-                final item = chatItems[i];
-
-                if (item == 'xp_bonus') {
-                  return const XpBonusBubble();
-                }
-
-                if (item == 'raid_repelled') {
-                  return const RaidRepelledBubble();
-                }
-
-                if (item == 'typing') {
-                  return const TypingIndicator(
-                    name: 'IronStrider',
-                    avatarEmoji: '🐗',
-                  );
-                }
-
-                final msg = item as ChatMessageModel;
-
-                if (msg.type == MessageType.sent) {
-                  return SentMessageBubble(message: msg);
-                }
-
-                return ReceivedMessageBubble(
-                  message: msg,
-                  avatarEmoji: msg.senderAvatar ?? '👤',
-                );
-              },
-            ),
+            child: messagesState.isLoading && messagesState.messages.isEmpty
+                ? const Center(child: CircularProgressIndicator())
+                : messagesState.messages.isEmpty
+                    ? const Center(child: Text('No messages yet. Say hi!'))
+                    : ListView.builder(
+                        controller: _scrollController,
+                        reverse: true,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        itemCount: messagesState.messages.length,
+                        itemBuilder: (context, i) {
+                          final row = messagesState.messages[i];
+                          final msg = _mapMessage(row, currentUserId);
+                          if (msg.type == MessageType.sent) {
+                            return SentMessageBubble(message: msg);
+                          }
+                          return ReceivedMessageBubble(
+                            message: msg,
+                            avatarEmoji: msg.senderAvatar ?? '👤',
+                          );
+                        },
+                      ),
           ),
           const Divider(height: 1, color: Color(0xFFEEEEEE)),
           const QuickReactionBar(),
           const Divider(height: 1, color: Color(0xFFEEEEEE)),
-          const MessageInputBar(),
-          // Safe area bottom padding
+          MessageInputBar(
+            controller: _messageController,
+            onSend: () => _sendMessage(circleId),
+          ),
           SizedBox(height: 8.h),
         ],
       ),

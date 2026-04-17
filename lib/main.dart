@@ -13,17 +13,20 @@ import 'dart:io';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // await Firebase.initializeApp();
+  await Firebase.initializeApp();
   await Supabase.initialize(
     url: 'https://dpvelnjzovjhxgpjvtay.supabase.co',
     anonKey:
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwdmVsbmp6b3ZqaHhncGp2dGF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzOTI0MTAsImV4cCI6MjA4Njk2ODQxMH0.Nbssvqd6jnpXXQpdDCzfrPpx1k4CxBiP9FDQSVNkous',
   );
+  
+  
   await initializeRevenueCat();
-  // await NotificationService.initialize();
+ await NotificationService.initialize();
 
   runApp(ProviderScope(child: MyApp()));
 }
+
 
 Future<void> initializeRevenueCat() async {
   // Platform-specific API keys

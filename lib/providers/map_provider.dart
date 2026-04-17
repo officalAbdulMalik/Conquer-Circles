@@ -43,11 +43,7 @@ class MapNotifier extends StateNotifier<MapState> {
     // Check location service
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Location services are disabled. Please enable GPS.',
-      );
-      return;
+     await Geolocator.requestPermission();
     }
 
     // Check / request permission
@@ -73,6 +69,10 @@ class MapNotifier extends StateNotifier<MapState> {
     state = state.copyWith(permissionGranted: true);
 
     try {
+      // Load attack energy from profile
+      final energy = await _service.getAttackEnergy();
+      state = state.copyWith(currentAttackEnergy: energy);
+
       // Fetch current position with a 10-second timeout
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
@@ -290,20 +290,118 @@ class MapNotifier extends StateNotifier<MapState> {
     }
   }
 
-  /// Calls claimOrAttackTile and surfaces the result to the UI via
-  /// the attackResult field in MapState.
-  Future<void> _processTileEntry(
-    String tileId,
+  /// Processes territory entry: validates conditions then calls attack RPC.
+  /// Includes app-side validation for speed, protection, shield, cooldown.
+  Future<void> _processTerritoryEntry(
+    String territoryId,
     LatLng location,
     double speedKmh,
   ) async {
-    final result = await _service.claimOrAttackTile(
-      tileId: tileId,
+    final now = DateTime.now();
+    
+    // ── APP-SIDE VALIDATION 1: SPEED CHECK ────────────────────────────────
+    if (speedKmh < 2.0 || speedKmh > 15.0) {
+      state = state.copyWith(
+        lastAttackResult: {
+          'action': 'error',
+          'reason': 'invalid_speed',
+          'speed_kmh': speedKmh,
+          'message': 'Walking speed required (2-15 km/h). Current: ${speedKmh.toStringAsFixed(1)} km/h'
+        }
+      );
+      return;
+    }
+    
+    // ── APP-SIDE VALIDATION 2: FIND TERRITORY IN NEARBY ────────────────────
+    Territory? territory;
+    try {
+      territory = state.nearbyTerritories.firstWhere((t) => t.id == territoryId);
+    } catch (_) {
+      territory = null;
+    }
+    
+    if (territory == null) {
+      state = state.copyWith(
+        lastAttackResult: {
+          'action': 'error',
+          'reason': 'territory_not_found',
+          'message': 'Territory not found nearby'
+        }
+      );
+      return;
+    }
+    
+    // ── APP-SIDE VALIDATION 3: PROTECTION CHECK (12h) ─────────────────────
+    if (territory.protectedUntil != null && territory.protectedUntil!.isAfter(now)) {
+      final hoursRemaining = 
+          territory.protectedUntil!.difference(now).inSeconds / 3600.0;
+      
+      state = state.copyWith(
+        lastAttackResult: {
+          'action': 'protected',
+          'reason': 'protection_active',
+          'territory_id': territoryId,
+          'hours_remaining': double.parse(hoursRemaining.toStringAsFixed(1)),
+          'message': '🛡️ Protected for ${hoursRemaining.toStringAsFixed(1)} hours'
+        }
+      );
+      return;
+    }
+    
+    // ── APP-SIDE VALIDATION 4: SHIELD CHECK (24h absence) ────────────────
+    if (territory.shieldUntil != null && territory.shieldUntil!.isAfter(now)) {
+      final hoursRemaining = 
+          territory.shieldUntil!.difference(now).inSeconds / 3600.0;
+      
+      state = state.copyWith(
+        lastAttackResult: {
+          'action': 'shielded',
+          'reason': 'absence_shield_active',
+          'territory_id': territoryId,
+          'hours_remaining': double.parse(hoursRemaining.toStringAsFixed(1)),
+          'message': '⚡ Absence shield active for ${hoursRemaining.toStringAsFixed(1)} hours'
+        }
+      );
+      return;
+    }
+    
+    // ── APP-SIDE VALIDATION 5: CHECK COOLDOWN ────────────────────────────
+    // Note: Could check local cache or just let RPC verify
+    // For now, we let RPC verify this (security gate)
+    
+    // ── APP-SIDE VALIDATION 6: ENERGY CHECK ──────────────────────────────
+    if (state.currentAttackEnergy <= 0) {
+      state = state.copyWith(
+        lastAttackResult: {
+          'action': 'no_energy',
+          'reason': 'insufficient_attack_energy',
+          'current_energy': state.currentAttackEnergy,
+          'message': '⚡ No attack energy! Walk more to generate energy.'
+        }
+      );
+      return;
+    }
+    
+    // ── ALL APP-SIDE CHECKS PASSED → CALL RPC ────────────────────────────
+    final result = await _service.attackOrClaimTerritory(
+      territoryId: territoryId,
+      speedKmh: speedKmh,
       lat: location.latitude,
       lng: location.longitude,
     );
 
     await _handleAttackResult(result, location);
+  }
+
+  /// Legacy method - redirects to new territory-based system
+  /// @deprecated Use _processTerritoryEntry instead
+  Future<void> _processTileEntry(
+    String tileId,
+    LatLng location,
+    double speedKmh,
+  ) async {
+    // Redirect to new territory system
+    await _processTerritoryEntry(tileId, location, speedKmh);
   }
 
   /// Centralised logic for handling attack/claim results, including
@@ -317,6 +415,25 @@ class MapNotifier extends StateNotifier<MapState> {
 
     final action = result['action'] as String?;
     if (action == null) return;
+
+    // ── UPDATE ATTACK ENERGY DISPLAY ───────────────────────────────────────
+    // Reload attack energy to reflect any deductions from this attack
+    if (action == 'captured' || action == 'damaged' || action == 'reinforced') {
+      final updatedEnergy = await _service.getAttackEnergy();
+      state = state.copyWith(currentAttackEnergy: updatedEnergy);
+    }
+
+    // ── REFRESH TERRITORY DATA AFTER ATTACK ────────────────────────────────
+    final territoryId = result['territory_id'] as String?;
+    if (territoryId != null && (action == 'captured' || action == 'damaged')) {
+      // Reload territories to reflect energy changes
+      await loadTerritoriesForBounds(
+        LatLngBounds(
+          southwest: LatLng(location.latitude - 0.05, location.longitude - 0.05),
+          northeast: LatLng(location.latitude + 0.05, location.longitude + 0.05),
+        ),
+      );
+    }
 
     // ── Notifications ────────────────────────────────────────────────────────
     if (action == 'captured') {
@@ -343,14 +460,6 @@ class MapNotifier extends StateNotifier<MapState> {
       if (state.activePath.length <= 1) {
         await NotificationService.notifyFirstTerritoryClaim();
       }
-
-      // 3. Map Refresh: reload territories so polygons update
-      await loadTerritoriesForBounds(
-        LatLngBounds(
-          southwest: LatLng(location.latitude - 0.05, location.longitude - 0.05),
-          northeast: LatLng(location.latitude + 0.05, location.longitude + 0.05),
-        ),
-      );
     } else if (action == 'damaged') {
       // Notify defender they are being attacked
       final defenderId = result['defender_id']?.toString();
@@ -441,19 +550,20 @@ class MapNotifier extends StateNotifier<MapState> {
 
   /// Public method for UI to manually trigger a tile entry (e.g. tile tap).
   /// Automatically called from _handleLocationUpdate during walks.
-  Future<Map<String, dynamic>?> onEnterTile(String tileId) async {
+  /// Public method for UI to manually trigger a territory attack/claim.
+  /// Called from tile tap or automated GPS entry.
+  /// Uses new attackOrClaimTerritory RPC with speed validation.
+  Future<Map<String, dynamic>?> onEnterTile(String territoryId) async {
     final speedKmh = state.currentSpeedKmh;
-    if (speedKmh < 2 || speedKmh > 15) return null;
     if (state.userLocation == null) return null;
 
-    final result = await _service.claimOrAttackTile(
-      tileId: tileId,
-      lat: state.userLocation!.latitude,
-      lng: state.userLocation!.longitude,
-    );
-
-    await _handleAttackResult(result, state.userLocation!);
-    return result;
+    // Delegate to territory entry handler which includes all validation
+    await _processTerritoryEntry(
+      territoryId,
+      state.userLocation!,
+      speedKmh,
+    );    
+    return state.lastAttackResult;
   }
 
   // ---------------------------------------------------------------------------

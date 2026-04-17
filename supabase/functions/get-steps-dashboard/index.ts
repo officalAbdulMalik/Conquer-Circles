@@ -13,60 +13,132 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      "https://nnbqgqjduvjnhqgqjduv.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5uYnFncWpkdXZqbmhxZ3FqZHV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM0MTg1NjYsImV4cCI6MjA1OTk5NDU2Nn0.b_08208z8s9k8s9k8s9k8s9k8s9k8s9k8s9k8s9k8",
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    // Get the authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401,
+        }
+      );
+    }
+
+    // Create admin client with service role key from environment
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!serviceRoleKey) {
+      return new Response(
+        JSON.stringify({ error: 'Service role key not configured' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    if (!supabaseUrl) {
+      return new Response(
+        JSON.stringify({ error: 'SUPABASE_URL not configured' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
+    }
+
+    const supabaseAdmin = createClient(
+      supabaseUrl,
+      serviceRoleKey,
     );
 
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) throw new Error("Unauthorized");
+    // Get request body
+    const { user_id } = await req.json();
+    
+    if (!user_id) {
+      return new Response(
+        JSON.stringify({ error: 'Missing user_id' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
+    }
 
-    const userId = user.id;
+    const userId = user_id;
     const today = new Date().toISOString().split('T')[0];
 
     // 1. Fetch Profile Info
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('username, level, xp, xp_goal, step_goal, daily_streak, attack_energy')
       .eq('id', userId)
       .single();
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      console.error('Profile error:', profileError);
+      throw profileError;
+    }
 
     // 2. Fetch Today's Steps
-    const { data: stepsData, error: stepsError } = await supabase
+    const { data: stepsData, error: stepsError } = await supabaseAdmin
       .from('daily_steps')
       .select('steps')
       .eq('user_id', userId)
       .eq('date', today)
       .maybeSingle();
 
-    if (stepsError) throw stepsError;
+    if (stepsError) {
+      console.error('Steps error:', stepsError);
+      throw stepsError;
+    }
     const steps = stepsData?.steps || 0;
 
     // 3. Fetch Weekly Steps (for charts)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-    const { data: weeklyData, error: weeklyError } = await supabase
+    const { data: weeklyData, error: weeklyError } = await supabaseAdmin
       .from('daily_steps')
       .select('date, steps')
       .eq('user_id', userId)
       .gte('date', sevenDaysAgo.toISOString().split('T')[0])
       .order('date', { ascending: true });
 
-    if (weeklyError) throw weeklyError;
+    if (weeklyError) {
+      console.error('Weekly error:', weeklyError);
+      throw weeklyError;
+    }
 
-    // 4. Fetch Badges
-    const { data: badges, error: badgesError } = await supabase
+    // 4. Fetch Badges (enriched with metadata)
+    const { data: userBadges, error: badgesError } = await supabaseAdmin
       .from('user_badges')
-      .select('badge_id, unlocked_at')
-      .eq('user_id', userId);
+      .select(`
+        unlocked_at,
+        badge:badges (
+          id,
+          name,
+          description,
+          category,
+          rarity,
+          icon_url
+        )
+      `)
+      .eq('user_id', userId)
+      .order('unlocked_at', { ascending: false });
 
-    if (badgesError) throw badgesError;
+    if (badgesError) {
+      console.error('Badges error:', badgesError);
+      throw badgesError;
+    }
 
-    // Calculate calories and distance (Conversion logic moved to backend)
+    // Flatten the join result to make it cleaner for the frontend
+    const badges = (userBadges || []).map((ub: any) => ({
+      ...ub.badge,
+      unlocked_at: ub.unlocked_at
+    }));
+
+    // Calculate calories and distance
     const calories = Math.round(steps * 0.04);
     const distanceKm = Number((steps * 0.00073).toFixed(2));
 
@@ -95,11 +167,12 @@ serve(async (req) => {
       }
     );
   } catch (error) {
+    console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || 'Internal server error' }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 500,
       }
     );
   }

@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_spacing.dart';
 import 'package:test_steps/features/steps/widgets/steps_dashboard_sections.dart';
+import 'package:test_steps/providers/profile_provider.dart';
 import 'package:test_steps/services/health_service.dart';
+import 'package:test_steps/services/notification_service.dart';
 import 'package:test_steps/services/supabase_service.dart';
 
 class StepsView extends ConsumerStatefulWidget {
@@ -54,6 +57,7 @@ class _StepsViewState extends ConsumerState<StepsView>
 
     final int xpCurrent = stepState.xp;
     final int xpGoal = stepState.xpGoal;
+    final int level = stepState.level;
     final double xpProgress = (xpCurrent / (xpGoal > 0 ? xpGoal : 3000)).clamp(
       0,
       1,
@@ -80,6 +84,7 @@ class _StepsViewState extends ConsumerState<StepsView>
                   xpCurrent: xpCurrent,
                   xpGoal: xpGoal,
                   xpProgress: xpProgress,
+                  level: level,
                   pulseValue: pulseValue,
                 ),
                 20.verticalSpace,
@@ -92,7 +97,7 @@ class _StepsViewState extends ConsumerState<StepsView>
                   pulseValue: pulseValue,
                 ),
                 20.verticalSpace,
-                const AchievementsCardSection(),
+                AchievementsCardSection(badges: stepState.badges),
                 18.verticalSpace,
                 SummaryGridSection(
                   steps: steps,
@@ -110,7 +115,45 @@ class _StepsViewState extends ConsumerState<StepsView>
                   pulseValue: pulseValue,
                 ),
                 14.verticalSpace,
-                LevelUpBannerSection(pulseValue: pulseValue),
+                14.verticalSpace,
+                // LevelUpBannerSection(pulseValue: pulseValue),
+                30.verticalSpace,
+                Center(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Checking for new badges...'),
+                        ),
+                      );
+                      // call the function
+                      await SupabaseService().checkAndAwardBadges('test_award');
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Badge check complete! Check your profile.',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.emoji_events),
+                    label: const Text('🏆 Test Achievements'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.brandPurple,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 24.w,
+                        vertical: 12.h,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                    ),
+                  ),
+                ),
+                50.verticalSpace,
               ],
             ),
           );

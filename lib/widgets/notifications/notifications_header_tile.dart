@@ -56,21 +56,24 @@ class NotificationsHeaderTile extends StatelessWidget {
             ],
           ),
           SizedBox(height: 14.h),
-          Row(
-            children: [
-              ...NotificationFilterMode.values.map(
-                (NotificationFilterMode mode) => Padding(
-                  padding: EdgeInsets.only(right: 8.w),
-                  child: NotificationsFilterChipTile(
-                    filter: mode,
-                    count: filterCounts[mode] ?? 0,
-                    isSelected: selectedFilter == mode,
-                    onTap: () => onFilterChanged(mode),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                ...NotificationFilterMode.values.map(
+                  (NotificationFilterMode mode) => Padding(
+                    padding: EdgeInsets.only(right: 8.w),
+                    child: NotificationsFilterChipTile(
+                      filter: mode,
+                      count: filterCounts[mode] ?? 0,
+                      isSelected: selectedFilter == mode,
+                      onTap: () => onFilterChanged(mode),
+                    ),
                   ),
                 ),
-              ),
-              NotificationChipIconTile(icon: Icons.groups_2_outlined),
-            ],
+                NotificationChipIconTile(icon: Icons.groups_2_outlined),
+              ],
+            ),
           ),
         ],
       ),
@@ -94,12 +97,7 @@ class NotificationsTitleTile extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          children: [
-            Text('Notifications', style: AppTextStyles.screenTitle),
-            SizedBox(width: 8.w),
-            if (unreadCount > 0)
-              HeaderBadgeTile(text: '$unreadCount', color: AppColors.error),
-          ],
+          children: [Text('Notifications', style: AppTextStyles.screenTitle)],
         ),
         SizedBox(height: 2.h),
         Text(
