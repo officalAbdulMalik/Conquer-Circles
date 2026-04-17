@@ -37,14 +37,16 @@ class CircleChatCard extends ConsumerStatefulWidget {
   const CircleChatCard({
     super.key,
     this.circleTitle = 'Circle Chat',
-    this.unreadCount = 4,
+    this.unreadCount = 0,
     this.myAvatarEmoji = '🦅',
+    this.recentMessages,
     this.onCollapse,
   });
 
   final String circleTitle;
   final int unreadCount;
   final String myAvatarEmoji;
+  final List<ChatMessage>? recentMessages;
   final VoidCallback? onCollapse;
 
   @override
@@ -54,15 +56,32 @@ class CircleChatCard extends ConsumerStatefulWidget {
 class _CircleChatCardState extends ConsumerState<CircleChatCard> {
   final _controller = TextEditingController();
   final _scrollCtrl = ScrollController();
-  final List<ChatMessage> _messages = List.from(sampleChatMessages);
+  late List<ChatMessage> _messages;
   bool _hasText = false;
+
+  List<ChatMessage> _resolveMessages() {
+    final provided = widget.recentMessages;
+    if (provided != null) {
+      return List<ChatMessage>.from(provided);
+    }
+    return List<ChatMessage>.from(sampleChatMessages);
+  }
 
   @override
   void initState() {
     super.initState();
+    _messages = _resolveMessages();
     _controller.addListener(() {
       setState(() => _hasText = _controller.text.trim().isNotEmpty);
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant CircleChatCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.recentMessages != widget.recentMessages) {
+      _messages = _resolveMessages();
+    }
   }
 
   @override
@@ -79,16 +98,14 @@ class _CircleChatCardState extends ConsumerState<CircleChatCard> {
     if (circleId != null) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => CircleCommsView(
-            circleId: circleId,
-            circleName: circleName,
-          ),
+          builder: (context) =>
+              CircleCommsView(circleId: circleId, circleName: circleName),
         ),
       );
     } else {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (context) => const ChatScreen()),
-      );
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (context) => const ChatScreen()));
     }
 
     setState(() {
@@ -115,9 +132,12 @@ class _CircleChatCardState extends ConsumerState<CircleChatCard> {
   @override
   Widget build(BuildContext context) {
     final circlesState = ref.watch(circlesProvider);
-    final currentCircle = circlesState.circles.isNotEmpty ? circlesState.circles.first : null;
+    final currentCircle = circlesState.circles.isNotEmpty
+        ? circlesState.circles.first
+        : null;
     final circleId = currentCircle?['circle_id']?.toString();
-    final circleName = currentCircle?['circles']?['name']?.toString() ?? widget.circleTitle;
+    final circleName =
+        currentCircle?['circles']?['name']?.toString() ?? widget.circleTitle;
 
     return Container(
       decoration: BoxDecoration(
@@ -143,19 +163,38 @@ class _CircleChatCardState extends ConsumerState<CircleChatCard> {
           // Message list
           ConstrainedBox(
             constraints: BoxConstraints(maxHeight: 220.h),
-            child: ListView.builder(
-              controller: _scrollCtrl,
-              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
-              shrinkWrap: true,
-              itemCount: _messages.length,
-              itemBuilder: (_, i) => _MessageBubble(
-                message: _messages[i],
-                myAvatarEmoji: widget.myAvatarEmoji,
-              ),
-            ),
+            child: _messages.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.w),
+                      child: Text(
+                        'No recent messages yet.',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    controller: _scrollCtrl,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 14.w,
+                      vertical: 10.h,
+                    ),
+                    shrinkWrap: true,
+                    itemCount: _messages.length,
+                    itemBuilder: (_, i) => _MessageBubble(
+                      message: _messages[i],
+                      myAvatarEmoji: widget.myAvatarEmoji,
+                    ),
+                  ),
           ),
           const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F6)),
-          _InputBar(controller: _controller, hasText: _hasText, onSend: () => _send(circleId, circleName)),
+          _InputBar(
+            controller: _controller,
+            hasText: _hasText,
+            onSend: () => _send(circleId, circleName),
+          ),
         ],
       ),
     );

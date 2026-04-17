@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:convert';
 import 'dart:developer';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -20,14 +19,31 @@ class GameService {
   /// Creates a new circle. Free: 1 max. Premium: 5 max.
   /// Returns { success, circle_id, invite_code }
   /// Call from: CirclesScreen "Create Circle" button
-  Future<Map<String, dynamic>> createCircle(String name) async {
+  Future<Map<String, dynamic>> createCircle(
+    String name, {
+    bool isPrivate = true,
+  }) async {
     final user = currentUser;
     if (user == null) return {'success': false, 'error': 'Not signed in'};
     try {
-      final res = await _client.rpc(
-        'create_circle',
-        params: {'p_user_id': user.id, 'p_name': name},
-      );
+      dynamic res;
+      try {
+        // Preferred signature: create_circle(p_user_id, p_name, p_is_private)
+        res = await _client.rpc(
+          'create_circle',
+          params: {
+            'p_user_id': user.id,
+            'p_name': name,
+            'p_is_private': isPrivate,
+          },
+        );
+      } catch (e) {
+        // Backward compatibility with older RPC signature
+        res = await _client.rpc(
+          'create_circle',
+          params: {'p_user_id': user.id, 'p_name': name},
+        );
+      }
       return Map<String, dynamic>.from(res as Map);
     } catch (e) {
       _log('createCircle', e);
@@ -209,14 +225,25 @@ class GameService {
     final user = currentUser;
     if (user == null) return [];
     try {
-      final res = await _client
-          .from('circle_members')
-          .select(
-            'circle_id, role, joined_at, '
-            'circles(id, name, invite_code, max_members, min_members, owner_id, is_active)',
-          )
-          .eq('user_id', user.id);
-      return List<Map<String, dynamic>>.from(res as List);
+      try {
+        final res = await _client
+            .from('circle_members')
+            .select(
+              'circle_id, role, joined_at, '
+              'circles(id, name, invite_code, max_members, min_members, owner_id, is_active, is_private)',
+            )
+            .eq('user_id', user.id);
+        return List<Map<String, dynamic>>.from(res as List);
+      } catch (_) {
+        final res = await _client
+            .from('circle_members')
+            .select(
+              'circle_id, role, joined_at, '
+              'circles(id, name, invite_code, max_members, min_members, owner_id, is_active)',
+            )
+            .eq('user_id', user.id);
+        return List<Map<String, dynamic>>.from(res as List);
+      }
     } catch (e) {
       _log('getMyCircles', e);
       return [];
@@ -227,18 +254,168 @@ class GameService {
   /// Call from: BrowseCirclesScreen on init
   Future<List<Map<String, dynamic>>> getAllCircles() async {
     try {
-      final res = await _client
+      final baseRows = await _fetchAllCirclesBaseRows();
+      final circles = List<Map<String, dynamic>>.from(baseRows);
+      if (circles.isEmpty) return circles;
+
+      final circleIds = circles
+          .map((circle) => circle['id']?.toString() ?? '')
+          .where((id) => id.isNotEmpty)
+          .toList();
+
+      final memberIdsByCircle = <String, Set<String>>{
+        for (final id in circleIds) id: <String>{},
+      };
+
+      try {
+        final memberRows = await _client
+            .from('circle_members')
+            .select('circle_id, user_id')
+            .inFilter('circle_id', circleIds);
+
+        for (final row in List<Map<String, dynamic>>.from(memberRows as List)) {
+          final circleId = row['circle_id']?.toString();
+          final userId = row['user_id']?.toString();
+          if (circleId == null || userId == null) continue;
+          memberIdsByCircle.putIfAbsent(circleId, () => <String>{}).add(userId);
+        }
+      } catch (e) {
+        _log('getAllCircles.memberCounts', e);
+      }
+
+      final allMemberIds = memberIdsByCircle.values
+          .expand((ids) => ids)
+          .toSet()
+          .toList();
+
+      final territoriesByUser = <String, int>{};
+      final raidsByUser = <String, int>{};
+
+      if (allMemberIds.isNotEmpty) {
+        try {
+          final territoryRows = await _client
+              .from('territories')
+              .select('user_id')
+              .inFilter('user_id', allMemberIds);
+
+          for (final row in List<Map<String, dynamic>>.from(
+            territoryRows as List,
+          )) {
+            final userId = row['user_id']?.toString();
+            if (userId == null || userId.isEmpty) continue;
+            territoriesByUser[userId] = (territoriesByUser[userId] ?? 0) + 1;
+          }
+        } catch (e) {
+          _log('getAllCircles.territories', e);
+        }
+
+        try {
+          final raidRows = await _client
+              .from('tile_attack_log')
+              .select('attacker_id')
+              .inFilter('attacker_id', allMemberIds)
+              .eq('captured', true);
+
+          for (final row in List<Map<String, dynamic>>.from(raidRows as List)) {
+            final userId = row['attacker_id']?.toString();
+            if (userId == null || userId.isEmpty) continue;
+            raidsByUser[userId] = (raidsByUser[userId] ?? 0) + 1;
+          }
+        } catch (e) {
+          _log('getAllCircles.raids', e);
+        }
+      }
+
+      final enriched = circles.map((circle) {
+        final row = Map<String, dynamic>.from(circle);
+        final circleId = row['id']?.toString() ?? '';
+        final memberIds = memberIdsByCircle[circleId] ?? <String>{};
+
+        int territories = 0;
+        int raidsWon = 0;
+        for (final memberId in memberIds) {
+          territories += territoriesByUser[memberId] ?? 0;
+          raidsWon += raidsByUser[memberId] ?? 0;
+        }
+
+        final memberCount = memberIds.length;
+        final rankScore = (territories * 3) + (raidsWon * 2) + memberCount;
+
+        row['member_count'] = memberCount;
+        row['territories'] = territories;
+        row['raids_won'] = raidsWon;
+        row['is_private'] = _parseCirclePrivacy(row);
+        row['_rank_score'] = rankScore;
+        return row;
+      }).toList();
+
+      enriched.sort((a, b) {
+        final scoreCompare = ((b['_rank_score'] as num?)?.toInt() ?? 0)
+            .compareTo((a['_rank_score'] as num?)?.toInt() ?? 0);
+        if (scoreCompare != 0) return scoreCompare;
+
+        final membersCompare = ((b['member_count'] as num?)?.toInt() ?? 0)
+            .compareTo((a['member_count'] as num?)?.toInt() ?? 0);
+        if (membersCompare != 0) return membersCompare;
+
+        final aCreated = a['created_at']?.toString() ?? '';
+        final bCreated = b['created_at']?.toString() ?? '';
+        return aCreated.compareTo(bCreated);
+      });
+
+      for (int i = 0; i < enriched.length; i++) {
+        enriched[i]['rank'] = i + 1;
+        enriched[i]['rank_trend'] = 0;
+        enriched[i].remove('_rank_score');
+      }
+
+      return enriched;
+    } catch (e) {
+      _log('getAllCircles', e);
+      return [];
+    }
+  }
+
+  Future<List<dynamic>> _fetchAllCirclesBaseRows() async {
+    try {
+      return await _client
+          .from('circles')
+          .select(
+            'id, name, invite_code, max_members, min_members, owner_id, is_active, created_at, is_private',
+          )
+          .eq('is_active', true)
+          .order('created_at', ascending: false);
+    } catch (_) {
+      return await _client
           .from('circles')
           .select(
             'id, name, invite_code, max_members, min_members, owner_id, is_active, created_at',
           )
           .eq('is_active', true)
           .order('created_at', ascending: false);
-      return List<Map<String, dynamic>>.from(res as List);
-    } catch (e) {
-      _log('getAllCircles', e);
-      return [];
     }
+  }
+
+  bool _parseCirclePrivacy(Map<String, dynamic> circle) {
+    final rawPrivate = circle['is_private'];
+    if (rawPrivate is bool) return rawPrivate;
+    if (rawPrivate is num) return rawPrivate != 0;
+    final privateText = rawPrivate?.toString().toLowerCase();
+    if (privateText == 'true' || privateText == '1') return true;
+    if (privateText == 'false' || privateText == '0') return false;
+
+    final rawVisibility = circle['visibility']?.toString().toLowerCase();
+    if (rawVisibility == 'private') return true;
+    if (rawVisibility == 'public') return false;
+
+    final rawPublic = circle['is_public'];
+    if (rawPublic is bool) return !rawPublic;
+    if (rawPublic is num) return rawPublic == 0;
+    final publicText = rawPublic?.toString().toLowerCase();
+    if (publicText == 'true' || publicText == '1') return false;
+    if (publicText == 'false' || publicText == '0') return true;
+
+    return false;
   }
 
   /// Leaves a circle. Owner cannot leave.

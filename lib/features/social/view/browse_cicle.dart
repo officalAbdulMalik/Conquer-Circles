@@ -29,6 +29,55 @@ class AllCirclesPage extends ConsumerStatefulWidget {
 }
 
 class _AllCirclesPageState extends ConsumerState<AllCirclesPage> {
+  bool _isPrivateCircle(Map<String, dynamic> circle) {
+    final rawPrivate = circle['is_private'];
+    if (rawPrivate is bool) return rawPrivate;
+    if (rawPrivate is num) return rawPrivate != 0;
+    final privateText = rawPrivate?.toString().toLowerCase();
+    if (privateText == 'true' || privateText == '1') return true;
+    if (privateText == 'false' || privateText == '0') return false;
+
+    final rawVisibility = circle['visibility']?.toString().toLowerCase();
+    if (rawVisibility == 'private') return true;
+    if (rawVisibility == 'public') return false;
+
+    final rawPublic = circle['is_public'];
+    if (rawPublic is bool) return !rawPublic;
+    if (rawPublic is num) return rawPublic == 0;
+    final publicText = rawPublic?.toString().toLowerCase();
+    if (publicText == 'true' || publicText == '1') return false;
+    if (publicText == 'false' || publicText == '0') return true;
+
+    return false;
+  }
+
+  String _formatCompactInt(int value) {
+    if (value >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(value % 1000000 == 0 ? 0 : 1)}M';
+    }
+    if (value >= 1000) {
+      return '${(value / 1000).toStringAsFixed(value % 1000 == 0 ? 0 : 1)}k';
+    }
+    return '$value';
+  }
+
+  List<String> _buildMemberEmojis(Map<String, dynamic> circle) {
+    final seed = (circle['name']?.toString() ?? 'Circle').trim();
+    if (seed.isEmpty) return ['👤', '👤', '👤'];
+
+    final chars = seed
+        .split('')
+        .where((c) => c.trim().isNotEmpty)
+        .take(3)
+        .map((c) => c.toUpperCase())
+        .toList();
+
+    while (chars.length < 3) {
+      chars.add('👤');
+    }
+    return chars;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -43,29 +92,48 @@ class _AllCirclesPageState extends ConsumerState<AllCirclesPage> {
     final name = circle['name'] as String? ?? 'Unknown Circle';
     final maxMembers = circle['max_members'] as int? ?? 25;
     final minMembers = circle['min_members'] as int? ?? 3;
-    
-    // Generate some basic data for display
-    final memberCount = (minMembers + maxMembers) ~/ 2; // Estimate
-    
+    final memberCount = (circle['member_count'] as num?)?.toInt() ?? minMembers;
+    final territories = (circle['territories'] as num?)?.toInt() ?? 0;
+    final raidsWon = (circle['raids_won'] as num?)?.toInt() ?? 0;
+    final rank = (circle['rank'] as num?)?.toInt() ?? 0;
+    final rankTrend = (circle['rank_trend'] as num?)?.toInt() ?? 0;
+    final isPrivate = _isPrivateCircle(circle);
+    final isFull = memberCount >= maxMembers;
+    final estimatedXp = (territories * 120) + (raidsWon * 300);
+
     return CircleData(
       name: name,
-      quote: '"Join the adventure!"',
-      logoEmoji: '🎯', // Default emoji
+      quote: isPrivate
+          ? '"Private squad focused on coordinated raids."'
+          : '"Open community. Walk, raid, and rise together."',
+      logoEmoji: isPrivate ? '🔒' : '🌐',
       logoBgColor: const Color(0xFFD4F5E2),
       cardBgColor: const Color(0xFFEDFDF4),
-      rank: 0, // Not available from DB
-      rankTrend: 0,
+      rank: rank,
+      rankTrend: rankTrend,
       members: memberCount,
       maxMembers: maxMembers,
-      zones: 0, // Not available from DB
-      wins: 0, // Not available from DB
-      xp: '0k', // Not available from DB
-      tags: const [
-        CircleTag(label: 'Open', color: AppColors.success, icon: '👥'),
+      zones: territories,
+      wins: raidsWon,
+      xp: _formatCompactInt(estimatedXp),
+      tags: [
+        CircleTag(
+          label: isPrivate ? 'Private' : 'Public',
+          color: isPrivate ? AppColors.accentPurple : AppColors.success,
+          icon: isPrivate ? '🔒' : '🌍',
+        ),
+        CircleTag(
+          label: isFull ? 'Full' : 'Open',
+          color: isFull ? AppColors.error : AppColors.success,
+          icon: isFull ? '⛔' : '👥',
+        ),
+        const CircleTag(label: 'Ranked', color: AppColors.info, icon: '🏆'),
       ],
-      memberEmojis: ['🎯', '⚡', '🏆'],
-      joinStatus: memberCount >= maxMembers ? JoinStatus.full : JoinStatus.join,
-      joinColor: AppColors.success,
+      memberEmojis: _buildMemberEmojis(circle),
+      joinStatus: isFull ? JoinStatus.full : JoinStatus.join,
+      joinColor: isFull ? AppColors.error : AppColors.success,
+      badge: rank > 0 && rank <= 3 ? 'Top $rank' : null,
+      badgeColor: rank > 0 && rank <= 3 ? AppColors.gold : null,
     );
   }
 
@@ -75,132 +143,140 @@ class _AllCirclesPageState extends ConsumerState<AllCirclesPage> {
       builder: (context, ref, child) {
         final circlesState = ref.watch(circlesProvider);
         final allCircles = circlesState.allCircles;
-    return Scaffold(
-      appBar: AppBar(
-        title: // ── Sticky header ─────────────────────────────────────────────
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Browse Circles',
-                  style: AppTextStyles.heading2.copyWith(fontSize: 22.sp),
-                ),
-                4.verticalSpace,
-                Text(
-                  '${allCircles.length} circles · Find your squad',
-                  style: AppTextStyles.bodySmall,
-                ),
-              ],
-            ),
+        return Scaffold(
+          appBar: AppBar(
+            title: // ── Sticky header ─────────────────────────────────────────────
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-               
-                Container(
-                  padding: EdgeInsets.all(12.sp),
-                  decoration: BoxDecoration(
-                    color: AppColors.fillColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: SvgPicture.asset(
-                    'assets/icons/filter.svg',
-                    width: 16.w,
-                    height: 16.h,
-                    colorFilter: const ColorFilter.mode(
-                      AppColors.brandPurple,
-                      BlendMode.srcIn,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Browse Circles',
+                      style: AppTextStyles.heading2.copyWith(fontSize: 22.sp),
                     ),
-                  ),
+                    4.verticalSpace,
+                    Text(
+                      '${allCircles.length} circles · Find your squad',
+                      style: AppTextStyles.bodySmall,
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(12.sp),
+                      decoration: BoxDecoration(
+                        color: AppColors.fillColor,
+                        shape: BoxShape.circle,
+                      ),
+                      child: SvgPicture.asset(
+                        'assets/icons/filter.svg',
+                        width: 16.w,
+                        height: 16.h,
+                        colorFilter: const ColorFilter.mode(
+                          AppColors.brandPurple,
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-          child: ListView(
-            children: [
-              AppButton(
-                label: 'Create New Circle',
-                isFullWidth: true,
-                backgroundColor: AppColors.brandPurple,
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const CreateCircleOnboardingView(),
-                    ),
-                  );
-                },
-              ),
-
-              10.verticalSpace,
-              AppButton(
-                label: circlesState.isJoining
-                    ? 'Joining...'
-                    : 'Join Circle by Code',
-                isFullWidth: true,
-                variant: AppButtonVariant.outlined,
-                backgroundColor: AppColors.brandPurple,
-                borderColor: AppColors.brandPurple.withValues(alpha: 0.4),
-                textStyle: AppTextStyles.buttonLabel.copyWith(
-                  color: AppColors.brandPurple,
-                ),
-                onPressed: circlesState.isJoining
-                    ? null
-                    : () => _showJoinCodeDialog(context, ref),
-              ),
-
-              10.verticalSpace,
-
-              CustomTextFormField(
-                hintText: 'Search circles, tags, regions...',
-                onChanged: (value) {
-                  // Handle search filtering
-                },
-              ),
-
-              10.verticalSpace,
-
-              Text('Featured Circles', style: AppTextStyles.heading3),
-
-              10.verticalSpace,
-
-              // Show first circle as featured if available
-              if (allCircles.isNotEmpty)
-                _CircleCard(data: _convertToCircleData(allCircles.first), circleData: allCircles.first)
-              else
-                const Center(child: Text('No circles available')),
-
-              10.verticalSpace,
-
-              Text('All Circles', style: AppTextStyles.heading3),
-              10.verticalSpace,
-
-              // ── Cards ─────────────────────────────────────────────────────
-              if (circlesState.isLoading)
-                const Center(child: CircularProgressIndicator())
-              else if (allCircles.isEmpty)
-                const Center(child: Text('No circles found'))
-              else
-                Column(
-                  children: List.generate(
-                    allCircles.length,
-                    (i) => Padding(
-                      padding: EdgeInsets.only(bottom: 14.h),
-                      child: _CircleCard(data: _convertToCircleData(allCircles[i]), circleData: allCircles[i]),
-                    ),
-                  ),
-                ),
-            ],
           ),
-        ),
-      ),
-    );
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 10.0,
+              ),
+              child: ListView(
+                children: [
+                  AppButton(
+                    label: 'Create New Circle',
+                    isFullWidth: true,
+                    backgroundColor: AppColors.brandPurple,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CreateCircleOnboardingView(),
+                        ),
+                      );
+                    },
+                  ),
+
+                  10.verticalSpace,
+                  AppButton(
+                    label: circlesState.isJoining
+                        ? 'Joining...'
+                        : 'Join Circle by Code',
+                    isFullWidth: true,
+                    variant: AppButtonVariant.outlined,
+                    backgroundColor: AppColors.brandPurple,
+                    borderColor: AppColors.brandPurple.withValues(alpha: 0.4),
+                    textStyle: AppTextStyles.buttonLabel.copyWith(
+                      color: AppColors.brandPurple,
+                    ),
+                    onPressed: circlesState.isJoining
+                        ? null
+                        : () => _showJoinCodeDialog(context, ref),
+                  ),
+
+                  10.verticalSpace,
+
+                  CustomTextFormField(
+                    hintText: 'Search circles, tags, regions...',
+                    onChanged: (value) {
+                      // Handle search filtering
+                    },
+                  ),
+
+                  10.verticalSpace,
+
+                  Text('Featured Circles', style: AppTextStyles.heading3),
+
+                  10.verticalSpace,
+
+                  // Show first circle as featured if available
+                  if (allCircles.isNotEmpty)
+                    _CircleCard(
+                      data: _convertToCircleData(allCircles.first),
+                      circleData: allCircles.first,
+                    )
+                  else
+                    const Center(child: Text('No circles available')),
+
+                  10.verticalSpace,
+
+                  Text('All Circles', style: AppTextStyles.heading3),
+                  10.verticalSpace,
+
+                  // ── Cards ─────────────────────────────────────────────────────
+                  if (circlesState.isLoading)
+                    const Center(child: CircularProgressIndicator())
+                  else if (allCircles.isEmpty)
+                    const Center(child: Text('No circles found'))
+                  else
+                    Column(
+                      children: List.generate(
+                        allCircles.length,
+                        (i) => Padding(
+                          padding: EdgeInsets.only(bottom: 14.h),
+                          child: _CircleCard(
+                            data: _convertToCircleData(allCircles[i]),
+                            circleData: allCircles[i],
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
       },
     );
   }
@@ -347,7 +423,11 @@ class _CircleCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _MemberAvatars(emojis: data.memberEmojis),
-              _ActionButton(status: data.joinStatus, color: data.joinColor, circleData: circleData),
+              _ActionButton(
+                status: data.joinStatus,
+                color: data.joinColor,
+                circleData: circleData,
+              ),
             ],
           ),
         ],
@@ -456,7 +536,7 @@ class _RankChip extends StatelessWidget {
             ),
             SizedBox(width: 2.w),
             Text(
-              '#$rank',
+              rank > 0 ? '#$rank' : '--',
               style: AppTextStyles.poppins(
                 size: 13,
                 color: AppColors.textSecondary,
@@ -626,7 +706,11 @@ class _MemberAvatars extends StatelessWidget {
 /// A button for joining or requesting to join a circle.
 class _ActionButton extends StatelessWidget {
   /// Creates an [_ActionButton].
-  const _ActionButton({required this.status, required this.color, required this.circleData});
+  const _ActionButton({
+    required this.status,
+    required this.color,
+    required this.circleData,
+  });
 
   final JoinStatus status;
   final Color color;
@@ -668,9 +752,7 @@ class _ActionButton extends StatelessWidget {
               final circleId = circleData['id'] as String? ?? '';
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => CirclesScreen(
-                    circleId: circleId,
-                  ),
+                  builder: (_) => CirclesScreen(circleId: circleId),
                 ),
               );
             },

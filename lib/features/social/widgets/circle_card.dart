@@ -25,7 +25,14 @@ class GuildCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final circleName = circle?['name']?.toString() ?? 'Unknown Circle';
-    
+    final maxMembers = (circle?['max_members'] as num?)?.toInt() ?? 25;
+    final rawPrivate = circle?['is_private'];
+    final isPrivate = rawPrivate is bool
+        ? rawPrivate
+        : (rawPrivate?.toString().toLowerCase() == 'true' ||
+              rawPrivate?.toString() == '1');
+    final circleRank = (circle?['rank'] as num?)?.toInt();
+
     String ownerName = 'Unknown';
     if (leaderboard != null) {
       for (final m in leaderboard!) {
@@ -37,7 +44,7 @@ class GuildCard extends StatelessWidget {
     }
 
     final int membersCount = leaderboard?.length ?? 0;
-    
+
     // Calculate total territories and raids
     int territories = 0;
     int raids = 0;
@@ -51,7 +58,7 @@ class GuildCard extends StatelessWidget {
     final stats = [
       GuildStat(
         icon: Text(AppEmojis.members, style: TextStyle(fontSize: 18.sp)),
-        value: '$membersCount',
+        value: '$membersCount/$maxMembers',
         label: 'Members',
       ),
       GuildStat(
@@ -66,24 +73,25 @@ class GuildCard extends StatelessWidget {
       ),
       GuildStat(
         icon: Text(AppEmojis.trophy, style: TextStyle(fontSize: 18.sp)),
-        value: '#-',
+        value: circleRank == null || circleRank <= 0 ? '#-' : '#$circleRank',
         label: 'Rank',
       ),
     ];
 
-    final displayMembers = leaderboard?.take(6).map((m) {
-      return GuildMember(
-        avatarEmoji: AppEmojis.eagle, // default fallback
-        bgColor: AppColors.avatarNeutral, // default fallback
-        isOnline: true, // assume online for now
-      );
-    }).toList() ?? [];
+    final displayMembers =
+        leaderboard?.take(6).map((m) {
+          return GuildMember(
+            avatarEmoji: AppEmojis.eagle, // default fallback
+            bgColor: AppColors.avatarNeutral, // default fallback
+            isOnline: true, // assume online for now
+          );
+        }).toList() ??
+        [];
 
     final onlineCount = displayMembers.where((m) => m.isOnline).length;
-    final extraMembers = (leaderboard != null && leaderboard!.length > 6) 
-        ? leaderboard!.length - 6 
+    final extraMembers = (leaderboard != null && leaderboard!.length > 6)
+        ? leaderboard!.length - 6
         : 0;
-
 
     return Container(
       padding: EdgeInsets.all(16.r),
@@ -126,6 +134,31 @@ class GuildCard extends StatelessWidget {
                           style: AppTextStyles.bodySmall.copyWith(
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8.w,
+                            vertical: 2.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                (isPrivate
+                                        ? AppColors.accentPurple
+                                        : AppColors.success)
+                                    .withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                          child: Text(
+                            isPrivate ? 'Private' : 'Public',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.w700,
+                              color: isPrivate
+                                  ? AppColors.accentPurple
+                                  : AppColors.success,
+                            ),
                           ),
                         ),
                       ],

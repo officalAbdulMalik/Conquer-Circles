@@ -55,6 +55,7 @@ dependencies:
   purchases_ui_flutter: ^9.15.1
   flutter_svg: ^2.2.0
   flutter_screenutil: ^5.9.3
+  image_picker: ^1.1.2
   
 
 dev_dependencies:

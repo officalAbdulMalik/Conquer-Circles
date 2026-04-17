@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
+import 'package:test_steps/features/profile/view/edit_profile_view.dart';
 import 'package:test_steps/features/steps/widgets/steps_dashboard_sections.dart';
 import 'package:test_steps/providers/profile_provider.dart';
 import 'package:test_steps/widgets/shared/app_button.dart';
@@ -49,6 +50,7 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
             1000; // Convert km to meters for display logic
         final currentStreak = profile.dailyStreak;
         final level = profile.level;
+        final avatarUrl = profile.avatarUrl;
         final leagueRank = 4; // Placeholder for now
         final joinedAt = profile.createdAt?.toIso8601String() ?? '';
         final notificationsEnabled = profile.notificationsEnabled;
@@ -112,30 +114,59 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
                                     ),
                                   ],
                                 ),
-                                child: const Icon(
-                                  Icons.person_outline_rounded,
-                                  size: 44,
-                                  color: Color(0xFF8B80CC),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(20),
+                                  child:
+                                      avatarUrl != null && avatarUrl.isNotEmpty
+                                      ? Image.network(
+                                          avatarUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) =>
+                                              const Icon(
+                                                Icons.person_outline_rounded,
+                                                size: 44,
+                                                color: Color(0xFF8B80CC),
+                                              ),
+                                        )
+                                      : const Icon(
+                                          Icons.person_outline_rounded,
+                                          size: 44,
+                                          color: Color(0xFF8B80CC),
+                                        ),
                                 ),
                               ),
                               Positioned(
                                 bottom: 0,
                                 right: 0,
-                                child: Container(
-                                  width: 24,
-                                  height: 24,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF6C63FF),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 2,
+                                child: GestureDetector(
+                                  onTap: () async {
+                                    final saved = await Navigator.of(context)
+                                        .push<bool>(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const EditProfileView(),
+                                          ),
+                                        );
+                                    if (saved == true) {
+                                      ref.invalidate(userProfileProvider);
+                                    }
+                                  },
+                                  child: Container(
+                                    width: 24,
+                                    height: 24,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF6C63FF),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 2,
+                                      ),
                                     ),
-                                  ),
-                                  child: const Icon(
-                                    Icons.edit,
-                                    size: 12,
-                                    color: Colors.white,
+                                    child: const Icon(
+                                      Icons.edit,
+                                      size: 12,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -714,7 +745,16 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
                       16.verticalSpace,
                       AppButton(
                         label: 'Edit Profile',
-                        onPressed: () {},
+                        onPressed: () async {
+                          final saved = await Navigator.of(context).push<bool>(
+                            MaterialPageRoute(
+                              builder: (_) => const EditProfileView(),
+                            ),
+                          );
+                          if (saved == true) {
+                            ref.invalidate(userProfileProvider);
+                          }
+                        },
                         isFullWidth: true,
                       ),
                       12.verticalSpace,

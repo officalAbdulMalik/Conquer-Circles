@@ -79,7 +79,7 @@ class RaidAlertsCard extends StatelessWidget {
   const RaidAlertsCard({
     super.key,
     this.alerts,
-    this.activeCount = 1,
+    this.activeCount = 0,
     this.onSeeAll,
     this.onDefend,
   });
@@ -92,6 +92,11 @@ class RaidAlertsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final list = alerts ?? sampleRaidAlerts;
+    final computedActiveCount = list
+        .where((alert) => alert.status == RaidStatus.activeAttack)
+        .length;
+    final badgeCount = activeCount > 0 ? activeCount : computedActiveCount;
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -121,7 +126,7 @@ class RaidAlertsCard extends StatelessWidget {
                 Text('Raid Alerts', style: AppTextStyles.heading3),
                 7.horizontalSpace,
                 // Badge
-                if (activeCount > 0)
+                if (badgeCount > 0)
                   Container(
                     width: 20.r,
                     height: 20.r,
@@ -131,7 +136,7 @@ class RaidAlertsCard extends StatelessWidget {
                     ),
                     child: Center(
                       child: Text(
-                        '$activeCount',
+                        '$badgeCount',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
@@ -158,26 +163,49 @@ class RaidAlertsCard extends StatelessWidget {
           const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F6)),
 
           // ── Alert rows ─────────────────────────────────────────────────────
-          ...list.asMap().entries.map((entry) {
-            final isLast = entry.key == list.length - 1;
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _AlertRow(
-                  alert: entry.value,
-                  onDefend: onDefend != null
-                      ? () => onDefend!(entry.value)
-                      : null,
-                ),
-                if (!isLast)
-                  const Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: Color(0xFFF0F0F6),
+          if (list.isEmpty)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle_outline_rounded,
+                    color: AppColors.success,
+                    size: 18,
                   ),
-              ],
-            );
-          }),
+                  8.horizontalSpace,
+                  Expanded(
+                    child: Text(
+                      'No active raid alerts in your circle right now.',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            ...list.asMap().entries.map((entry) {
+              final isLast = entry.key == list.length - 1;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _AlertRow(
+                    alert: entry.value,
+                    onDefend: onDefend != null
+                        ? () => onDefend!(entry.value)
+                        : null,
+                  ),
+                  if (!isLast)
+                    const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: Color(0xFFF0F0F6),
+                    ),
+                ],
+              );
+            }),
 
           SizedBox(height: 4.h),
         ],

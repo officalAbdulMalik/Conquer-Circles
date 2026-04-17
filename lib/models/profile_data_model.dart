@@ -17,8 +17,11 @@ class ProfileDataModel {
     return ProfileDataModel(
       profile: ProfileInfo.fromJson(json['profile'] as Map<String, dynamic>),
       stats: TotalStats.fromJson(json['stats'] as Map<String, dynamic>),
-      analytics: AnalyticsData.fromJson(json['analytics'] as Map<String, dynamic>),
-      badges: (json['badges'] as List<dynamic>?)
+      analytics: AnalyticsData.fromJson(
+        json['analytics'] as Map<String, dynamic>,
+      ),
+      badges:
+          (json['badges'] as List<dynamic>?)
               ?.map((e) => BadgeModel.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
@@ -42,6 +45,7 @@ class ProfileDataModel {
 
 class ProfileInfo {
   final String username;
+  final String? avatarUrl;
   final int level;
   final int xp;
   final int dailyStreak;
@@ -50,6 +54,7 @@ class ProfileInfo {
 
   ProfileInfo({
     required this.username,
+    this.avatarUrl,
     required this.level,
     required this.xp,
     required this.dailyStreak,
@@ -60,16 +65,20 @@ class ProfileInfo {
   factory ProfileInfo.fromJson(Map<String, dynamic> json) {
     return ProfileInfo(
       username: json['username'] as String? ?? 'User',
+      avatarUrl: json['avatar_url'] as String?,
       level: json['level'] as int? ?? 1,
       xp: json['xp'] as int? ?? 0,
       dailyStreak: json['daily_streak'] as int? ?? 0,
       notificationsEnabled: json['notifications_enabled'] as bool? ?? true,
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at'] as String) : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
     );
   }
 
   ProfileInfo copyWith({
     String? username,
+    String? avatarUrl,
     int? level,
     int? xp,
     int? dailyStreak,
@@ -78,6 +87,7 @@ class ProfileInfo {
   }) {
     return ProfileInfo(
       username: username ?? this.username,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
       level: level ?? this.level,
       xp: xp ?? this.xp,
       dailyStreak: dailyStreak ?? this.dailyStreak,
@@ -111,18 +121,17 @@ class AnalyticsData {
   final List<ChartPoint> weekly;
   final List<ChartPoint> monthly;
 
-  AnalyticsData({
-    required this.weekly,
-    required this.monthly,
-  });
+  AnalyticsData({required this.weekly, required this.monthly});
 
   factory AnalyticsData.fromJson(Map<String, dynamic> json) {
     return AnalyticsData(
-      weekly: (json['weekly'] as List<dynamic>?)
+      weekly:
+          (json['weekly'] as List<dynamic>?)
               ?.map((e) => ChartPoint.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      monthly: (json['monthly'] as List<dynamic>?)
+      monthly:
+          (json['monthly'] as List<dynamic>?)
               ?.map((e) => ChartPoint.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
@@ -134,10 +143,7 @@ class ChartPoint {
   final String date;
   final int steps;
 
-  ChartPoint({
-    required this.date,
-    required this.steps,
-  });
+  ChartPoint({required this.date, required this.steps});
 
   factory ChartPoint.fromJson(Map<String, dynamic> json) {
     return ChartPoint(

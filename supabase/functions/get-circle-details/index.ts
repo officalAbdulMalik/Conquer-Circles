@@ -74,6 +74,33 @@ serve(async (req) => {
                 .gte('created_at', dateStr)
         ]);
 
+        // Optional data for Social screen cards.
+        // Failures here should not break the whole response.
+        let recentMessages: any[] = [];
+        let raidAlerts: any[] = [];
+
+        const { data: recentMessagesData } = await supabaseClient
+            .from('circle_messages')
+            .select('id, circle_id, user_id, message, sender_info, created_at')
+            .eq('circle_id', circle_id)
+            .order('created_at', { ascending: false })
+            .limit(8);
+
+        if (recentMessagesData) {
+            recentMessages = recentMessagesData;
+        }
+
+        const { data: raidAlertsData } = await supabaseClient
+            .from('circle_raid_alerts')
+            .select('*')
+            .eq('circle_id', circle_id)
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+        if (raidAlertsData) {
+            raidAlerts = raidAlertsData;
+        }
+
         // 4. Process Aggregations
         const stepsMap = new Map<string, number>();
         stepsRes.data?.forEach(row => {
@@ -113,6 +140,8 @@ serve(async (req) => {
         return new Response(JSON.stringify({
             circle,
             leaderboard,
+            recent_messages: recentMessages,
+            raid_alerts: raidAlerts,
             metadata: {
                 period_days: 30,
                 last_updated: new Date().toISOString()

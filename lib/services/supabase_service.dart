@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/invite_model.dart';
 import '../models/notification_model.dart';
@@ -99,6 +101,60 @@ class SupabaseService {
           .eq('id', user.id);
     } catch (e) {
       _log('saveFcmToken', e);
+    }
+  }
+
+  /// Uploads a profile avatar to Supabase Storage and returns its public URL.
+  /// Tries common bucket names and uses the first one that succeeds.
+  Future<String> uploadProfileAvatar(
+    Uint8List bytes, {
+    required String fileExtension,
+  }) async {
+    final user = currentUser;
+    if (user == null) throw Exception('Not signed in');
+    if (bytes.isEmpty) throw Exception('Empty image payload');
+
+    final normalizedExt = fileExtension.replaceAll('.', '').toLowerCase();
+    final ext = normalizedExt.isEmpty ? 'jpg' : normalizedExt;
+    final fileName = '${DateTime.now().millisecondsSinceEpoch}.$ext';
+    final objectPath = '${user.id}/$fileName';
+    final contentType = _mimeTypeForExtension(ext);
+
+    const candidateBuckets = ['avatars', 'profile-images', 'profiles'];
+    Object? lastError;
+
+    for (final bucket in candidateBuckets) {
+      try {
+        await _client.storage
+            .from(bucket)
+            .uploadBinary(
+              objectPath,
+              bytes,
+              fileOptions: FileOptions(upsert: true, contentType: contentType),
+            );
+        return _client.storage.from(bucket).getPublicUrl(objectPath);
+      } catch (e) {
+        lastError = e;
+      }
+    }
+
+    throw Exception('Failed to upload avatar: $lastError');
+  }
+
+  String _mimeTypeForExtension(String ext) {
+    switch (ext.toLowerCase()) {
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      case 'gif':
+        return 'image/gif';
+      case 'heic':
+        return 'image/heic';
+      case 'jpg':
+      case 'jpeg':
+      default:
+        return 'image/jpeg';
     }
   }
 
@@ -374,17 +430,6 @@ class SupabaseService {
     }
 
     return Map<String, dynamic>.from(response.data as Map);
-  }
-
-  /// Safe sign out that doesn't throw (prevents breaking auth listeners)
-  Future<void> _safeSiginOut() async {
-    try {
-      await _client.auth.signOut();
-      _log('Safely signed out user', null);
-    } catch (e) {
-      _log('Error during safe sign out', e);
-      // Don't rethrow - we already have an error to report
-    }
   }
 
   /// Creates a new walking session row. Returns the session UUID.

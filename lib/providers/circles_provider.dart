@@ -103,7 +103,10 @@ class CirclesNotifier extends StateNotifier<CirclesState> {
     );
 
     try {
-      final response = await _gameService.createCircle(trimmedName);
+      final response = await _gameService.createCircle(
+        trimmedName,
+        isPrivate: isPrivate,
+      );
       final success = response['success'] == true;
 
       if (!success) {
@@ -146,27 +149,17 @@ class CirclesNotifier extends StateNotifier<CirclesState> {
     }
   }
 
-
-Future<Map<String, dynamic>> getCircleById(String circleId) async {
+  Future<Map<String, dynamic>> getCircleById(String circleId) async {
     state = state.copyWith(isLoading: true, error: null, infoMessage: null);
     try {
       final circleDetails = await _gameService.getCircleDetails(circleId);
-      state = state.copyWith(
-        isLoading: false,
-        error: null,
-        infoMessage: null,
-      );
+      state = state.copyWith(isLoading: false, error: null, infoMessage: null);
       return {'success': true, 'circle': circleDetails};
     } catch (e) {
       final error = e.toString();
-      state = state.copyWith(
-        isLoading: false,
-        error: error,
-        infoMessage: null,
-      );
+      state = state.copyWith(isLoading: false, error: error, infoMessage: null);
       return {'success': false, 'error': error};
     }
-    
   }
 
   Future<Map<String, dynamic>> joinCircleByCode(String code) async {

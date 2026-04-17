@@ -37,7 +37,7 @@ serve(async (req: Request) => {
     // 1. Fetch Profile Info
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('username, level, xp, daily_streak, notifications_enabled, created_at')
+      .select('username, avatar_url, level, xp, daily_streak, notifications_enabled, created_at')
       .eq('id', userId)
       .single();
 
@@ -98,6 +98,7 @@ serve(async (req: Request) => {
       JSON.stringify({
         profile: {
           username: profile.username,
+          avatar_url: profile.avatar_url,
           level: profile.level,
           xp: profile.xp,
           daily_streak: profile.daily_streak,
