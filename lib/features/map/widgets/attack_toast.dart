@@ -8,9 +8,11 @@ enum AttackToastVariant {
   claimed,
   captured,
   damaged,
+  reinforced,
   protected,
   cooldown,
   noEnergy,
+  restricted,
 }
 
 extension _AttackToastVariantExt on AttackToastVariant {
@@ -22,12 +24,16 @@ extension _AttackToastVariantExt on AttackToastVariant {
         return '⚔️';
       case AttackToastVariant.damaged:
         return '💥';
+      case AttackToastVariant.reinforced:
+        return '🧱';
       case AttackToastVariant.protected:
         return '🛡️';
       case AttackToastVariant.cooldown:
         return '⏱️';
       case AttackToastVariant.noEnergy:
         return '⚡';
+      case AttackToastVariant.restricted:
+        return '🚫';
     }
   }
 
@@ -39,12 +45,16 @@ extension _AttackToastVariantExt on AttackToastVariant {
         return const Color(0xFF1B5E20);
       case AttackToastVariant.damaged:
         return const Color(0xFFBF360C);
+      case AttackToastVariant.reinforced:
+        return const Color(0xFF0B3D2E);
       case AttackToastVariant.protected:
         return const Color(0xFF4A148C);
       case AttackToastVariant.cooldown:
         return const Color(0xFF212121);
       case AttackToastVariant.noEnergy:
         return const Color(0xFFB71C1C);
+      case AttackToastVariant.restricted:
+        return const Color(0xFF263238);
     }
   }
 
@@ -56,12 +66,16 @@ extension _AttackToastVariantExt on AttackToastVariant {
         return const Color(0xFF4CAF50);
       case AttackToastVariant.damaged:
         return const Color(0xFFFF5722);
+      case AttackToastVariant.reinforced:
+        return const Color(0xFF26A69A);
       case AttackToastVariant.protected:
         return const Color(0xFF9C27B0);
       case AttackToastVariant.cooldown:
         return const Color(0xFF757575);
       case AttackToastVariant.noEnergy:
         return const Color(0xFFF44336);
+      case AttackToastVariant.restricted:
+        return const Color(0xFF90A4AE);
     }
   }
 }
@@ -101,12 +115,17 @@ class AttackToastController extends ChangeNotifier {
         return AttackToastVariant.captured;
       case 'damaged':
         return AttackToastVariant.damaged;
+      case 'reinforced':
+        return AttackToastVariant.reinforced;
       case 'protected':
+      case 'shielded':
         return AttackToastVariant.protected;
       case 'cooldown':
         return AttackToastVariant.cooldown;
       case 'no_energy':
         return AttackToastVariant.noEnergy;
+      case 'not_friends':
+        return AttackToastVariant.restricted;
       default:
         return null;
     }

@@ -61,13 +61,13 @@ serve(async (req) => {
             
             // Count territories
             supabaseClient
-                .from('territories') // or 'hex_tiles'
+                .from('territories')
                 .select('user_id')
                 .in('user_id', memberIds),
 
             // Count raids won
             supabaseClient
-                .from('tile_attack_log')
+                .from('territory_attack_log')
                 .select('attacker_id')
                 .in('attacker_id', memberIds)
                 .eq('captured', true)

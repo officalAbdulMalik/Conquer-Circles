@@ -34,6 +34,7 @@ class HexGridOverlay {
     LatLng? homeBase,
     LatLng? mapCenter,
     double zoomLevel = 15,
+    void Function(Territory territory)? onTerritoryTap,
   }) {
     final Set<Polygon> polygons = {};
 
@@ -56,6 +57,7 @@ class HexGridOverlay {
         territory,
         currentUserId,
         homeBase: homeBase,
+        onTap: onTerritoryTap,
       );
       if (polygon != null) polygons.add(polygon);
     }
@@ -67,6 +69,7 @@ class HexGridOverlay {
     Territory territory,
     String? currentUserId, {
     LatLng? homeBase,
+    void Function(Territory territory)? onTap,
   }) {
     // Territory must have a polygon from the DB to be drawn
     if (!territory.hasPolygon) return null;
@@ -118,7 +121,8 @@ class HexGridOverlay {
       fillColor: fillColor,
       strokeColor: strokeColor,
       strokeWidth: strokeWidth,
-      consumeTapEvents: false,
+      consumeTapEvents: onTap != null,
+      onTap: onTap == null ? null : () => onTap(territory),
     );
   }
 }
@@ -211,4 +215,3 @@ class H3GridTileOverlay {
 // =============================================================================
 // Tile Info Bottom Sheet — unchanged from original
 // =============================================================================
-

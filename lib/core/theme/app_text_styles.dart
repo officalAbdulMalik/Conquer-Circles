@@ -24,6 +24,23 @@ class AppTextStyles {
     );
   }
 
+  static TextStyle montserrat({
+    required double size,
+    required Color color,
+    FontWeight weight = FontWeight.w400,
+    double? height,
+    double letterSpacing = 0,
+  }) {
+    return style(
+      fontFamily: 'Montserrat',
+      size: size,
+      color: color,
+      weight: weight,
+      height: height,
+      letterSpacing: letterSpacing,
+    );
+  }
+
   static TextStyle poppins({
     required double size,
     required Color color,
@@ -94,7 +111,7 @@ class AppTextStyles {
     height: 1.5,
   );
 
-  static TextStyle get bodySmall => inter(
+  static TextStyle get bodySmall => montserrat(
     size: 14,
     color: AppColors.textLight,
     weight: FontWeight.w500,
@@ -122,18 +139,19 @@ class AppTextStyles {
     height: 1.2,
   );
 
-  static TextStyle get cardTitle => poppins(
-    size: 16,
+  static TextStyle get cardTitle => montserrat(
+    size: 17,
     weight: FontWeight.w700,
     color: AppColors.textNavy,
     height: 1.2,
+    
   );
 
   static TextStyle get cardSubtitle =>
-      inter(size: 12, color: AppColors.textSecondary, weight: FontWeight.w500);
+      montserrat(size: 12, color: AppColors.textSecondary, weight: FontWeight.w500);
 
   static TextStyle get chipLabel =>
-      inter(size: 11, color: AppColors.textSecondary, weight: FontWeight.w600);
+      montserrat(size: 11, color: AppColors.textSecondary, weight: FontWeight.w600);
 
   static TextStyle get buttonLabel => poppins(
     size: 14,

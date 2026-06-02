@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:test_steps/widgets/shared/app_text_input.dart';
 
 class ChatInputArea extends StatelessWidget {
   final TextEditingController controller;
@@ -41,26 +42,25 @@ class ChatInputArea extends StatelessWidget {
                     onPressed: onAdd,
                   ),
                 Expanded(
-                  child: TextField(
+                  child: AppTextInput(
                     controller: controller,
-                    decoration: InputDecoration(
-                      hintText: hintText,
-                      hintStyle: const TextStyle(
-                        color: Color(0xFF7D7E85),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                    height: 40,
+                    border: Border.all(color: Colors.transparent, width: 0),
+                    fillColor: Colors.white,
+                    hintText: hintText,
+                    hintStyle: const TextStyle(
+                      color: Color(0xFF7D7E85),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
                     textInputAction: TextInputAction.send,
                     onSubmitted: (_) => onSend(),
-                    style: const TextStyle(
+                    textStyle: const TextStyle(
                       color: Color(0xFF30323A),
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
                     ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
                   ),
                 ),
               ],

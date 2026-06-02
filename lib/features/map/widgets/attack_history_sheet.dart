@@ -9,7 +9,7 @@ import '../../../services/supabase_service.dart';
 // ---------------------------------------------------------------------------
 
 class AttackLogEntry {
-  final String tileId;
+  final String territoryId;
   final String
   action; // 'captured', 'damaged', 'protected', 'cooldown', 'claimed'
   final int? energyBefore;
@@ -18,7 +18,7 @@ class AttackLogEntry {
   final bool isDefence; // true when someone attacked YOUR tile
 
   const AttackLogEntry({
-    required this.tileId,
+    required this.territoryId,
     required this.action,
     this.energyBefore,
     this.energyAfter,
@@ -28,7 +28,8 @@ class AttackLogEntry {
 
   factory AttackLogEntry.fromJson(Map<String, dynamic> json) {
     return AttackLogEntry(
-      tileId: json['tile_id']?.toString() ?? '',
+      territoryId:
+          json['territory_id']?.toString() ?? json['tile_id']?.toString() ?? '',
       action: json['action']?.toString() ?? '',
       energyBefore: json['energy_before'] as int?,
       energyAfter: json['energy_after'] as int?,
@@ -47,14 +48,14 @@ class AttackLogEntry {
 final attackHistoryProvider = FutureProvider.autoDispose<List<AttackLogEntry>>((
   ref,
 ) async {
-  // Reads from tile_attack_log via Supabase
+  // Reads from territory_attack_log via Supabase
   final svc = SupabaseService();
   final user = svc.currentUser;
   if (user == null) return [];
 
   try {
     final rows = await Supabase.instance.client
-        .from('tile_attack_log')
+        .from('territory_attack_log')
         .select()
         .or('attacker_id.eq.${user.id},defender_id.eq.${user.id}')
         .order('created_at', ascending: false)
@@ -64,7 +65,8 @@ final attackHistoryProvider = FutureProvider.autoDispose<List<AttackLogEntry>>((
       final isDefence =
           r['defender_id'] == user.id && r['attacker_id'] != user.id;
       return AttackLogEntry(
-        tileId: r['tile_id']?.toString() ?? '',
+        territoryId:
+            r['territory_id']?.toString() ?? r['tile_id']?.toString() ?? '',
         action: r['action']?.toString() ?? '',
         energyBefore: r['energy_before'] as int?,
         energyAfter: r['energy_after'] as int?,
@@ -146,7 +148,7 @@ class _AttackHistorySheet extends ConsumerWidget {
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'Your recent tile battles',
+                          'Your recent territory battles',
                           style: TextStyle(
                             color: Color(0xFF64748B),
                             fontSize: 12,
@@ -268,9 +270,9 @@ class _AttackLogRow extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      entry.tileId.length > 6
-                          ? entry.tileId.substring(0, 6).toUpperCase()
-                          : entry.tileId.toUpperCase(),
+                      entry.territoryId.length > 6
+                          ? entry.territoryId.substring(0, 6).toUpperCase()
+                          : entry.territoryId.toUpperCase(),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 13,

@@ -9,10 +9,10 @@ import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 import '../models/map_model.dart';
 import '../models/walk_models.dart';
- import '../services/supabase_service.dart';
+import '../services/supabase_service.dart';
 import '../services/badge_service.dart';
 import '../services/notification_service.dart';
-import '../features/map/widgets/tile_handler.dart';
+import '../services/game_service.dart';
 
 // ---------------------------------------------------------------------------
 // Notifier
@@ -21,7 +21,7 @@ import '../features/map/widgets/tile_handler.dart';
 class MapNotifier extends StateNotifier<MapState> {
   final SupabaseService _service;
   final BadgeService _badgeService;
-  final MapTileHandler _tileHandler = MapTileHandler();
+  final GameService _gameService;
 
   StreamSubscription<Position>? _positionSubscription;
   StreamSubscription<List<Map<String, dynamic>>>? _liveLocationSubscription;
@@ -29,7 +29,8 @@ class MapNotifier extends StateNotifier<MapState> {
 
   supabase.User? get currentUser => _service.currentUser;
 
-  MapNotifier(this._service, this._badgeService) : super(MapState()) {
+  MapNotifier(this._service, this._badgeService, this._gameService)
+    : super(MapState()) {
     initialize();
   }
 
@@ -43,7 +44,7 @@ class MapNotifier extends StateNotifier<MapState> {
     // Check location service
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-     await Geolocator.requestPermission();
+      await Geolocator.requestPermission();
     }
 
     // Check / request permission
@@ -51,7 +52,7 @@ class MapNotifier extends StateNotifier<MapState> {
     if (forceRequest || permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
-    
+
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
       state = state.copyWith(
@@ -78,21 +79,23 @@ class MapNotifier extends StateNotifier<MapState> {
         desiredAccuracy: LocationAccuracy.high,
         timeLimit: const Duration(seconds: 10),
       );
-      
+
       state = state.copyWith(
         userLocation: LatLng(position.latitude, position.longitude),
         isLoading: false,
       );
     } catch (e) {
       print('[Map] Initialization timeout or error: $e');
-      
+
       // Fallback to London city center if no location available
       const fallbackLoc = LatLng(51.5074, -0.1278);
-      
+
       state = state.copyWith(
         userLocation: state.userLocation ?? state.homeBase ?? fallbackLoc,
         isLoading: false,
-        error: state.userLocation == null ? 'GPS timed out. Using default location.' : null,
+        error: state.userLocation == null
+            ? 'GPS timed out. Using default location.'
+            : null,
       );
     }
 
@@ -120,8 +123,11 @@ class MapNotifier extends StateNotifier<MapState> {
 
       for (final point in points) {
         final uid = point['user_id']?.toString();
-        if (uid == null || uid == currentUser?.id || !_friendIds.contains(uid))
+        if (uid == null ||
+            uid == currentUser?.id ||
+            !_friendIds.contains(uid)) {
           continue;
+        }
 
         final lat = (point['latitude'] as num).toDouble();
         final lng = (point['longitude'] as num).toDouble();
@@ -163,22 +169,9 @@ class MapNotifier extends StateNotifier<MapState> {
       };
 
       state = state.copyWith(nearbyTerritories: merged.values.toList());
-
-      // ── Hex Tiles ──────────────────────────────────────────────────────────
-      final hexTiles = await _tileHandler.loadTilesForBounds(
-        swLat: bounds.southwest.latitude,
-        swLng: bounds.southwest.longitude,
-        neLat: bounds.northeast.latitude,
-        neLng: bounds.northeast.longitude,
-      );
-      state = state.copyWith(visibleTiles: hexTiles);
     } catch (e) {
       print('[Map] loadTerritoriesForBounds error: $e');
     }
-  }
-
-  void selectTile(String? tileId) {
-    state = state.copyWith(selectedTileId: tileId);
   }
 
   Future<void> getCurrentLocation() async {
@@ -197,6 +190,36 @@ class MapNotifier extends StateNotifier<MapState> {
         error: 'Could not fetch location: $e',
       );
     }
+  }
+
+  Future<Map<String, dynamic>> setHomeBaseToCurrentLocation() async {
+    var location = state.userLocation;
+    if (location == null) {
+      await getCurrentLocation();
+      location = state.userLocation;
+    }
+
+    if (location == null) {
+      return {'success': false, 'error': 'Current location is unavailable.'};
+    }
+
+    final result = await _gameService
+        .setHomeBase(location.latitude, location.longitude)
+        .timeout(
+          const Duration(seconds: 12),
+          onTimeout: () => {
+            'success': false,
+            'error': 'Setting home base timed out. Please try again.',
+          },
+        );
+
+    if (result['success'] == true) {
+      state = state.copyWith(homeBase: location, error: null);
+    } else {
+      state = state.copyWith(error: result['error']?.toString());
+    }
+
+    return result;
   }
 
   // ---------------------------------------------------------------------------
@@ -221,7 +244,10 @@ class MapNotifier extends StateNotifier<MapState> {
 
     state = state.copyWith(
       isWalking: true,
+      isRunPaused: false,
       currentSessionId: sessionId,
+      walkStartedAt: DateTime.now(),
+      clearWalkPausedAt: true,
       activePath: [],
       sequenceNum: 0,
       isLoading: false,
@@ -235,12 +261,51 @@ class MapNotifier extends StateNotifier<MapState> {
     ).listen(_handleLocationUpdate);
   }
 
+  Future<void> pauseWalk() async {
+    if (!state.isWalking || state.currentSessionId == null) return;
+
+    await _positionSubscription?.cancel();
+    _positionSubscription = null;
+
+    state = state.copyWith(
+      isWalking: false,
+      isRunPaused: true,
+      walkPausedAt: DateTime.now(),
+      clearSpeed: true,
+    );
+  }
+
+  void resumeWalk() {
+    if (!state.isRunPaused || state.currentSessionId == null) return;
+
+    final startedAt = state.walkStartedAt;
+    final pausedAt = state.walkPausedAt;
+    final elapsedBeforePause = startedAt == null || pausedAt == null
+        ? Duration.zero
+        : pausedAt.difference(startedAt);
+
+    state = state.copyWith(
+      isWalking: true,
+      isRunPaused: false,
+      walkStartedAt: DateTime.now().subtract(elapsedBeforePause),
+      clearWalkPausedAt: true,
+    );
+
+    _positionSubscription?.cancel();
+    _positionSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5,
+      ),
+    ).listen(_handleLocationUpdate);
+  }
+
   // ---------------------------------------------------------------------------
   // Walk session — location updates while walking
   // ---------------------------------------------------------------------------
 
-  // Tracks last tile processed to avoid calling the RPC on every GPS tick
-  String? _lastProcessedTileId;
+  // Tracks last territory processed to avoid calling the RPC on every GPS tick
+  String? _lastProcessedTerritoryId;
 
   void _handleLocationUpdate(Position position) {
     if (!state.isWalking || state.currentSessionId == null) return;
@@ -278,16 +343,30 @@ class MapNotifier extends StateNotifier<MapState> {
     _checkTerritoryStatus(latLng, user.id);
     _checkCrossingNotifications(latLng, user.id);
 
-    // ── Tile attack: compute current H3 tile and call the attack RPC ──────
+    // ── Territory action: process only when user is inside a real polygon ──
     // Only fires when speed is in valid walk range (2–15 km/h)
     if (speedKmh >= 2 && speedKmh <= 15) {
-      final tileId = _latLngToTileId(position.latitude, position.longitude);
-      // Only process each tile once per entry — not on every GPS tick
-      if (tileId != _lastProcessedTileId) {
-        _lastProcessedTileId = tileId;
-        _processTileEntry(tileId, latLng, speedKmh);
+      final territory = _territoryAtPoint(latLng);
+      if (territory == null) {
+        _lastProcessedTerritoryId = null;
+        return;
+      }
+
+      if (territory.id != _lastProcessedTerritoryId) {
+        _lastProcessedTerritoryId = territory.id;
+        _processTerritoryEntry(territory.id, latLng, speedKmh);
       }
     }
+  }
+
+  Territory? _territoryAtPoint(LatLng point) {
+    for (final territory in state.nearbyTerritories) {
+      if (!territory.hasPolygon) continue;
+      if (_isPointInPolygon(point, territory.polygonPoints)) {
+        return territory;
+      }
+    }
+    return null;
   }
 
   /// Processes territory entry: validates conditions then calls attack RPC.
@@ -298,7 +377,7 @@ class MapNotifier extends StateNotifier<MapState> {
     double speedKmh,
   ) async {
     final now = DateTime.now();
-    
+
     // ── APP-SIDE VALIDATION 1: SPEED CHECK ────────────────────────────────
     if (speedKmh < 2.0 || speedKmh > 15.0) {
       state = state.copyWith(
@@ -306,69 +385,75 @@ class MapNotifier extends StateNotifier<MapState> {
           'action': 'error',
           'reason': 'invalid_speed',
           'speed_kmh': speedKmh,
-          'message': 'Walking speed required (2-15 km/h). Current: ${speedKmh.toStringAsFixed(1)} km/h'
-        }
+          'message':
+              'Walking speed required (2-15 km/h). Current: ${speedKmh.toStringAsFixed(1)} km/h',
+        },
       );
       return;
     }
-    
+
     // ── APP-SIDE VALIDATION 2: FIND TERRITORY IN NEARBY ────────────────────
     Territory? territory;
     try {
-      territory = state.nearbyTerritories.firstWhere((t) => t.id == territoryId);
+      territory = state.nearbyTerritories.firstWhere(
+        (t) => t.id == territoryId,
+      );
     } catch (_) {
       territory = null;
     }
-    
+
     if (territory == null) {
       state = state.copyWith(
         lastAttackResult: {
           'action': 'error',
           'reason': 'territory_not_found',
-          'message': 'Territory not found nearby'
-        }
+          'message': 'Territory not found nearby',
+        },
       );
       return;
     }
-    
+
     // ── APP-SIDE VALIDATION 3: PROTECTION CHECK (12h) ─────────────────────
-    if (territory.protectedUntil != null && territory.protectedUntil!.isAfter(now)) {
-      final hoursRemaining = 
+    if (territory.protectedUntil != null &&
+        territory.protectedUntil!.isAfter(now)) {
+      final hoursRemaining =
           territory.protectedUntil!.difference(now).inSeconds / 3600.0;
-      
+
       state = state.copyWith(
         lastAttackResult: {
           'action': 'protected',
           'reason': 'protection_active',
           'territory_id': territoryId,
           'hours_remaining': double.parse(hoursRemaining.toStringAsFixed(1)),
-          'message': '🛡️ Protected for ${hoursRemaining.toStringAsFixed(1)} hours'
-        }
+          'message':
+              '🛡️ Protected for ${hoursRemaining.toStringAsFixed(1)} hours',
+        },
       );
       return;
     }
-    
+
     // ── APP-SIDE VALIDATION 4: SHIELD CHECK (24h absence) ────────────────
     if (territory.shieldUntil != null && territory.shieldUntil!.isAfter(now)) {
-      final hoursRemaining = 
+      final hoursRemaining =
           territory.shieldUntil!.difference(now).inSeconds / 3600.0;
-      
+
       state = state.copyWith(
         lastAttackResult: {
           'action': 'shielded',
           'reason': 'absence_shield_active',
           'territory_id': territoryId,
           'hours_remaining': double.parse(hoursRemaining.toStringAsFixed(1)),
-          'message': '⚡ Absence shield active for ${hoursRemaining.toStringAsFixed(1)} hours'
-        }
+          'message':
+              '⚡ Absence shield active for ${hoursRemaining.toStringAsFixed(1)} hours',
+        },
       );
       return;
     }
-    
+
     // ── APP-SIDE VALIDATION 5: CHECK COOLDOWN ────────────────────────────
     // Note: Could check local cache or just let RPC verify
     // For now, we let RPC verify this (security gate)
-    
+
     // ── APP-SIDE VALIDATION 6: ENERGY CHECK ──────────────────────────────
     if (state.currentAttackEnergy <= 0) {
       state = state.copyWith(
@@ -376,12 +461,12 @@ class MapNotifier extends StateNotifier<MapState> {
           'action': 'no_energy',
           'reason': 'insufficient_attack_energy',
           'current_energy': state.currentAttackEnergy,
-          'message': '⚡ No attack energy! Walk more to generate energy.'
-        }
+          'message': '⚡ No attack energy! Walk more to generate energy.',
+        },
       );
       return;
     }
-    
+
     // ── ALL APP-SIDE CHECKS PASSED → CALL RPC ────────────────────────────
     final result = await _service.attackOrClaimTerritory(
       territoryId: territoryId,
@@ -391,17 +476,6 @@ class MapNotifier extends StateNotifier<MapState> {
     );
 
     await _handleAttackResult(result, location);
-  }
-
-  /// Legacy method - redirects to new territory-based system
-  /// @deprecated Use _processTerritoryEntry instead
-  Future<void> _processTileEntry(
-    String tileId,
-    LatLng location,
-    double speedKmh,
-  ) async {
-    // Redirect to new territory system
-    await _processTerritoryEntry(tileId, location, speedKmh);
   }
 
   /// Centralised logic for handling attack/claim results, including
@@ -418,19 +492,32 @@ class MapNotifier extends StateNotifier<MapState> {
 
     // ── UPDATE ATTACK ENERGY DISPLAY ───────────────────────────────────────
     // Reload attack energy to reflect any deductions from this attack
-    if (action == 'captured' || action == 'damaged' || action == 'reinforced') {
+    if (action == 'captured' ||
+        action == 'damaged' ||
+        action == 'reinforced' ||
+        action == 'claimed') {
       final updatedEnergy = await _service.getAttackEnergy();
       state = state.copyWith(currentAttackEnergy: updatedEnergy);
     }
 
     // ── REFRESH TERRITORY DATA AFTER ATTACK ────────────────────────────────
     final territoryId = result['territory_id'] as String?;
-    if (territoryId != null && (action == 'captured' || action == 'damaged')) {
+    if (territoryId != null &&
+        (action == 'captured' ||
+            action == 'damaged' ||
+            action == 'reinforced' ||
+            action == 'claimed')) {
       // Reload territories to reflect energy changes
       await loadTerritoriesForBounds(
         LatLngBounds(
-          southwest: LatLng(location.latitude - 0.05, location.longitude - 0.05),
-          northeast: LatLng(location.latitude + 0.05, location.longitude + 0.05),
+          southwest: LatLng(
+            location.latitude - 0.05,
+            location.longitude - 0.05,
+          ),
+          northeast: LatLng(
+            location.latitude + 0.05,
+            location.longitude + 0.05,
+          ),
         ),
       );
     }
@@ -448,7 +535,10 @@ class MapNotifier extends StateNotifier<MapState> {
         final myName = result['username'] as String? ?? 'Someone';
 
         // Notify attacker (victory)
-        await NotificationService.notifyRaidVictory(currentUser!.id, victimUsername);
+        await NotificationService.notifyRaidVictory(
+          currentUser!.id,
+          victimUsername,
+        );
         // Notify defender (lost)
         await NotificationService.notifyTerritoryLost(
           result['previous_owner_id'],
@@ -469,17 +559,6 @@ class MapNotifier extends StateNotifier<MapState> {
     }
   }
 
-  /// Converts a GPS coordinate to an H3-style tile ID string.
-  /// Uses a simple grid quantisation at ~60m resolution.
-  /// Replace with the h3_flutter package for production accuracy.
-  String _latLngToTileId(double lat, double lng) {
-    // 0.0005 degrees ≈ 55m at equator — matches the 60m tile spec
-    const double resolution = 0.0005;
-    final int latGrid = (lat / resolution).floor();
-    final int lngGrid = (lng / resolution).floor();
-    return '${latGrid}_$lngGrid';
-  }
-
   // ---------------------------------------------------------------------------
   // Walk session — STOP
   // ---------------------------------------------------------------------------
@@ -488,7 +567,7 @@ class MapNotifier extends StateNotifier<MapState> {
   /// then reloads territories on the map.
   /// Call from MapScreen "Stop Walk" FAB.
   Future<void> stopWalk() async {
-    if (!state.isWalking || state.currentSessionId == null) return;
+    if (state.currentSessionId == null) return;
 
     state = state.copyWith(isLoading: true);
 
@@ -501,7 +580,10 @@ class MapNotifier extends StateNotifier<MapState> {
 
     state = state.copyWith(
       isWalking: false,
-      currentSessionId: null,
+      isRunPaused: false,
+      clearCurrentSessionId: true,
+      clearWalkStartedAt: true,
+      clearWalkPausedAt: true,
       isLoading: false,
     );
 
@@ -545,24 +627,17 @@ class MapNotifier extends StateNotifier<MapState> {
   }
 
   // ---------------------------------------------------------------------------
-  // Tile attack — called from map hex-tile hit detection
+  // Territory action — called from map territory interactions
   // ---------------------------------------------------------------------------
 
-  /// Public method for UI to manually trigger a tile entry (e.g. tile tap).
-  /// Automatically called from _handleLocationUpdate during walks.
-  /// Public method for UI to manually trigger a territory attack/claim.
-  /// Called from tile tap or automated GPS entry.
-  /// Uses new attackOrClaimTerritory RPC with speed validation.
-  Future<Map<String, dynamic>?> onEnterTile(String territoryId) async {
+  /// Public method for UI to manually trigger a territory action.
+  /// Called from territory tap or automated GPS entry.
+  Future<Map<String, dynamic>?> onEnterTerritory(String territoryId) async {
     final speedKmh = state.currentSpeedKmh;
     if (state.userLocation == null) return null;
 
     // Delegate to territory entry handler which includes all validation
-    await _processTerritoryEntry(
-      territoryId,
-      state.userLocation!,
-      speedKmh,
-    );    
+    await _processTerritoryEntry(territoryId, state.userLocation!, speedKmh);
     return state.lastAttackResult;
   }
 
@@ -704,5 +779,5 @@ class MapNotifier extends StateNotifier<MapState> {
 // ---------------------------------------------------------------------------
 
 final mapProvider = StateNotifierProvider<MapNotifier, MapState>((ref) {
-  return MapNotifier(SupabaseService(), BadgeService());
+  return MapNotifier(SupabaseService(), BadgeService(), GameService());
 });

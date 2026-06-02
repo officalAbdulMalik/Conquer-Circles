@@ -10,11 +10,18 @@ class AppColors {
   static const Color brandCyan = Color(0xFF53E4F3);
   static const Color brandLightCyan = Color(0xFF99D7E9);
   static Color iconColor = Color(0xFF675FAA).withValues(alpha: 0.4);
+  static const Color blueColor = Color(0xFF5169FF);
+  static const Color lightBlueColor = Color(0xFFEFF7FF);
+  static const Color blueContiner = Color(0xFFDBEAFE);
+  static const Color borderColor = Color(0xffE5E7EB);
+  static const Color scaffoldBackground = Color(0xFFF8FAFD);
+  static const Color segmentTrack = Color(0xFFF9FAFB);
+  static const Color currentUserChip = Color(0xFFC9F7EC);
 
   // ── Text Colors ───────────────────────────────────────────────────────────
-  static const Color textPrimary = Color(0xFF2D2D2D);
-  static const Color textSecondary = Color(0xFF8A8AA0);
-  static const Color textNavy = Color(0xFF1A1A2E);
+  static const Color textPrimary = Color(0xFF030712);
+  static const Color textSecondary = Color(0xFF6B7280);
+  static const Color textNavy = Color(0xFF1F2937);
   static const Color textMuted = Color(0xFFCCCCCC);
   static const Color textLight = Color(0xFF99A1AF);
 
@@ -52,7 +59,7 @@ class AppColors {
   static const Color surfaceDark = Color(0xFF1E293B);
   static const Color textPrimaryLight = textNavy;
   static const Color textSecondaryLight = textSecondary;
-  static const Color borderLight = Color(0xFFE2E8F0);
+  static const Color borderLight = borderColor;
   static const Color cardLight = surface;
 
   static const Color fillColor = Color(0xFFF5F3FF);

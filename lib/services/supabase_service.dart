@@ -607,56 +607,6 @@ class SupabaseService {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // (DEPRECATED) Hex Tile Attack System - DO NOT USE
-  // ---------------------------------------------------------------------------
-  // The following methods are for the old hex tile system and are deprecated.
-  // Use attackOrClaimTerritory() instead for the new territory system.
-
-  /// (DEPRECATED) Main game action for hex tiles. DO NOT USE.
-  /// Use attackOrClaimTerritory() instead.
-  Future<Map<String, dynamic>> claimOrAttackTile({
-    required String tileId,
-    required double lat,
-    required double lng,
-  }) async {
-    final user = currentUser;
-    if (user == null) return {'action': 'error', 'message': 'not signed in'};
-    try {
-      final response = await _client.rpc(
-        'claim_or_attack_tile',
-        params: {
-          'p_tile_id': tileId,
-          'p_user_id': user.id,
-          'p_lat': lat,
-          'p_lng': lng,
-        },
-      );
-      final result = Map<String, dynamic>.from(response as Map);
-
-      return result;
-    } catch (e) {
-      _log('claimOrAttackTile', e);
-      return {'action': 'error', 'message': e.toString()};
-    }
-  }
-
-  /// Returns the current state of a single hex tile, or null if unclaimed.
-  Future<Map<String, dynamic>?> getTileState(String tileId) async {
-    try {
-      return await _client
-          .from('hex_tiles')
-          .select(
-            'tile_id, owner_id, tile_energy, protection_until, last_visited_at',
-          )
-          .eq('tile_id', tileId)
-          .maybeSingle();
-    } catch (e) {
-      _log('getTileState', e);
-      return null;
-    }
-  }
-
   Future<void> updateProfile(Map<String, dynamic> updates) async {
     final user = currentUser;
     if (user == null) return;
@@ -665,27 +615,6 @@ class SupabaseService {
     } catch (e) {
       _log('updateProfile', e);
       rethrow;
-    }
-  }
-
-  /// Returns true if the signed-in user still has an active cooldown on [tileId].
-  Future<bool> hasCooldown(String tileId) async {
-    final user = currentUser;
-    if (user == null) return false;
-    try {
-      final res = await _client
-          .from('attack_cooldowns')
-          .select('cooldown_until')
-          .eq('attacker_id', user.id)
-          .eq('tile_id', tileId)
-          .maybeSingle();
-      if (res == null) return false;
-      return DateTime.parse(
-        res['cooldown_until'] as String,
-      ).isAfter(DateTime.now());
-    } catch (e) {
-      _log('hasCooldown', e);
-      return false;
     }
   }
 

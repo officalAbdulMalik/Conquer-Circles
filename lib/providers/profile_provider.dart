@@ -76,6 +76,16 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     }
   }
 
+  // logout method to clear local data and sign out from Supabase
+  Future<void> logout() async {
+    try {
+      await supabaseService.signOut();
+      state = ProfileState(); // Clear profile state on logout
+    } catch (e) {
+      print('[ProfileNotifier.logout] $e');
+    }
+  }
+
   Future<void> checkForBadges(
     String eventType, [
     Map<String, dynamic>? payload,

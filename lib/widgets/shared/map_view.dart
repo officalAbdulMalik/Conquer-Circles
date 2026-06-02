@@ -10,9 +10,10 @@ class GoogleMapLayer extends StatelessWidget {
   final VoidCallback onCameraIdle;
   final void Function(CameraPosition) onCameraMove;
   final Set<Polyline> Function() buildPolylines;
+  final void Function(LatLng position)? onTap;
 
-  const GoogleMapLayer({super.key, 
-   
+  const GoogleMapLayer({
+    super.key,
     required this.hexGrid,
     required this.hexPolygons,
     required this.mapState,
@@ -20,23 +21,21 @@ class GoogleMapLayer extends StatelessWidget {
     required this.onCameraIdle,
     required this.onCameraMove,
     required this.buildPolylines,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-
-
-print("{  mapState.userLocation: ${mapState.userLocation}, mapState.homeBase: ${mapState.homeBase} }");
-
     return GoogleMap(
       initialCameraPosition: CameraPosition(
-        target: mapState.userLocation ??
+        target:
+            mapState.userLocation ??
             mapState.homeBase ??
-            const LatLng(51.5074, -0.1278), // default to SF if no location
+            const LatLng(31.5204, 74.3587),
         zoom: 15.0,
       ),
-     
-      myLocationEnabled: true,
+
+      myLocationEnabled: mapState.permissionGranted,
       myLocationButtonEnabled: false,
       zoomControlsEnabled: false,
       polylines: buildPolylines(),
@@ -44,6 +43,7 @@ print("{  mapState.userLocation: ${mapState.userLocation}, mapState.homeBase: ${
       onCameraIdle: onCameraIdle,
       onCameraMove: onCameraMove,
       onMapCreated: onMapCreated,
+      onTap: onTap,
     );
   }
 }

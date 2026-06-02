@@ -32,18 +32,14 @@ class AppAvatarStack extends StatelessWidget {
               decoration: BoxDecoration(
                 color: backgroundColor,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.surface, width: 2.w),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 4.r,
-                  ),
-                ],
+                border: Border.all(color: AppColors.borderColor, width: 2.w),
               ),
-              child: Center(
-                child: Text(
-                  emojis[index],
-                  style: TextStyle(fontSize: (size * 0.46).sp),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(size.w / 2),
+                child: Image.asset(
+                  'assets/images/profile.png',
+                  width: size.w * 0.6,
+                  height: size.h * 0.6,
                 ),
               ),
             ),

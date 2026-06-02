@@ -741,8 +741,9 @@ class NotificationRouteIndexResolver {
       case '/map':
         return 1;
       case '/invites':
-      case '/leaderboard':
         return 2;
+      case '/leaderboard':
+        return 3;
       default:
         return null;
     }

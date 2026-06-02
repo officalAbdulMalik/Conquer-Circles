@@ -3,8 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
-import 'package:test_steps/features/chatbot/view/chat_view.dart';
-import 'package:test_steps/features/profile/view/profile_view.dart';
+import 'package:test_steps/features/leaderboard/view/leaderboard_view.dart';
 import 'package:test_steps/features/social/view/browse_cicle.dart';
 import 'package:test_steps/features/steps/view/steps_view.dart';
 import 'package:test_steps/features/map/view/map_view.dart';
@@ -29,8 +28,7 @@ class _MainNavigationState extends State<MainNavigation> {
     StepsView(),
     MapView(),
     AllCirclesPage(),
-    ProfileView(),
-    ChatView(),
+    LeaderboardView(),
   ];
 
   final List<_NavItem> _navItems = const [
@@ -43,16 +41,12 @@ class _MainNavigationState extends State<MainNavigation> {
       iconAsset: 'assets/icons/dashboard_nav_map_icon.svg',
     ),
     _NavItem(
-      label: 'Social',
+      label: 'Circle',
       iconAsset: 'assets/icons/dashboard_nav_circles_icon.svg',
     ),
     _NavItem(
-      label: 'Profile',
-      iconAsset: 'assets/icons/dashboard_nav_profile_icon.svg',
-    ),
-    _NavItem(
-      label: 'Chat',
-      iconAsset: 'assets/icons/dashboard_nav_profile_icon.svg',
+      label: 'Leaderboard',
+      iconAsset: 'assets/icons/dashboard_medal_icon.svg',
     ),
   ];
 
@@ -71,7 +65,11 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: (_selectedIndex == 1 || _selectedIndex == 3)
+      appBar:
+          (_selectedIndex == 0 ||
+              _selectedIndex == 1 ||
+              _selectedIndex == 2 ||
+              _selectedIndex == 3)
           ? null
           : AppBar(
               toolbarHeight: 60.sp,

@@ -1,89 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
-import '../../../providers/subscription_provider.dart';
-import '../../../services/subscription_service.dart';
 
-final offeringsProvider = FutureProvider<Offerings?>((ref) {
-  return SubscriptionService().getOfferings();
-});
+// RevenueCat is currently disabled.
+// import 'package:purchases_flutter/purchases_flutter.dart';
+// import '../../../providers/subscription_provider.dart';
+// import '../../../services/subscription_service.dart';
+//
+// final offeringsProvider = FutureProvider<Offerings?>((ref) {
+//   return SubscriptionService().getOfferings();
+// });
 
 class PremiumPaywallView extends ConsumerWidget {
   const PremiumPaywallView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final offeringsAsync = ref.watch(offeringsProvider);
-
     return Scaffold(
-      body: offeringsAsync.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator(color: Colors.white)),
-        error: (err, stack) => Center(
-          child: Text(
-            'Error loading offers',
-            style: const TextStyle(color: Colors.white),
+      body: Stack(
+        children: [
+          // Background Gradient
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF0F172A),
+                  Color(0xFF1E293B),
+                  Color(0xFF0D9488),
+                ],
+              ),
+            ),
           ),
-        ),
-        data: (offerings) {
-          final currentOffering = offerings?.current;
-          final premiumPackage = currentOffering?.availablePackages.firstWhere(
-            (p) => p.packageType == PackageType.monthly,
-            orElse: () => currentOffering.availablePackages.first,
-          );
-          final seasonPackage = currentOffering?.availablePackages.firstWhere(
-            (p) => p.identifier.contains('season'),
-            orElse: () => currentOffering.availablePackages.last,
-          );
 
-          return Stack(
-            children: [
-              // Background Gradient
-              Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF0F172A),
-                      Color(0xFF1E293B),
-                      Color(0xFF0D9488),
-                    ],
+          SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(context),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 20),
+                        _buildMainBenefits(),
+                        const SizedBox(height: 32),
+                        _buildComparisonTable(),
+                        const SizedBox(height: 32),
+                        _buildPricingOptions(context),
+                        const SizedBox(height: 40),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-
-              SafeArea(
-                child: Column(
-                  children: [
-                    _buildHeader(context),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 20),
-                            _buildMainBenefits(),
-                            const SizedBox(height: 32),
-                            _buildComparisonTable(),
-                            const SizedBox(height: 32),
-                            _buildPricingOptions(
-                              context,
-                              ref,
-                              premiumPackage,
-                              seasonPackage,
-                            ),
-                            const SizedBox(height: 40),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -201,57 +174,38 @@ class PremiumPaywallView extends ConsumerWidget {
     );
   }
 
-  Widget _buildPricingOptions(
-    BuildContext context,
-    WidgetRef ref,
-    Package? premium,
-    Package? season,
-  ) {
+  Widget _buildPricingOptions(BuildContext context) {
     return Column(
       children: [
-        if (premium != null)
-          _PricingCard(
-            title: 'Premium Subscription',
-            price: premium.storeProduct.priceString,
-            period: 'per month',
-            description: premium.storeProduct.description,
-            icon: Icons.star,
-            isPopular: true,
-            onTap: () async {
-              final success = await ref
-                  .read(subscriptionProvider.notifier)
-                  .purchasePackage(premium);
-              if (success && context.mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Welcome to Premium! 💎')),
-                );
-              }
-            },
-          ),
+        _PricingCard(
+          title: 'Premium Subscription',
+          price: 'Unavailable',
+          period: '',
+          description:
+              'Purchases are disabled while RevenueCat is commented out.',
+          icon: Icons.star,
+          isPopular: true,
+          onTap: () => _showDisabledMessage(context),
+        ),
         const SizedBox(height: 16),
-        if (season != null)
-          _PricingCard(
-            title: 'Season Pass',
-            price: season.storeProduct.priceString,
-            period: 'for current season',
-            description: season.storeProduct.description,
-            icon: Icons.confirmation_number,
-            isPopular: false,
-            color: const Color(0xFF0D968B),
-            onTap: () async {
-              final success = await ref
-                  .read(subscriptionProvider.notifier)
-                  .purchasePackage(season);
-              if (success && context.mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Season Pass Activated! 🎟️')),
-                );
-              }
-            },
-          ),
+        _PricingCard(
+          title: 'Season Pass',
+          price: 'Unavailable',
+          period: '',
+          description:
+              'Purchases are disabled while RevenueCat is commented out.',
+          icon: Icons.confirmation_number,
+          isPopular: false,
+          color: const Color(0xFF0D968B),
+          onTap: () => _showDisabledMessage(context),
+        ),
       ],
+    );
+  }
+
+  void _showDisabledMessage(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Purchases are currently disabled.')),
     );
   }
 }

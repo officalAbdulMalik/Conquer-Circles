@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:purchases_flutter/models/package_wrapper.dart';
 import '../models/invite_model.dart';
 import '../services/supabase_service.dart';
 import '../services/subscription_service.dart';
@@ -72,19 +71,11 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
     }
   }
 
-  Future<bool> purchasePackage(Package package) async {
+  Future<bool> purchasePackage(Object package) async {
     state = state.copyWith(isLoading: true, error: null);
     final success = await SubscriptionService().purchasePackage(package);
-    print('purchasePackage success: $package');
-    if (!success) {
-      if (package.packageType == PackageType.monthly) {
-        await _supabaseService.updateProfile({'is_premium': true});
-      } else if (package.packageType == PackageType.weekly) {
-        await _supabaseService.updateProfile({'has_season_pass': true});
-      }
-      await refresh();
-    }
-    return true;
+    state = state.copyWith(isLoading: false);
+    return success;
   }
 
   Future<void> restorePurchases() async {

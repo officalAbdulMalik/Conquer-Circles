@@ -49,8 +49,14 @@ class BadgeService {
 
       // Notify the user
       final title = BadgeModel.getTitle(badgeId);
-      final isRare = badgeId.contains('legend') || badgeId.contains('emperor') || badgeId.contains('king');
-      await NotificationService.notifyBadgeEarned(badgeName: title, isRare: isRare);
+      final isRare =
+          badgeId.contains('legend') ||
+          badgeId.contains('emperor') ||
+          badgeId.contains('king');
+      await NotificationService.notifyBadgeEarned(
+        badgeName: title,
+        isRare: isRare,
+      );
 
       return true;
     } catch (e) {
@@ -59,19 +65,20 @@ class BadgeService {
     }
   }
 
-  /// Returns total number of tiles captured by the user.
-  Future<int> getCapturedTilesCount() async {
+  /// Returns total number of territory captures by the user.
+  Future<int> getCapturedTerritoriesCount() async {
     final user = _client.auth.currentUser;
     if (user == null) return 0;
     try {
       final res = await _client
-          .from('hex_tiles')
+          .from('territory_attack_log')
           .select('id')
-          .eq('owner_id', user.id);
+          .eq('attacker_id', user.id)
+          .eq('captured', true);
 
       return res.length;
     } catch (e) {
-      print('[BadgeService.getCapturedTilesCount] $e');
+      print('[BadgeService.getCapturedTerritoriesCount] $e');
       return 0;
     }
   }
@@ -86,7 +93,7 @@ class BadgeService {
 
   /// Checks and unlocks territory-based badges.
   Future<void> checkTerritoryAchievements() async {
-    final totalCaptured = await getCapturedTilesCount();
+    final totalCaptured = await getCapturedTerritoriesCount();
     if (totalCaptured >= 10) await unlockBadge('territory_pioneer');
     if (totalCaptured >= 50) await unlockBadge('territory_builder');
     if (totalCaptured >= 100) await unlockBadge('expansion_master');

@@ -1,6 +1,5 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:test_steps/models/walk_models.dart';
-import '../features/map/widgets/tile_handler.dart';
 
 class MapState {
   final LatLng? userLocation;
@@ -11,6 +10,9 @@ class MapState {
   // Walking Session State
   final bool isWalking;
   final String? currentSessionId;
+  final DateTime? walkStartedAt;
+  final DateTime? walkPausedAt;
+  final bool isRunPaused;
   final List<LatLng> activePath;
   final List<Territory> nearbyTerritories;
   final int sequenceNum;
@@ -19,15 +21,10 @@ class MapState {
   final double currentSpeedKmh;
   final Map<String, dynamic>? lastAttackResult;
   final int currentAttackEnergy; // Player's current attack energy (0-600)
-
-  // Hex Tile Territory System
   final LatLng? homeBase;
-  final List<MapTile> visibleTiles;
-  final String? selectedTileId;
 
   // Current GPS speed in m/s — updated every position event while walking.
   final double? currentSpeedMps;
-  
 
   MapState({
     this.userLocation,
@@ -36,6 +33,9 @@ class MapState {
     this.permissionGranted = false,
     this.isWalking = false,
     this.currentSessionId,
+    this.walkStartedAt,
+    this.walkPausedAt,
+    this.isRunPaused = false,
     this.activePath = const [],
     this.nearbyTerritories = const [],
     this.sequenceNum = 0,
@@ -46,8 +46,6 @@ class MapState {
     this.currentAttackEnergy = 0,
     this.lastAttackResult,
     this.currentSpeedMps,
-    this.visibleTiles = const [],
-    this.selectedTileId,
   });
 
   MapState copyWith({
@@ -57,6 +55,12 @@ class MapState {
     bool? permissionGranted,
     bool? isWalking,
     String? currentSessionId,
+    bool clearCurrentSessionId = false,
+    DateTime? walkStartedAt,
+    bool clearWalkStartedAt = false,
+    DateTime? walkPausedAt,
+    bool clearWalkPausedAt = false,
+    bool? isRunPaused,
     List<LatLng>? activePath,
     List<Territory>? nearbyTerritories,
     int? sequenceNum,
@@ -69,8 +73,6 @@ class MapState {
     double? currentSpeedKmh,
     int? currentAttackEnergy,
     Map<String, dynamic>? lastAttackResult,
-    List<MapTile>? visibleTiles,
-    String? selectedTileId,
   }) {
     return MapState(
       userLocation: userLocation ?? this.userLocation,
@@ -78,7 +80,16 @@ class MapState {
       error: error ?? this.error,
       permissionGranted: permissionGranted ?? this.permissionGranted,
       isWalking: isWalking ?? this.isWalking,
-      currentSessionId: currentSessionId ?? this.currentSessionId,
+      currentSessionId: clearCurrentSessionId
+          ? null
+          : (currentSessionId ?? this.currentSessionId),
+      walkStartedAt: clearWalkStartedAt
+          ? null
+          : (walkStartedAt ?? this.walkStartedAt),
+      walkPausedAt: clearWalkPausedAt
+          ? null
+          : (walkPausedAt ?? this.walkPausedAt),
+      isRunPaused: isRunPaused ?? this.isRunPaused,
       activePath: activePath ?? this.activePath,
       nearbyTerritories: nearbyTerritories ?? this.nearbyTerritories,
       sequenceNum: sequenceNum ?? this.sequenceNum,
@@ -92,8 +103,6 @@ class MapState {
       currentSpeedKmh: currentSpeedKmh ?? this.currentSpeedKmh,
       currentAttackEnergy: currentAttackEnergy ?? this.currentAttackEnergy,
       lastAttackResult: lastAttackResult ?? this.lastAttackResult,
-      visibleTiles: visibleTiles ?? this.visibleTiles,
-      selectedTileId: selectedTileId ?? this.selectedTileId,
     );
   }
 }

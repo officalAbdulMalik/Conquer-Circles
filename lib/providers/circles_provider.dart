@@ -277,6 +277,10 @@ final circlesProvider = StateNotifierProvider<CirclesNotifier, CirclesState>((
   return CirclesNotifier(GameService(), ref);
 });
 
+final currentCircleUserIdProvider = Provider<String?>((ref) {
+  return GameService().currentUser?.id;
+});
+
 final activeSeasonProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
   return GameService().getActiveSeason();
 });

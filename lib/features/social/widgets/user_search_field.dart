@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:test_steps/widgets/shared/app_text_input.dart';
 
 class UserSearchField extends StatelessWidget {
   final TextEditingController? controller;
@@ -8,30 +10,15 @@ class UserSearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: TextField(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: AppTextInput(
         controller: controller,
         onChanged: onChanged,
-        style: const TextStyle(
-          fontSize: 14,
-          color: Color(0xFF0F172A),
-          fontWeight: FontWeight.w500,
-        ),
-        decoration: const InputDecoration(
-          hintText: 'Search by username',
-          hintStyle: TextStyle(
-            color: Color(0xFF94A3B8),
-            fontWeight: FontWeight.w400,
-          ),
-          prefixIcon: Icon(Icons.search, color: Color(0xFF94A3B8), size: 20),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-        ),
+        hintText: 'Search by username',
+        borderRadius: 16,
+        fillColor: const Color(0xFFF8FAFC),
+        prefixIcon: Icon(Icons.search, size: 20.sp),
       ),
     );
   }

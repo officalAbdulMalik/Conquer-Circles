@@ -213,48 +213,34 @@ serve(async (req) => {
             }
         }
 
-        if (event_type === 'tile_captured' || event_type === 'tile_reinforced') {
+        const isTerritoryCapturedEvent = event_type === 'tile_captured' || event_type === 'territory_captured';
+        const isTerritoryReinforcedEvent = event_type === 'tile_reinforced' || event_type === 'territory_reinforced';
+
+        if (isTerritoryCapturedEvent || isTerritoryReinforcedEvent) {
             // 🗺️ Territory Pioneer / Builder / Expansion Master / Emperor
             const { count: tileCount } = await supabaseClient
-                .from('hex_tiles') // or 'territories' depending on implementation
+                .from('territories')
                 .select('*', { count: 'exact', head: true })
-                .eq('owner_id', user_id)
+                .eq('user_id', user_id)
 
             if (tileCount >= 10) await awardBadge('territory_pioneer')
             if (tileCount >= 25) await awardBadge('territory_emperor')
             if (tileCount >= 50) await awardBadge('territory_builder')
             if (tileCount >= 100) await awardBadge('expansion_master')
 
-            // 🔗 Cluster Creator
-            const { data: cluster } = await supabaseClient
-                .from('tile_clusters')
-                .select('tile_count')
-                .eq('owner_id', user_id)
-                .gte('tile_count', 7)
-                .maybeSingle()
-            if (cluster) await awardBadge('cluster_creator')
-
             // 🚀 Expansion Legend
             const { count: todayCaptures } = await supabaseClient
-                .from('tile_attack_log')
+                .from('territory_attack_log')
                 .select('*', { count: 'exact', head: true })
                 .eq('attacker_id', user_id)
                 .eq('captured', true)
                 .gte('created_at', todayStr)
             if (todayCaptures >= 10) await awardBadge('expansion_legend')
 
-            // 🌳 Park Explorer
-            const { count: parkCount } = await supabaseClient
-                .from('hex_tiles')
-                .select('*', { count: 'exact', head: true })
-                .eq('owner_id', user_id)
-                .eq('tile_type', 'park')
-            if (parkCount >= 5) await awardBadge('park_explorer')
-
             // ⚔️ Raid Badges
-            if (event_type === 'tile_captured') {
+            if (isTerritoryCapturedEvent) {
                 const { count: totalRaids } = await supabaseClient
-                    .from('tile_attack_log')
+                    .from('territory_attack_log')
                     .select('*', { count: 'exact', head: true })
                     .eq('attacker_id', user_id)
                 if (totalRaids === 1) await awardBadge('raid_initiator')
@@ -270,7 +256,7 @@ serve(async (req) => {
                 // 🗡️ Rival Slayer
                 if (payload?.defender_id) {
                     const { count: rivalCaptures } = await supabaseClient
-                        .from('tile_attack_log')
+                        .from('territory_attack_log')
                         .select('*', { count: 'exact', head: true })
                         .eq('attacker_id', user_id)
                         .eq('defender_id', payload.defender_id)
@@ -285,22 +271,23 @@ serve(async (req) => {
             }
 
             // 🏰 Fortress Master / Defense Architect
-            if (payload?.new_tile_energy === 60) {
+            const maxEnergyAfterAttack = payload?.territory_energy_after ?? payload?.new_tile_energy;
+            if (maxEnergyAfterAttack === 60) {
                 await awardBadge('fortress_master')
                 const { count: maxEnergyTiles } = await supabaseClient
-                    .from('hex_tiles')
+                    .from('territories')
                     .select('*', { count: 'exact', head: true })
-                    .eq('owner_id', user_id)
-                    .eq('tile_energy', 60)
+                    .eq('user_id', user_id)
+                    .eq('energy', 60)
                 if (maxEnergyTiles >= 10) await awardBadge('defense_architect')
             }
         }
 
-        if (event_type === 'tile_attacked') {
+        if (event_type === 'tile_attacked' || event_type === 'territory_attacked') {
             // 🔒 Defender
             if (payload?.captured === false) {
                 const { count: defendedCount } = await supabaseClient
-                    .from('tile_attack_log')
+                    .from('territory_attack_log')
                     .select('*', { count: 'exact', head: true })
                     .eq('defender_id', user_id)
                     .eq('captured', false)
@@ -318,7 +305,7 @@ serve(async (req) => {
         if (event_type === 'war_phase_victory') {
             // 🎖️ War Hero
             const { count: warWins } = await supabaseClient
-                .from('tile_attack_log')
+                .from('territory_attack_log')
                 .select('*', { count: 'exact', head: true })
                 .eq('attacker_id', user_id)
                 .eq('captured', true)
