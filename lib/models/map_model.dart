@@ -7,45 +7,57 @@ class MapState {
   final String? error;
   final bool permissionGranted;
 
-  // Walking Session State
-  final bool isWalking;
-  final String? currentSessionId;
-  final DateTime? walkStartedAt;
-  final DateTime? walkPausedAt;
-  final bool isRunPaused;
-  final List<LatLng> activePath;
   final List<Territory> nearbyTerritories;
-  final int sequenceNum;
   final Set<String> currentlyInsideTerritoryIds;
-  final Map<String, LatLng> liveUserLocations;
   final double currentSpeedKmh;
   final Map<String, dynamic>? lastAttackResult;
   final int currentAttackEnergy; // Player's current attack energy (0-600)
   final LatLng? homeBase;
+  final bool isRunActive;
+  final bool isRunPaused;
+  final List<LatLng> runRoute;
+  // Faithful visual trail of the walk (distance-based, captures turnarounds).
+  // Kept separate from [runRoute], which is speed-gated for anti-cheat/metrics.
+  final List<LatLng> trailPoints;
+  final double runDistanceKm;
+  final int runSteps;
+  final double runClaimedAreaKm2;
+  final Set<String> runClaimedTerritoryIds;
+  final Set<String> underAttackTerritoryIds;
 
-  // Current GPS speed in m/s — updated every position event while walking.
+  // Current GPS speed in m/s.
   final double? currentSpeedMps;
+
+  /// Display anchor for the run timer. Shifted forward on resume so elapsed
+  /// time excludes pauses — the UI just renders `now - runStartedAt`.
+  final DateTime? runStartedAt;
+
+  /// When the current pause began (null while running).
+  final DateTime? runPausedAt;
 
   MapState({
     this.userLocation,
     this.isLoading = false,
     this.error,
     this.permissionGranted = false,
-    this.isWalking = false,
-    this.currentSessionId,
-    this.walkStartedAt,
-    this.walkPausedAt,
-    this.isRunPaused = false,
-    this.activePath = const [],
     this.nearbyTerritories = const [],
-    this.sequenceNum = 0,
     this.currentlyInsideTerritoryIds = const {},
-    this.liveUserLocations = const {},
     this.homeBase,
     this.currentSpeedKmh = 0.0,
     this.currentAttackEnergy = 0,
     this.lastAttackResult,
     this.currentSpeedMps,
+    this.isRunActive = false,
+    this.isRunPaused = false,
+    this.runRoute = const [],
+    this.trailPoints = const [],
+    this.runDistanceKm = 0,
+    this.runSteps = 0,
+    this.runClaimedAreaKm2 = 0,
+    this.runClaimedTerritoryIds = const {},
+    this.underAttackTerritoryIds = const {},
+    this.runStartedAt,
+    this.runPausedAt,
   });
 
   MapState copyWith({
@@ -53,19 +65,8 @@ class MapState {
     bool? isLoading,
     String? error,
     bool? permissionGranted,
-    bool? isWalking,
-    String? currentSessionId,
-    bool clearCurrentSessionId = false,
-    DateTime? walkStartedAt,
-    bool clearWalkStartedAt = false,
-    DateTime? walkPausedAt,
-    bool clearWalkPausedAt = false,
-    bool? isRunPaused,
-    List<LatLng>? activePath,
     List<Territory>? nearbyTerritories,
-    int? sequenceNum,
     Set<String>? currentlyInsideTerritoryIds,
-    Map<String, LatLng>? liveUserLocations,
     LatLng? homeBase,
     bool clearHomeBase = false,
     double? currentSpeedMps,
@@ -73,29 +74,28 @@ class MapState {
     double? currentSpeedKmh,
     int? currentAttackEnergy,
     Map<String, dynamic>? lastAttackResult,
+    bool? isRunActive,
+    bool? isRunPaused,
+    List<LatLng>? runRoute,
+    List<LatLng>? trailPoints,
+    double? runDistanceKm,
+    int? runSteps,
+    double? runClaimedAreaKm2,
+    Set<String>? runClaimedTerritoryIds,
+    Set<String>? underAttackTerritoryIds,
+    DateTime? runStartedAt,
+    bool clearRunStartedAt = false,
+    DateTime? runPausedAt,
+    bool clearRunPausedAt = false,
   }) {
     return MapState(
       userLocation: userLocation ?? this.userLocation,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
       permissionGranted: permissionGranted ?? this.permissionGranted,
-      isWalking: isWalking ?? this.isWalking,
-      currentSessionId: clearCurrentSessionId
-          ? null
-          : (currentSessionId ?? this.currentSessionId),
-      walkStartedAt: clearWalkStartedAt
-          ? null
-          : (walkStartedAt ?? this.walkStartedAt),
-      walkPausedAt: clearWalkPausedAt
-          ? null
-          : (walkPausedAt ?? this.walkPausedAt),
-      isRunPaused: isRunPaused ?? this.isRunPaused,
-      activePath: activePath ?? this.activePath,
       nearbyTerritories: nearbyTerritories ?? this.nearbyTerritories,
-      sequenceNum: sequenceNum ?? this.sequenceNum,
       currentlyInsideTerritoryIds:
           currentlyInsideTerritoryIds ?? this.currentlyInsideTerritoryIds,
-      liveUserLocations: liveUserLocations ?? this.liveUserLocations,
       homeBase: clearHomeBase ? null : (homeBase ?? this.homeBase),
       currentSpeedMps: clearSpeed
           ? null
@@ -103,6 +103,23 @@ class MapState {
       currentSpeedKmh: currentSpeedKmh ?? this.currentSpeedKmh,
       currentAttackEnergy: currentAttackEnergy ?? this.currentAttackEnergy,
       lastAttackResult: lastAttackResult ?? this.lastAttackResult,
+      isRunActive: isRunActive ?? this.isRunActive,
+      isRunPaused: isRunPaused ?? this.isRunPaused,
+      runRoute: runRoute ?? this.runRoute,
+      trailPoints: trailPoints ?? this.trailPoints,
+      runDistanceKm: runDistanceKm ?? this.runDistanceKm,
+      runSteps: runSteps ?? this.runSteps,
+      runClaimedAreaKm2: runClaimedAreaKm2 ?? this.runClaimedAreaKm2,
+      runClaimedTerritoryIds:
+          runClaimedTerritoryIds ?? this.runClaimedTerritoryIds,
+      underAttackTerritoryIds:
+          underAttackTerritoryIds ?? this.underAttackTerritoryIds,
+      runStartedAt: clearRunStartedAt
+          ? null
+          : (runStartedAt ?? this.runStartedAt),
+      runPausedAt: clearRunPausedAt
+          ? null
+          : (runPausedAt ?? this.runPausedAt),
     );
   }
 }

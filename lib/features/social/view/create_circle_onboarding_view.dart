@@ -4,19 +4,13 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/social/widgets/circle_icon_picker.dart';
+import 'package:test_steps/features/social/widgets/circle_created_dialog.dart';
 import 'package:test_steps/providers/circles_provider.dart';
 import 'package:test_steps/widgets/shared/app_borders.dart';
 import 'package:test_steps/widgets/shared/app_text_input.dart';
+import 'package:test_steps/widgets/shared/custom_app_dialog.dart';
 import 'package:test_steps/widgets/shared/dashboard_segmented_tab_bar.dart';
 import 'package:test_steps/widgets/shared/primary_button.dart';
-
-const circleIconOptions = [
-  CircleIconOption(id: 'energy', asset: 'assets/icons/battery.png'),
-  CircleIconOption(id: 'shield', asset: 'assets/images/sheld.png'),
-  CircleIconOption(id: 'bolt', asset: 'assets/icons/battery.png'),
-  CircleIconOption(id: 'fire', asset: 'assets/icons/battery.png'),
-  CircleIconOption(id: 'heart', asset: 'assets/images/night.png'),
-];
 
 class CreateCircleOnboardingView extends ConsumerStatefulWidget {
   const CreateCircleOnboardingView({super.key});
@@ -29,9 +23,16 @@ class CreateCircleOnboardingView extends ConsumerStatefulWidget {
 class _CreateCircleOnboardingViewState
     extends ConsumerState<CreateCircleOnboardingView> {
   final TextEditingController _circleNameController = TextEditingController();
-  String _selectedIconId = circleIconOptions.first.id;
+
   bool _showIconPicker = false;
   bool _isPrivate = false;
+  late String _selectedIconId;
+
+  @override
+  initState() {
+    super.initState();
+    _selectedIconId = ref.read(circlesProvider.notifier).circleImages.first;
+  }
 
   @override
   void dispose() {
@@ -50,27 +51,37 @@ class _CreateCircleOnboardingViewState
 
     final response = await ref
         .read(circlesProvider.notifier)
-        .createCircle(name: circleName, isPrivate: _isPrivate);
+        .createCircle(
+          name: circleName,
+          isPrivate: _isPrivate,
+          iconUrl: _selectedIconId,
+        );
     final success = response['success'] == true;
-    final message = success
-        ? 'Circle created successfully.'
-        : (response['error']?.toString() ?? 'Failed to create circle');
 
     if (!mounted) return;
+
+    if (success) {
+      await showCustomAppDialog<void>(
+        context: context,
+        dialog: CircleCreatedDialog(
+          onClose: () {
+            Navigator.of(context).pop();
+            Navigator.of(context).pop();
+          },
+        ),
+      );
+      return;
+    }
+
+    final message = response['error']?.toString() ?? 'Failed to create circle';
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
-
-    if (success) Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     final circlesState = ref.watch(circlesProvider);
-    final selectedIcon = circleIconOptions.firstWhere(
-      (option) => option.id == _selectedIconId,
-      orElse: () => circleIconOptions.first,
-    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFD),
@@ -137,11 +148,23 @@ class _CreateCircleOnboardingViewState
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: Center(
-                        child: Image.asset(
-                          selectedIcon.asset,
-                          width: 52.sp,
-                          height: 52.sp,
-                          fit: BoxFit.contain,
+                        child: SizedBox.square(
+                          dimension: 34.sp,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(6.r),
+                            child: Image.network(
+                              _selectedIconId,
+                              width: 34.sp,
+                              height: 34.sp,
+                              fit: BoxFit.cover,
+                              alignment: Alignment.center,
+                              errorBuilder: (_, __, ___) => Icon(
+                                Icons.image_not_supported_outlined,
+                                size: 24.sp,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -169,10 +192,10 @@ class _CreateCircleOnboardingViewState
                   if (_showIconPicker) ...[
                     14.verticalSpace,
                     CircleIconPicker(
-                      options: circleIconOptions,
+                      options: ref.read(circlesProvider.notifier).circleImages,
                       selectedId: _selectedIconId,
                       onSelected: (option) =>
-                          setState(() => _selectedIconId = option.id),
+                          setState(() => _selectedIconId = option),
                     ),
                   ],
                   20.verticalSpace,

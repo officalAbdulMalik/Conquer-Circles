@@ -60,89 +60,113 @@ class AppTextInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final field = Container(
-      height: height?.h,
-      decoration: BoxDecoration(
-        color: fillColor,
-        borderRadius: BorderRadius.circular(borderRadius.r),
-        border: border ?? AppBorders.raised(),
-      ),
-      child: Center(
-        child: TextFormField(
-          controller: controller,
-          enabled: enabled,
-          readOnly: readOnly,
-          obscureText: obscureText,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          textCapitalization: textCapitalization,
-          maxLines: maxLines,
-          onChanged: onChanged,
-          onFieldSubmitted: onSubmitted,
-          onTap: onTap,
-          validator: validator,
-          textAlignVertical: TextAlignVertical.center,
-          style:
-              textStyle ??
-              AppTextStyles.montserrat(
-                size: 14,
-                color: AppColors.textPrimary,
-                weight: FontWeight.w500,
+    return FormField<String>(
+      initialValue: controller?.text ?? '',
+      validator: validator,
+      builder: (fieldState) {
+        final hasError = fieldState.hasError;
+        final field = Container(
+          height: height?.h,
+          decoration: BoxDecoration(
+            color: fillColor,
+            borderRadius: BorderRadius.circular(borderRadius.r),
+            border:
+                border ??
+                AppBorders.raised(
+                  color: hasError ? AppColors.error : AppColors.borderColor,
+                ),
+          ),
+          child: Center(
+            child: TextFormField(
+              controller: controller,
+              enabled: enabled,
+              readOnly: readOnly,
+              obscureText: obscureText,
+              keyboardType: keyboardType,
+              textInputAction: textInputAction,
+              textCapitalization: textCapitalization,
+              maxLines: maxLines,
+              onChanged: (value) {
+                fieldState.didChange(value);
+                onChanged?.call(value);
+              },
+              onFieldSubmitted: onSubmitted,
+              onTap: onTap,
+              textAlignVertical: TextAlignVertical.center,
+              style:
+                  textStyle ??
+                  AppTextStyles.montserrat(
+                    size: 14,
+                    color: AppColors.textPrimary,
+                    weight: FontWeight.w500,
+                  ),
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
+                hintText: hintText,
+                hintStyle:
+                    hintStyle ??
+                    AppTextStyles.montserrat(
+                      size: 14,
+                      color: const Color(0xFFC6CCD7),
+                      weight: FontWeight.w500,
+                    ),
+                prefixIcon: prefixIcon,
+                prefixIconColor: prefixIconColor ?? const Color(0xFFCBD5E1),
+                prefixIconConstraints: BoxConstraints(
+                  minWidth: prefixIcon == null ? 0 : 44.w,
+                  minHeight: height == null ? 0 : height!.h,
+                ),
+                suffixIcon: suffixIcon,
+                suffixIconConstraints: BoxConstraints(
+                  minWidth: suffixIcon == null ? 0 : 44.w,
+                  minHeight: height == null ? 0 : height!.h,
+                ),
+                isDense: true,
+                isCollapsed: true,
+                contentPadding:
+                    contentPadding ??
+                    EdgeInsets.symmetric(
+                      horizontal: prefixIcon == null ? 15.w : 0,
+                      vertical: 0,
+                    ),
               ),
-          decoration: InputDecoration(
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            disabledBorder: InputBorder.none,
-            errorBorder: InputBorder.none,
-            focusedErrorBorder: InputBorder.none,
-            hintText: hintText,
-            hintStyle:
-                hintStyle ??
-                AppTextStyles.montserrat(
-                  size: 14,
-                  color: const Color(0xFFC6CCD7),
-                  weight: FontWeight.w500,
-                ),
-            prefixIcon: prefixIcon,
-            prefixIconColor: prefixIconColor ?? const Color(0xFFCBD5E1),
-            prefixIconConstraints: BoxConstraints(
-              minWidth: prefixIcon == null ? 0 : 44.w,
-              minHeight: height == null ? 0 : height!.h,
             ),
-            suffixIcon: suffixIcon,
-            suffixIconConstraints: BoxConstraints(
-              minWidth: suffixIcon == null ? 0 : 44.w,
-              minHeight: height == null ? 0 : height!.h,
-            ),
-            isDense: true,
-            isCollapsed: true,
-            contentPadding:
-                contentPadding ??
-                EdgeInsets.symmetric(
-                  horizontal: prefixIcon == null ? 15.w : 0,
-                  vertical: 0,
+          ),
+        );
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (label != null && label!.isNotEmpty) ...[
+              Text(
+                label!,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14.sp,
                 ),
-          ),
-        ),
-      ),
-    );
-
-    if (label == null || label!.isEmpty) return field;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label!,
-          style: AppTextStyles.bodyMedium.copyWith(
-            fontWeight: FontWeight.w600,
-            fontSize: 14.sp,
-          ),
-        ),
-        8.verticalSpace,
-        field,
-      ],
+              ),
+              8.verticalSpace,
+            ],
+            field,
+            if (hasError) ...[
+              8.verticalSpace,
+              Text(
+                fieldState.errorText!,
+                style: AppTextStyles.montserrat(
+                  size: 12,
+                  color: AppColors.error,
+                  weight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 }

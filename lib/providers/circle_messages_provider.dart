@@ -27,7 +27,10 @@ class CircleMessagesNotifier extends StateNotifier<CircleMessagesState> {
     try {
       final rows = await _gameService.getCircleMessages(_circleId);
       final normalized = rows.map(_normalizeMessage).toList();
-      state = state.copyWith(messages: _sortMessages(normalized), isLoading: false);
+      state = state.copyWith(
+        messages: _sortMessages(normalized),
+        isLoading: false,
+      );
     } catch (e) {
       state = state.copyWith(error: e.toString(), isLoading: false);
     }
@@ -54,19 +57,32 @@ class CircleMessagesNotifier extends StateNotifier<CircleMessagesState> {
           },
         )
         .onPostgresChanges(
-          event: PostgresChangeEvent.insert,
+          event: PostgresChangeEvent.update,
           schema: 'public',
-          table: 'circle_message_reactions',
+          table: 'circle_messages',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'circle_id',
+            value: _circleId,
+          ),
           callback: (payload) {
-            _handleReactionEvent(payload); 
+            final updatedMessage = Map<String, dynamic>.from(payload.newRecord);
+            _mergeIncomingMessage(_normalizeMessage(updatedMessage));
           },
         )
         .onPostgresChanges(
           event: PostgresChangeEvent.delete,
           schema: 'public',
-          table: 'circle_message_reactions',
+          table: 'circle_messages',
           callback: (payload) {
-            _handleReactionEvent(payload);
+            final deletedId = payload.oldRecord['id']?.toString();
+            if (deletedId == null) return;
+            state = state.copyWith(
+              messages: state.messages
+                  .where((message) => message['id']?.toString() != deletedId)
+                  .toList(),
+              error: null,
+            );
           },
         )
         .subscribe();
@@ -97,16 +113,6 @@ class CircleMessagesNotifier extends StateNotifier<CircleMessagesState> {
     state = state.copyWith(messages: _sortMessages(updated), error: null);
   }
 
-  void _handleReactionEvent(dynamic payload) {
-    final messageId = payload?.newRecord?['message_id']?.toString() ??
-        payload?.oldRecord?['message_id']?.toString();
-    if (messageId == null) return;
-    if (!state.messages.any((message) => message['id']?.toString() == messageId)) {
-      return;
-    }
-    refreshMessages();
-  }
-
   Future<void> toggleReaction(String messageId, String emoji) async {
     final messageIndex = state.messages.indexWhere(
       (message) => message['id']?.toString() == messageId,
@@ -114,7 +120,9 @@ class CircleMessagesNotifier extends StateNotifier<CircleMessagesState> {
     if (messageIndex < 0) return;
 
     final currentMessages = List<Map<String, dynamic>>.from(state.messages);
-    final currentMessage = Map<String, dynamic>.from(currentMessages[messageIndex]);
+    final currentMessage = Map<String, dynamic>.from(
+      currentMessages[messageIndex],
+    );
     final rawReactions = List<Map<String, dynamic>>.from(
       currentMessage['reactions'] ?? [],
     );
@@ -122,19 +130,25 @@ class CircleMessagesNotifier extends StateNotifier<CircleMessagesState> {
       (reaction) => reaction['emoji'] == emoji,
       orElse: () => {},
     );
-    final isCurrentlySelected = existing.isNotEmpty && existing['selected'] == true;
+    final isCurrentlySelected =
+        existing.isNotEmpty && existing['selected'] == true;
 
-    final optimisticReactions = rawReactions.map((reaction) {
-      if (reaction['emoji'] == emoji) {
-        final count = reaction['count'] is int ? reaction['count'] as int : int.tryParse('${reaction['count']}') ?? 0;
-        return {
-          'emoji': emoji,
-          'count': isCurrentlySelected ? count - 1 : count + 1,
-          'selected': !isCurrentlySelected,
-        };
-      }
-      return reaction;
-    }).where((reaction) => reaction['count'] != 0).toList();
+    final optimisticReactions = rawReactions
+        .map((reaction) {
+          if (reaction['emoji'] == emoji) {
+            final count = reaction['count'] is int
+                ? reaction['count'] as int
+                : int.tryParse('${reaction['count']}') ?? 0;
+            return {
+              'emoji': emoji,
+              'count': isCurrentlySelected ? count - 1 : count + 1,
+              'selected': !isCurrentlySelected,
+            };
+          }
+          return reaction;
+        })
+        .where((reaction) => reaction['count'] != 0)
+        .toList();
 
     if (!isCurrentlySelected && existing.isEmpty) {
       optimisticReactions.add({'emoji': emoji, 'count': 1, 'selected': true});
@@ -142,11 +156,19 @@ class CircleMessagesNotifier extends StateNotifier<CircleMessagesState> {
 
     currentMessage['reactions'] = optimisticReactions;
     currentMessages[messageIndex] = currentMessage;
-    state = state.copyWith(messages: _sortMessages(currentMessages), error: null);
+    state = state.copyWith(
+      messages: _sortMessages(currentMessages),
+      error: null,
+    );
 
-    final response = await _gameService.toggleCircleMessageReaction(messageId, emoji);
+    final response = await _gameService.toggleCircleMessageReaction(
+      messageId,
+      emoji,
+    );
     if (response['success'] != true) {
-      state = state.copyWith(error: response['error']?.toString() ?? 'Failed to update reaction');
+      state = state.copyWith(
+        error: response['error']?.toString() ?? 'Failed to update reaction',
+      );
       await refreshMessages();
       return;
     }
@@ -154,17 +176,24 @@ class CircleMessagesNotifier extends StateNotifier<CircleMessagesState> {
     final reactionPayload = response['reactions'];
     if (reactionPayload is List) {
       final updatedReactions = reactionPayload
-          .map<Map<String, dynamic>>((raw) => {
-                'emoji': raw['emoji']?.toString() ?? '',
-                'count': raw['count'] is int ? raw['count'] as int : int.tryParse('${raw['count']}') ?? 0,
-                'selected': raw['selected'] == true,
-              })
+          .map<Map<String, dynamic>>(
+            (raw) => {
+              'emoji': raw['emoji']?.toString() ?? '',
+              'count': raw['count'] is int
+                  ? raw['count'] as int
+                  : int.tryParse('${raw['count']}') ?? 0,
+              'selected': raw['selected'] == true,
+            },
+          )
           .where((reaction) => reaction['emoji']?.toString().isNotEmpty == true)
           .toList();
 
       currentMessage['reactions'] = updatedReactions;
       currentMessages[messageIndex] = currentMessage;
-      state = state.copyWith(messages: _sortMessages(currentMessages), error: null);
+      state = state.copyWith(
+        messages: _sortMessages(currentMessages),
+        error: null,
+      );
     } else {
       await refreshMessages();
     }
@@ -189,11 +218,10 @@ class CircleMessagesNotifier extends StateNotifier<CircleMessagesState> {
       final emoji = reaction['emoji']?.toString();
       if (emoji == null || emoji.isEmpty) continue;
       final userId = reaction['user_id']?.toString();
-      final existing = aggregated.putIfAbsent(emoji, () => {
-            'emoji': emoji,
-            'count': 0,
-            'selected': false,
-          });
+      final existing = aggregated.putIfAbsent(
+        emoji,
+        () => {'emoji': emoji, 'count': 0, 'selected': false},
+      );
       existing['count'] = (existing['count'] as int) + 1;
       if (userId != null && userId == currentUserId) {
         existing['selected'] = true;
@@ -252,13 +280,78 @@ class CircleMessagesNotifier extends StateNotifier<CircleMessagesState> {
     if (payload is Map<String, dynamic>) {
       _mergeIncomingMessage(_normalizeMessage(payload));
     } else if (payload is Map) {
-      _mergeIncomingMessage(_normalizeMessage(Map<String, dynamic>.from(payload)));
+      _mergeIncomingMessage(
+        _normalizeMessage(Map<String, dynamic>.from(payload)),
+      );
     } else {
       final cleaned = state.messages
           .where((message) => message['id'] != optimisticMessage['id'])
           .toList();
       state = state.copyWith(messages: cleaned, error: null);
     }
+  }
+
+  Future<Map<String, dynamic>> editMessage(
+    String messageId,
+    String content,
+  ) async {
+    final text = content.trim();
+    if (text.isEmpty) {
+      return {'success': false, 'error': 'Message cannot be empty'};
+    }
+
+    final index = state.messages.indexWhere(
+      (message) => message['id']?.toString() == messageId,
+    );
+    if (index < 0) {
+      return {'success': false, 'error': 'Message not found'};
+    }
+
+    final original = Map<String, dynamic>.from(state.messages[index]);
+    final updatedMessages = List<Map<String, dynamic>>.from(state.messages);
+    updatedMessages[index] = {
+      ...original,
+      'message': text,
+      'edited_at': DateTime.now().toUtc().toIso8601String(),
+    };
+    state = state.copyWith(messages: updatedMessages, error: null);
+
+    final response = await _gameService.editCircleMessage(messageId, text);
+    if (response['success'] != true) {
+      updatedMessages[index] = original;
+      state = state.copyWith(
+        messages: updatedMessages,
+        error: response['error']?.toString() ?? 'Could not edit message',
+      );
+      return response;
+    }
+
+    final rawMessage = response['message'];
+    if (rawMessage is Map) {
+      _mergeIncomingMessage(
+        _normalizeMessage(Map<String, dynamic>.from(rawMessage)),
+      );
+    }
+    return response;
+  }
+
+  Future<Map<String, dynamic>> deleteMessage(String messageId) async {
+    final originalMessages = List<Map<String, dynamic>>.from(state.messages);
+    state = state.copyWith(
+      messages: state.messages
+          .where((message) => message['id']?.toString() != messageId)
+          .toList(),
+      error: null,
+    );
+
+    final response = await _gameService.deleteCircleMessage(messageId);
+    if (response['success'] != true) {
+      state = state.copyWith(
+        messages: originalMessages,
+        error: response['error']?.toString() ?? 'Could not delete message',
+      );
+    }
+    return response;
   }
 
   List<Map<String, dynamic>> _sortMessages(

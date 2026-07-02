@@ -11,6 +11,8 @@ class PrimaryButton extends StatelessWidget {
     this.width,
     this.isLoading = false,
     this.textStyle,
+    this.verticalPadding = 12,
+    this.backgroundColor,
   });
 
   final String label;
@@ -18,6 +20,8 @@ class PrimaryButton extends StatelessWidget {
   final bool isLoading;
   final double? width;
   final TextStyle? textStyle;
+  final double verticalPadding;
+  final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -27,11 +31,14 @@ class PrimaryButton extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         opacity: onTap == null ? 0.55 : 1,
         child: Container(
-         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+          padding: EdgeInsets.symmetric(
+            horizontal: 16.w,
+            vertical: verticalPadding,
+          ),
           width: width ?? double.infinity,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: AppColors.blueColor,
+            color: backgroundColor ?? AppColors.blueColor,
             borderRadius: BorderRadius.circular(26),
           ),
           child: isLoading
@@ -45,7 +52,8 @@ class PrimaryButton extends StatelessWidget {
                 )
               : Text(
                   label,
-                  style: textStyle ??
+                  style:
+                      textStyle ??
                       AppTextStyles.montserrat(
                         size: 16.sp,
                         color: Colors.white,

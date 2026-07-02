@@ -7,9 +7,14 @@ import 'package:test_steps/features/leaderboard/widgets/leaderboard_avatar.dart'
 import 'package:test_steps/widgets/shared/app_borders.dart';
 
 class LeaderboardParticipantTile extends StatelessWidget {
-  const LeaderboardParticipantTile({super.key, required this.participant});
+  const LeaderboardParticipantTile({
+    super.key,
+    required this.participant,
+    required this.metric,
+  });
 
   final LeaderboardParticipant participant;
+  final LeaderboardMetric metric;
 
   @override
   Widget build(BuildContext context) {
@@ -76,18 +81,46 @@ class LeaderboardParticipantTile extends StatelessWidget {
             ),
           ),
           8.horizontalSpace,
-          Text(
-            '${participant.score}',
-            style: AppTextStyles.montserrat(
-              size: 14.sp,
-              color: AppColors.textPrimary,
-              weight: FontWeight.w700,
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 7.h),
+            decoration: BoxDecoration(
+              color: AppColors.lightBlueColor,
+              borderRadius: BorderRadius.circular(18.r),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _metricIcon(metric),
+                  size: 16.sp,
+                  color: AppColors.textPrimary,
+                ),
+                6.horizontalSpace,
+                Text(
+                  '${participant.score}',
+                  style: AppTextStyles.montserrat(
+                    size: 14.sp,
+                    color: AppColors.textPrimary,
+                    weight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
           ),
-          7.horizontalSpace,
-          Image.asset('assets/icons/battery.png', width: 19.sp, height: 19.sp),
         ],
       ),
     );
+  }
+
+  IconData _metricIcon(LeaderboardMetric metric) {
+    switch (metric) {
+      case LeaderboardMetric.territoryTiles:
+        return Icons.grid_view_rounded;
+      case LeaderboardMetric.totalSteps:
+        return Icons.directions_walk_rounded;
+      case LeaderboardMetric.raidsWon:
+        return Icons.local_fire_department_rounded;
+      case LeaderboardMetric.territoryEnergy:
+        return Icons.bolt_rounded;
+    }
   }
 }

@@ -11,12 +11,28 @@ class HomeBaseSetupSheet extends StatelessWidget {
     super.key,
     required this.onUseCurrentLocation,
     required this.onSetHomeBase,
+    required this.locationController,
+    required this.onSearchLocation,
+    required this.onLocationChanged,
+    required this.suggestions,
+    required this.onSuggestionSelected,
     this.isLoading = false,
+    this.isSelectingLocation = false,
+    this.isSearchingLocation = false,
+    this.searchError,
   });
 
   final VoidCallback onUseCurrentLocation;
   final VoidCallback onSetHomeBase;
+  final TextEditingController locationController;
+  final ValueChanged<String> onSearchLocation;
+  final ValueChanged<String> onLocationChanged;
+  final List<HomeBaseLocationSuggestion> suggestions;
+  final ValueChanged<HomeBaseLocationSuggestion> onSuggestionSelected;
   final bool isLoading;
+  final bool isSelectingLocation;
+  final bool isSearchingLocation;
+  final String? searchError;
 
   @override
   Widget build(BuildContext context) {
@@ -89,9 +105,11 @@ class HomeBaseSetupSheet extends StatelessWidget {
                     ),
                     const Spacer(),
                     GestureDetector(
-                      onTap: onUseCurrentLocation,
+                      onTap: isSelectingLocation ? null : onUseCurrentLocation,
                       child: Text(
-                        'Use Your Current Location',
+                        isSelectingLocation
+                            ? 'Getting Current Location...'
+                            : 'Use Your Current Location',
                         style: AppTextStyles.montserrat(
                           size: 14.sp,
                           color: AppColors.blueColor,
@@ -103,15 +121,80 @@ class HomeBaseSetupSheet extends StatelessWidget {
                 ),
                 SizedBox(height: 10.h),
                 AppTextInput(
-                  enabled: false,
+                  controller: locationController,
                   hintText: 'Search location or use current one',
                   height: 50,
+                  textInputAction: TextInputAction.search,
+                  onChanged: onLocationChanged,
+                  onSubmitted: onSearchLocation,
                   hintStyle: AppTextStyles.montserrat(
                     size: 15.sp,
                     color: const Color(0xffD1D5DB),
                     weight: FontWeight.w500,
                   ),
+                  prefixIcon: Icon(
+                    Icons.location_on_rounded,
+                    size: 20.sp,
+                    color: AppColors.blueColor,
+                  ),
+                  suffixIcon: isSelectingLocation || isSearchingLocation
+                      ? Padding(
+                          padding: EdgeInsets.all(14.sp),
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : IconButton(
+                          onPressed: () =>
+                              onSearchLocation(locationController.text),
+                          icon: Icon(
+                            Icons.search_rounded,
+                            size: 21.sp,
+                            color: AppColors.blueColor,
+                          ),
+                        ),
                 ),
+                if (suggestions.isNotEmpty) ...[
+                  SizedBox(height: 8.h),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: AppBorders.raised(),
+                    ),
+                    child: Column(
+                      children: [
+                        for (
+                          var index = 0;
+                          index < suggestions.length;
+                          index++
+                        ) ...[
+                          _LocationSuggestionTile(
+                            suggestion: suggestions[index],
+                            onTap: () =>
+                                onSuggestionSelected(suggestions[index]),
+                          ),
+                          if (index < suggestions.length - 1)
+                            const Divider(height: 1),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+                if (searchError != null) ...[
+                  SizedBox(height: 8.h),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      searchError!,
+                      style: AppTextStyles.montserrat(
+                        size: 12.sp,
+                        color: AppColors.error,
+                        weight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
                 SizedBox(height: 24.h),
                 PrimaryButton(
                   label: 'Set Home Base',
@@ -121,6 +204,61 @@ class HomeBaseSetupSheet extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class HomeBaseLocationSuggestion {
+  const HomeBaseLocationSuggestion({
+    required this.label,
+    required this.latitude,
+    required this.longitude,
+  });
+
+  final String label;
+  final double latitude;
+  final double longitude;
+}
+
+class _LocationSuggestionTile extends StatelessWidget {
+  const _LocationSuggestionTile({
+    required this.suggestion,
+    required this.onTap,
+  });
+
+  final HomeBaseLocationSuggestion suggestion;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16.r),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 11.h),
+        child: Row(
+          children: [
+            Icon(
+              Icons.location_on_outlined,
+              size: 20.sp,
+              color: AppColors.blueColor,
+            ),
+            SizedBox(width: 10.w),
+            Expanded(
+              child: Text(
+                suggestion.label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.montserrat(
+                  size: 13.sp,
+                  color: AppColors.textPrimary,
+                  weight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

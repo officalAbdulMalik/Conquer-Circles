@@ -8,107 +8,149 @@ class SplashLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 113,
-      width: 113,
+      height: 132,
+      width: 132,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Main purple rounded square with fire icon
           Container(
-            width: 113,
-            height: 113,
+            width: 132,
+            height: 132,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.surface.withValues(alpha: 0.1),
+              border: Border.all(
+                color: AppColors.surface.withValues(alpha: 0.2),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.bgDeep.withValues(alpha: 0.22),
+                  blurRadius: 36,
+                  offset: const Offset(0, 18),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 94,
+            height: 94,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  AppColors.brandPurple, // Purple
-                  Color(0xFF8B7FD4), // Light Purple
-                ],
+                colors: [AppColors.surface, Color(0xFFEAF6FF)],
               ),
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(30),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.brandPurple.withValues(alpha: 0.3),
-                  blurRadius: 40,
-                  offset: const Offset(0, 12),
+                  color: AppColors.bgDeep.withValues(alpha: 0.2),
+                  blurRadius: 28,
+                  offset: const Offset(0, 14),
                 ),
               ],
             ),
-            child: Center(
-              child: SvgPicture.asset(
-                'assets/icons/splash_icon_1.svg',
-                width: 56,
-                height: 56,
-              ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.splashAqua.withValues(alpha: 0.22),
+                        AppColors.splashBlue.withValues(alpha: 0.16),
+                      ],
+                    ),
+                  ),
+                ),
+                SvgPicture.asset(
+                  'assets/icons/dashboard_shield_icon.svg',
+                  width: 46,
+                  height: 46,
+                  colorFilter: const ColorFilter.mode(
+                    AppColors.splashBlueDeep,
+                    BlendMode.srcIn,
+                  ),
+                ),
+                Positioned(
+                  right: 23,
+                  top: 23,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: const BoxDecoration(
+                      color: AppColors.splashGold,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-
-          // Top-right cyan badge with bolt icon
           Positioned(
-            top: -13.69,
-            right: -14.4,
+            top: 4,
+            right: 2,
             child: Container(
-              width: 47.4,
-              height: 47.4,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.brandCyan, // Cyan
-                    Color(0xFF3DD4E3), // Dark Cyan
-                  ],
+                  colors: [AppColors.splashAqua, Color(0xFF2CC6DC)],
                 ),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.brandCyan.withValues(alpha: 0.4),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
+                    color: AppColors.splashAqua.withValues(alpha: 0.38),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
               child: Center(
                 child: SvgPicture.asset(
                   'assets/icons/splash_icon_2.svg',
-                  width: 20,
-                  height: 20,
+                  width: 18,
+                  height: 18,
                 ),
               ),
             ),
           ),
-
-          // Bottom-left light cyan badge with heart icon
           Positioned(
-            bottom: -14.4,
-            left: -14.4,
+            bottom: 6,
+            left: 4,
             child: Container(
-              width: 44.8,
-              height: 44.8,
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF99D7E9), // Light Cyan
-                    Color(0xFF7BC5DA), // Darker Light Cyan
-                  ],
+                  colors: [AppColors.splashGold, Color(0xFFFFB84D)],
                 ),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.brandLightCyan.withValues(alpha: 0.4),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
+                    color: AppColors.splashGold.withValues(alpha: 0.35),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
               child: Center(
                 child: SvgPicture.asset(
                   'assets/icons/splash_icon_3.svg',
-                  width: 20,
-                  height: 20,
+                  width: 17,
+                  height: 17,
+                  colorFilter: const ColorFilter.mode(
+                    AppColors.surface,
+                    BlendMode.srcIn,
+                  ),
                 ),
               ),
             ),

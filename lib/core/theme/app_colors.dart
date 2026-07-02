@@ -9,6 +9,10 @@ class AppColors {
   static const Color brandPurple = Color(0xFF675FAA);
   static const Color brandCyan = Color(0xFF53E4F3);
   static const Color brandLightCyan = Color(0xFF99D7E9);
+  static const Color splashBlue = Color(0xFF3F64FF);
+  static const Color splashBlueDeep = Color(0xff4C6FFF);
+  static const Color splashAqua = Color(0xFF55D7EC);
+  static const Color splashGold = Color(0xFFFFD166);
   static Color iconColor = Color(0xFF675FAA).withValues(alpha: 0.4);
   static const Color blueColor = Color(0xFF5169FF);
   static const Color lightBlueColor = Color(0xFFEFF7FF);

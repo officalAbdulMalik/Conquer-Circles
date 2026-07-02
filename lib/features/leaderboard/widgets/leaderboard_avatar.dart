@@ -28,16 +28,15 @@ class LeaderboardAvatar extends StatelessWidget {
             borderRadius: BorderRadius.circular(20.r),
             border: Border.all(color: AppColors.borderColor),
           ),
-          child: participant.avatarAsset == null
-              ? Center(
-                  child: Text(
-                    participant.avatarEmoji ?? '',
-                    style: AppTextStyles.montserrat(
-                      size: (size * 0.5).sp,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
+          child: participant.avatarUrl?.isNotEmpty == true
+              ? Image.network(
+                  participant.avatarUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      _AvatarFallback(participant: participant, size: size),
                 )
+              : participant.avatarAsset == null
+              ? _AvatarFallback(participant: participant, size: size)
               : Image.asset(participant.avatarAsset!, fit: BoxFit.cover),
         ),
         if (participant.medal != null)
@@ -63,6 +62,36 @@ class LeaderboardAvatar extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _AvatarFallback extends StatelessWidget {
+  const _AvatarFallback({required this.participant, required this.size});
+
+  final LeaderboardParticipant participant;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final initials = participant.name.trim().isEmpty
+        ? '?'
+        : participant.name
+              .trim()
+              .split(RegExp(r'\s+'))
+              .take(2)
+              .map((part) => part[0])
+              .join()
+              .toUpperCase();
+
+    return Center(
+      child: Text(
+        participant.avatarEmoji ?? initials,
+        style: AppTextStyles.montserrat(
+          size: (size * 0.5).sp,
+          color: AppColors.textPrimary,
+        ),
+      ),
     );
   }
 }

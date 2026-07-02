@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
+import 'package:test_steps/features/social/models/circle_detail_models.dart';
 import 'package:test_steps/providers/circle_messages_provider.dart';
 import 'package:test_steps/widgets/shared/app_avatar_stack.dart';
 import 'package:test_steps/widgets/shared/app_borders.dart';
@@ -14,10 +15,12 @@ class CircleCommsView extends ConsumerStatefulWidget {
     super.key,
     required this.circleId,
     required this.circleName,
+    required this.members,
   });
 
   final String circleId;
   final String circleName;
+  final List<CircleLeaderboardMember> members;
 
   @override
   ConsumerState<CircleCommsView> createState() => _CircleCommsViewState();
@@ -38,13 +41,11 @@ class _CircleCommsViewState extends ConsumerState<CircleCommsView> {
   Widget build(BuildContext context) {
     final messagesState = ref.watch(circleMessagesProvider(widget.circleId));
     final currentUserId = Supabase.instance.client.auth.currentUser?.id;
-    final messages = messagesState.messages.isEmpty
-        ? _previewMessages
-        : messagesState.messages
-              .map((row) => _chatMessageFromRow(row, currentUserId))
-              .toList()
-              .reversed
-              .toList();
+    final messages = messagesState.messages
+        .map((row) => _chatMessageFromRow(row, currentUserId))
+        .toList()
+        .reversed
+        .toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFD),
@@ -67,6 +68,7 @@ class _CircleCommsViewState extends ConsumerState<CircleCommsView> {
                     title: widget.circleName.isEmpty
                         ? 'StromWalker Team'
                         : widget.circleName,
+                    members: widget.members,
                     onBack: () => Navigator.maybePop(context),
                     onMenuTap: () {},
                   ),
@@ -76,6 +78,18 @@ class _CircleCommsViewState extends ConsumerState<CircleCommsView> {
                   child:
                       messagesState.isLoading && messagesState.messages.isEmpty
                       ? const Center(child: CircularProgressIndicator())
+                      : messagesState.error != null &&
+                            messagesState.messages.isEmpty
+                      ? _MessagesLoadError(
+                          message: messagesState.error!,
+                          onRetry: () => ref
+                              .read(
+                                circleMessagesProvider(
+                                  widget.circleId,
+                                ).notifier,
+                              )
+                              .refreshMessages(),
+                        )
                       : ListView(
                           controller: _scrollController,
                           physics: const BouncingScrollPhysics(),
@@ -83,11 +97,18 @@ class _CircleCommsViewState extends ConsumerState<CircleCommsView> {
                           children: [
                             const _DayChip(label: 'Today'),
                             14.verticalSpace,
-                            ...List.generate(messages.length, (index) {
-                              return _ChatMessageBlock(
-                                message: messages[index],
-                              );
-                            }),
+                            if (messages.isEmpty)
+                              const _EmptyMessages()
+                            else
+                              ...List.generate(messages.length, (index) {
+                                return _ChatMessageBlock(
+                                  message: messages[index],
+                                  onLongPress: messages[index].isMe
+                                      ? () =>
+                                            _showMessageActions(messages[index])
+                                      : null,
+                                );
+                              }),
                           ],
                         ),
                 ),
@@ -119,10 +140,62 @@ class _CircleCommsViewState extends ConsumerState<CircleCommsView> {
         : TimeOfDay.fromDateTime(createdAt.toLocal()).format(context);
 
     return _CircleChatMessage(
+      id: row['id']?.toString() ?? '',
       sender: isMe ? 'You' : senderName,
       time: time,
       text: row['message']?.toString() ?? '',
       isMe: isMe,
+      isEdited: row['edited_at'] != null,
+    );
+  }
+
+  Future<void> _showMessageActions(_CircleChatMessage message) async {
+    if (!message.isMe || message.id.isEmpty || message.id.startsWith('temp_')) {
+      return;
+    }
+
+    final action = await showModalBottomSheet<_MessageAction>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const _MessageActionsSheet(),
+    );
+    if (!mounted || action == null) return;
+
+    if (action == _MessageAction.edit) {
+      await _showEditMessageDialog(message);
+      return;
+    }
+
+    final response = await ref
+        .read(circleMessagesProvider(widget.circleId).notifier)
+        .deleteMessage(message.id);
+    if (!mounted || response['success'] == true) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          response['error']?.toString() ?? 'Could not delete message',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showEditMessageDialog(_CircleChatMessage message) async {
+    final editedText = await showDialog<String>(
+      context: context,
+      builder: (context) => _EditMessageDialog(initialText: message.text),
+    );
+    if (!mounted || editedText == null || editedText == message.text) return;
+
+    final response = await ref
+        .read(circleMessagesProvider(widget.circleId).notifier)
+        .editMessage(message.id, editedText);
+    if (!mounted || response['success'] == true) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          response['error']?.toString() ?? 'Could not edit message',
+        ),
+      ),
     );
   }
 
@@ -147,11 +220,13 @@ class _CircleCommsViewState extends ConsumerState<CircleCommsView> {
 class _ChatHeader extends StatelessWidget {
   const _ChatHeader({
     required this.title,
+    required this.members,
     required this.onBack,
     required this.onMenuTap,
   });
 
   final String title;
+  final List<CircleLeaderboardMember> members;
   final VoidCallback onBack;
   final VoidCallback onMenuTap;
 
@@ -211,8 +286,13 @@ class _ChatHeader extends StatelessWidget {
                 ),
               ),
               8.verticalSpace,
-              const AppAvatarStack(
-                emojis: ['👩', '👱', '🧑', '👨'],
+              AppAvatarStack(
+                emojis: members.take(4).map((member) => member.avatar).toList(),
+                imageUrls: members
+                    .take(4)
+                    .map((member) => member.avatarUrl)
+                    .toList(),
+                labels: members.take(4).map((member) => member.name).toList(),
                 size: 25,
                 overlap: 15,
                 backgroundColor: AppColors.surface,
@@ -262,9 +342,10 @@ class _DayChip extends StatelessWidget {
 }
 
 class _ChatMessageBlock extends StatelessWidget {
-  const _ChatMessageBlock({required this.message});
+  const _ChatMessageBlock({required this.message, this.onLongPress});
 
   final _CircleChatMessage message;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -275,22 +356,25 @@ class _ChatMessageBlock extends StatelessWidget {
             ? CrossAxisAlignment.end
             : CrossAxisAlignment.start,
         children: [
-          ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: 336.w),
-            child: Container(
-              padding: EdgeInsets.fromLTRB(12.w, 10.h, 12.w, 11.h),
-              decoration: BoxDecoration(
-                color: message.isMe ? AppColors.blueColor : Colors.white,
-                borderRadius: BorderRadius.circular(18.r),
-                border: message.isMe ? null : AppBorders.raised(),
-              ),
-              child: Text(
-                message.text,
-                style: AppTextStyles.montserrat(
-                  size: 14.sp,
-                  color: message.isMe ? Colors.white : AppColors.textPrimary,
-                  weight: FontWeight.w500,
-                  height: 1.35,
+          GestureDetector(
+            onLongPress: onLongPress,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 336.w),
+              child: Container(
+                padding: EdgeInsets.fromLTRB(12.w, 10.h, 12.w, 11.h),
+                decoration: BoxDecoration(
+                  color: message.isMe ? AppColors.blueColor : Colors.white,
+                  borderRadius: BorderRadius.circular(18.r),
+                  border: message.isMe ? null : AppBorders.raised(),
+                ),
+                child: Text(
+                  message.text,
+                  style: AppTextStyles.montserrat(
+                    size: 14.sp,
+                    color: message.isMe ? Colors.white : AppColors.textPrimary,
+                    weight: FontWeight.w500,
+                    height: 1.35,
+                  ),
                 ),
               ),
             ),
@@ -309,7 +393,7 @@ class _ChatMessageBlock extends StatelessWidget {
               ),
               6.horizontalSpace,
               Text(
-                message.time,
+                message.isEdited ? '${message.time} · Edited' : message.time,
                 style: AppTextStyles.montserrat(
                   size: 12.sp,
                   color: AppColors.textSecondary,
@@ -319,6 +403,206 @@ class _ChatMessageBlock extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+enum _MessageAction { edit, delete }
+
+class _EditMessageDialog extends StatefulWidget {
+  const _EditMessageDialog({required this.initialText});
+
+  final String initialText;
+
+  @override
+  State<_EditMessageDialog> createState() => _EditMessageDialogState();
+}
+
+class _EditMessageDialogState extends State<_EditMessageDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialText);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit Message'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        maxLines: 4,
+        minLines: 1,
+        textCapitalization: TextCapitalization.sentences,
+        decoration: const InputDecoration(hintText: 'Message'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () {
+            final value = _controller.text.trim();
+            if (value.isNotEmpty) Navigator.pop(context, value);
+          },
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
+class _MessageActionsSheet extends StatelessWidget {
+  const _MessageActionsSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        margin: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24.r),
+          border: AppBorders.raised(),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _MessageActionTile(
+              icon: Icons.edit_outlined,
+              label: 'Edit Message',
+              onTap: () => Navigator.pop(context, _MessageAction.edit),
+            ),
+            Divider(height: 1, color: AppColors.borderColor),
+            _MessageActionTile(
+              icon: Icons.delete_outline_rounded,
+              label: 'Delete',
+              color: const Color(0xFFFF3B4E),
+              onTap: () => Navigator.pop(context, _MessageAction.delete),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MessageActionTile extends StatelessWidget {
+  const _MessageActionTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.color = AppColors.textPrimary,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
+        child: Row(
+          children: [
+            Container(
+              width: 52.w,
+              height: 52.w,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16.r),
+                border: Border.all(color: AppColors.borderColor),
+              ),
+              child: Icon(icon, color: color, size: 25.sp),
+            ),
+            12.horizontalSpace,
+            Text(
+              label,
+              style: AppTextStyles.montserrat(
+                size: 15.sp,
+                color: color,
+                weight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyMessages extends StatelessWidget {
+  const _EmptyMessages();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(top: 48.h),
+      child: Center(
+        child: Text(
+          'No messages yet',
+          style: AppTextStyles.montserrat(
+            size: 14.sp,
+            color: AppColors.textSecondary,
+            weight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MessagesLoadError extends StatelessWidget {
+  const _MessagesLoadError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(24.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Messages could not be loaded',
+              style: AppTextStyles.montserrat(
+                size: 16.sp,
+                color: AppColors.textPrimary,
+                weight: FontWeight.w700,
+              ),
+            ),
+            8.verticalSpace,
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.montserrat(
+                size: 12.sp,
+                color: AppColors.textSecondary,
+                weight: FontWeight.w400,
+              ),
+            ),
+            12.verticalSpace,
+            TextButton(onPressed: onRetry, child: const Text('Retry')),
+          ],
+        ),
       ),
     );
   }
@@ -361,15 +645,19 @@ class _ChatComposer extends StatelessWidget {
               customBorder: const CircleBorder(),
               onTap: onSend,
               child: Container(
-              padding: EdgeInsets.all(12.sp),
-                decoration:  BoxDecoration(
+                padding: EdgeInsets.all(12.sp),
+                decoration: BoxDecoration(
                   color: AppColors.blueColor,
                   borderRadius: BorderRadius.circular(26.r),
                   border: AppBorders.raised(
                     color: AppColors.blueColor.withValues(alpha: 0.28),
                   ),
                 ),
-                child: Image.asset('assets/images/send.png', width: 24.sp, height: 24.sp),
+                child: Image.asset(
+                  'assets/images/send.png',
+                  width: 24.sp,
+                  height: 24.sp,
+                ),
               ),
             ),
           ],
@@ -381,53 +669,18 @@ class _ChatComposer extends StatelessWidget {
 
 class _CircleChatMessage {
   const _CircleChatMessage({
+    required this.id,
     required this.sender,
     required this.time,
     required this.text,
     this.isMe = false,
+    this.isEdited = false,
   });
 
+  final String id;
   final String sender;
   final String time;
   final String text;
   final bool isMe;
+  final bool isEdited;
 }
-
-const _previewMessages = [
-  _CircleChatMessage(
-    sender: 'Sarah',
-    time: '11:33PM',
-    text: 'Rival activity near Downtown sector again.',
-  ),
-  _CircleChatMessage(
-    sender: 'Alex',
-    time: '11:36PM',
-    text: 'I’m heading there now. Should secure east border in 15 mins.',
-  ),
-  _CircleChatMessage(
-    sender: 'Micheal',
-    time: '11:39PM',
-    text: 'Just captured +0.3 km² near Central Station 🔥',
-  ),
-  _CircleChatMessage(
-    sender: 'You',
-    time: '11:55PM',
-    text: 'Nice. I’ll defend north side before they push further.',
-    isMe: true,
-  ),
-  _CircleChatMessage(
-    sender: 'Sarah',
-    time: '12:07AM',
-    text: 'Perfect. We only need +1.2 km² more for weekly mission.',
-  ),
-  _CircleChatMessage(
-    sender: 'Alex',
-    time: '12:29AM',
-    text: 'Starting territory raid now ⚔',
-  ),
-  _CircleChatMessage(
-    sender: 'Micheal',
-    time: '12:41AM',
-    text: 'Don’t forget to activate defense boost.',
-  ),
-];

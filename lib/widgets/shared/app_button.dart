@@ -65,6 +65,59 @@ class AppButton extends StatelessWidget {
   }
 }
 
+class AppOutlinedButton extends StatelessWidget {
+  const AppOutlinedButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.width = double.infinity,
+    this.height = 48,
+    this.borderRadius = 24,
+    this.borderColor = AppColors.blueColor,
+    this.foregroundColor = AppColors.blueColor,
+    this.borderWidth = 1.5,
+    this.textStyle,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final double? width;
+  final double height;
+  final double borderRadius;
+  final Color borderColor;
+  final Color foregroundColor;
+  final double borderWidth;
+  final TextStyle? textStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      height: height.h,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: foregroundColor,
+          side: BorderSide(color: borderColor, width: borderWidth.w),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(borderRadius.r),
+          ),
+        ),
+        child: Text(
+          label,
+          style:
+              textStyle ??
+              AppTextStyles.montserrat(
+                size: 15.sp,
+                color: foregroundColor,
+                weight: FontWeight.w600,
+              ),
+        ),
+      ),
+    );
+  }
+}
+
 class AppActionTileButton extends StatelessWidget {
   const AppActionTileButton({
     super.key,

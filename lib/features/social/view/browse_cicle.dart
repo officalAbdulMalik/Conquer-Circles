@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:test_steps/features/profile/view/profile_view.dart';
+import 'package:test_steps/features/profile/view/profile_bottom_sheet.dart';
+import 'package:test_steps/features/social/models/circle_models.dart';
 import 'package:test_steps/features/social/view/create_circle_onboarding_view.dart';
 import 'package:test_steps/features/social/view/circle_details_screen.dart';
 import 'package:test_steps/features/social/widgets/circle_card_tile.dart';
@@ -39,76 +40,68 @@ class _AllCirclesPageState extends ConsumerState<AllCirclesPage> {
     });
   }
 
-  CircleCardTileData _circleUiData(Map<String, dynamic> circle, int index) {
-    final name = circle['name']?.toString().trim();
-    final maxMembers = (circle['max_members'] as int?) ?? 25;
-    final minMembers = (circle['min_members'] as int?) ?? 3;
-    final members =
-        (circle['members'] as int?) ?? (minMembers + maxMembers) ~/ 2;
-    final isPrivate = (circle['is_private'] as bool?) == true;
-    final isMember = (circle['is_member'] as bool?) == true;
-    final createdByMe = (circle['created_by_me'] as bool?) == true;
-    final full = members >= maxMembers;
-    final rank = (circle['rank'] as int?) ?? [2, 3, 6, 10][index % 4];
-
+  CircleCardTileData _circleUiData(CircleModel circle, int index) {
     return CircleCardTileData(
-      id: circle['id']?.toString() ?? circle['circle_id']?.toString() ?? '',
-      name: name?.isNotEmpty == true ? name! : _fallbackNames[index % 4],
+      id: circle.id,
+      name: circle.name,
       icon: _fallbackIcons[index % 4],
+      iconUrl: circle.imageUrl,
       iconBackground: _fallbackIconBackgrounds[index % 4],
-      territory: index == 3 ? '64.3 km² Territory' : '48.2 km² Territory',
-      membersLabel: '$members / $maxMembers Members',
-      rank: rank,
-      status: isMember
+      territory: '${circle.territories} Territories',
+      membersLabel: '${circle.memberCount} / ${circle.maxMembers} Members',
+      memberNames: circle.members.map((member) => member.name).toList(),
+      memberAvatarUrls: circle.members
+          .map((member) => member.avatarUrl)
+          .toList(),
+      rank: circle.rank > 0 ? circle.rank : index + 1,
+      status: circle.isMember
           ? CircleCardStatus.joined
-          : createdByMe
+          : circle.createdByMe
           ? CircleCardStatus.active
-          : isPrivate
+          : circle.hasPendingJoinRequest
+          ? CircleCardStatus.requested
+          : circle.isPrivate
           ? CircleCardStatus.private
-          : full
+          : circle.isFull
           ? CircleCardStatus.full
           : CircleCardStatus.active,
-      action: full
+      action: circle.isFull
           ? CircleCardAction.full
-          : isMember
+          : circle.isMember
+          ? CircleCardAction.request
+          : circle.createdByMe || circle.hasPendingJoinRequest
           ? CircleCardAction.request
           : CircleCardAction.join,
     );
   }
 
-  List<Map<String, dynamic>> _filteredCircles(
-    List<Map<String, dynamic>> circles,
-  ) {
+  List<CircleModel> _filteredCircles(List<CircleModel> circles) {
     if (_selectedTab == 1) {
-      return circles.where((c) => (c['is_member'] as bool?) == true).toList();
+      return circles.where((circle) => circle.isMember).toList();
     }
     if (_selectedTab == 2) {
-      return circles
-          .where((c) => (c['created_by_me'] as bool?) == true)
-          .toList();
+      return circles.where((circle) => circle.createdByMe).toList();
     }
     if (_selectedTab == 3) {
-      return circles.where((c) => (c['is_private'] as bool?) == true).toList();
+      return circles.where((circle) => circle.isPrivate).toList();
     }
-    return List<Map<String, dynamic>>.from(circles);
+    return List<CircleModel>.from(circles);
   }
 
   @override
   Widget build(BuildContext context) {
     final circlesState = ref.watch(circlesProvider);
     final allCircles = circlesState.allCircles;
-    final visibleCircles = allCircles.isEmpty ? _previewCircles : allCircles;
-    final filtered = allCircles.isEmpty
-        ? _previewCircles
-        : _filteredCircles(visibleCircles);
+    final visibleCircles = allCircles;
+    final filtered = _filteredCircles(visibleCircles);
     final joinedCount = visibleCircles
-        .where((c) => (c['is_member'] as bool?) == true)
+        .where((circle) => circle.isMember)
         .length;
     final createdCount = visibleCircles
-        .where((c) => (c['created_by_me'] as bool?) == true)
+        .where((circle) => circle.createdByMe)
         .length;
     final privateCount = visibleCircles
-        .where((c) => (c['is_private'] as bool?) == true)
+        .where((circle) => circle.isPrivate)
         .length;
     final tabCounts = [
       visibleCircles.length,
@@ -145,9 +138,7 @@ class _AllCirclesPageState extends ConsumerState<AllCirclesPage> {
                     );
                   },
                   onProfileTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ProfileView()),
-                    );
+                    showProfileBottomSheet(context);
                   },
                 ),
                 26.verticalSpace,
@@ -173,6 +164,11 @@ class _AllCirclesPageState extends ConsumerState<AllCirclesPage> {
                 22.verticalSpace,
                 if (circlesState.isLoading && allCircles.isEmpty)
                   const Center(child: CircularProgressIndicator())
+                else if (circlesState.error != null && allCircles.isEmpty)
+                  _CirclesLoadError(
+                    onRetry: () =>
+                        ref.read(circlesProvider.notifier).refreshAllCircles(),
+                  )
                 else if (filtered.isEmpty)
                   const EmptyCircleState()
                 else
@@ -181,18 +177,37 @@ class _AllCirclesPageState extends ConsumerState<AllCirclesPage> {
                       padding: EdgeInsets.only(bottom: 14.h),
                       child: CircleCardTile(
                         data: _circleUiData(filtered[index], index),
+                        isRequesting: circlesState.requestingCircleIds.contains(
+                          filtered[index].id,
+                        ),
                         onTap: () {
-                          final circleId =
-                              filtered[index]['id']?.toString() ??
-                              filtered[index]['circle_id']?.toString();
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => CirclesDetailsScreen(circleId: circleId),
+                              builder: (_) => CirclesDetailsScreen(
+                                circleId: filtered[index].id,
+                              ),
                             ),
                           );
                         },
-                        onRequestJoin: () {
-                          showDialog<void>(
+                        onRequestJoin: () async {
+                          final result = await ref
+                              .read(circlesProvider.notifier)
+                              .requestToJoinCircle(filtered[index].id);
+                          if (!context.mounted) {
+                            return;
+                          }
+                          if (result['success'] != true) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  result['error']?.toString() ??
+                                      'Could not send join request',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+                          await showDialog<void>(
                             context: context,
                             builder: (_) => const RequestSentDialog(),
                           );
@@ -226,12 +241,44 @@ class _AllCirclesPageState extends ConsumerState<AllCirclesPage> {
   }
 }
 
-const _fallbackNames = [
-  'StromWalker Team',
-  'ShadowCore',
-  'NeonStrike',
-  'Night Striders',
-];
+class _CirclesLoadError extends StatelessWidget {
+  const _CirclesLoadError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 36.h),
+      child: Column(
+        children: [
+          Icon(
+            Icons.error_outline_rounded,
+            size: 42.sp,
+            color: const Color(0xFF667085),
+          ),
+          12.verticalSpace,
+          Text(
+            'Circles could not be loaded',
+            style: TextStyle(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF101828),
+            ),
+          ),
+          6.verticalSpace,
+          Text(
+            'Check the circles table access and try again.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13.sp, color: const Color(0xFF667085)),
+          ),
+          10.verticalSpace,
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
+      ),
+    );
+  }
+}
 
 const _fallbackIcons = ['⚡', '🛡️', '⚡', '🌙'];
 
@@ -240,37 +287,4 @@ const _fallbackIconBackgrounds = [
   Color(0xFFDDEBFF),
   Color(0xFFDDEBFF),
   Color(0xFFE8F0FF),
-];
-
-const _previewCircles = [
-  {
-    'id': 'stormwalker-preview',
-    'name': 'StromWalker Team',
-    'max_members': 20,
-    'members': 14,
-    'rank': 2,
-  },
-  {
-    'id': 'shadowcore-preview',
-    'name': 'ShadowCore',
-    'is_private': true,
-    'max_members': 20,
-    'members': 14,
-    'rank': 3,
-  },
-  {
-    'id': 'neonstrike-preview',
-    'name': 'NeonStrike',
-    'max_members': 25,
-    'members': 25,
-    'rank': 6,
-  },
-  {
-    'id': 'night-striders-preview',
-    'name': 'Night Striders',
-    'is_member': true,
-    'max_members': 25,
-    'members': 18,
-    'rank': 10,
-  },
 ];

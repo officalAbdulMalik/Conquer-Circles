@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.example.testSteps</string>
+	<string>com.walk.territory.conquer.game</string>
 	<key>PROJECT_ID</key>
 	<string>stepsapp-4363e</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:482868800647:ios:140e1e0efe77c8bb3b1c22</string>
+	<string>1:482868800647:ios:de02b983ff04930a3b1c22</string>
 </dict>
 </plist>

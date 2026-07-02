@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:riverpod/legacy.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/supabase_service.dart';
@@ -10,12 +11,18 @@ class ProfileState {
   final Map<String, dynamic>? trustStatus;
   final bool isLoading;
   final String? error;
+  final String currentWeightGoal;
+  final int currentStepGoal;
+  final bool isGoalsLoading;
 
   ProfileState({
     this.profileData,
     this.trustStatus,
     this.isLoading = false,
     this.error,
+    this.currentWeightGoal = 'Lose Weight',
+    this.currentStepGoal = 5000,
+    this.isGoalsLoading = false,
   });
 
   ProfileState copyWith({
@@ -23,15 +30,23 @@ class ProfileState {
     Map<String, dynamic>? trustStatus,
     bool? isLoading,
     String? error,
+    String? currentWeightGoal,
+    int? currentStepGoal,
+    bool? isGoalsLoading,
   }) {
     return ProfileState(
       profileData: profileData ?? this.profileData,
       trustStatus: trustStatus ?? this.trustStatus,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      currentWeightGoal: currentWeightGoal ?? this.currentWeightGoal,
+      currentStepGoal: currentStepGoal ?? this.currentStepGoal,
+      isGoalsLoading: isGoalsLoading ?? this.isGoalsLoading,
     );
   }
 }
+
+
 
 class ProfileNotifier extends StateNotifier<ProfileState> {
   final SupabaseService supabaseService;
@@ -79,10 +94,55 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
   // logout method to clear local data and sign out from Supabase
   Future<void> logout() async {
     try {
+      debugPrint('🚪 [Session] Starting logout...');
+      
+      // Clear local state immediately
+      state = ProfileState();
+      debugPrint('✅ [Session] Cleared profile state');
+      
+      // Sign out from Supabase (this triggers AuthStateChange)
       await supabaseService.signOut();
-      state = ProfileState(); // Clear profile state on logout
+      debugPrint('✅ [Session] Signed out from Supabase');
+      
     } catch (e) {
-      print('[ProfileNotifier.logout] $e');
+      print('[ProfileNotifier.logout] Error: $e');
+      // Even if error, clear local state to ensure clean slate
+      state = ProfileState();
+    }
+  }
+
+  Future<void> loadCurrentGoals() async {
+    state = state.copyWith(isGoalsLoading: true);
+    try {
+      final profile = await supabaseService.getProfile();
+      state = state.copyWith(
+        currentWeightGoal: (profile?['weight_goal'] as String?) ?? 'Lose Weight',
+        currentStepGoal: (profile?['step_goal'] as int?) ?? (profile?['daily_steps_goal'] as int?) ?? 5000,
+        isGoalsLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(isGoalsLoading: false);
+    }
+  }
+
+  Future<void> updateGoals({
+    required String weightGoal,
+    required int dailyStepsGoal,
+  }) async {
+    state = state.copyWith(isGoalsLoading: true);
+    try {
+      await supabaseService.updateGoals(
+        weightGoal: weightGoal,
+        dailyStepsGoal: dailyStepsGoal,
+      );
+      state = state.copyWith(
+        currentWeightGoal: weightGoal,
+        currentStepGoal: dailyStepsGoal,
+        isGoalsLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(isGoalsLoading: false);
+      rethrow;
     }
   }
 

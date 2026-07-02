@@ -143,7 +143,7 @@ class OwnedTerritoryInfoCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '+0.42 km² Captured',
+                        'Territory Captured',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.montserrat(
@@ -169,7 +169,7 @@ class OwnedTerritoryInfoCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Near Central Park',
+                        'Energy ${territory.energy.clamp(0, 60)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.montserrat(
@@ -231,40 +231,6 @@ class OwnedTerritoryInfoCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE4E7EC)),
-            ),
-            child: const Row(
-              children: [
-                Expanded(
-                  child: _TerritorySummaryMetric(
-                    value: '8,420',
-                    label: 'Steps',
-                  ),
-                ),
-                _MetricDivider(),
-                Expanded(
-                  child: _TerritorySummaryMetric(
-                    value: '8.72km',
-                    label: 'Distance',
-                  ),
-                ),
-                _MetricDivider(),
-                Expanded(
-                  child: _TerritorySummaryMetric(
-                    value: '45:10',
-                    label: 'Duration',
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -272,19 +238,19 @@ class OwnedTerritoryInfoCard extends StatelessWidget {
 
   String get _displayName {
     return territory.username.trim().isEmpty || territory.username == 'Unknown'
-        ? 'Aqib Javid'
+        ? 'Unknown owner'
         : territory.username;
   }
 
   String get _capturedAtLabel {
     final capturedAt = territory.captureTime;
-    if (capturedAt == null) return 'Friday 16 May · 8:42 PM';
+    if (capturedAt == null) return 'Capture time unavailable';
     return '${_weekday(capturedAt)} ${capturedAt.day} ${_month(capturedAt)} · ${_time(capturedAt)}';
   }
 
   String get _captureAgeLabel {
     final capturedAt = territory.captureTime;
-    if (capturedAt == null) return '2 days';
+    if (capturedAt == null) return 'Unknown';
     final days = DateTime.now().difference(capturedAt).inDays;
     if (days <= 0) return 'Today';
     return '$days ${days == 1 ? 'day' : 'days'}';
@@ -292,7 +258,7 @@ class OwnedTerritoryInfoCard extends StatelessWidget {
 
   String get _lastVisitLabel {
     final lastVisit = territory.lastActivityTime;
-    if (lastVisit == null) return '20 min';
+    if (lastVisit == null) return 'Unknown';
     final minutes = DateTime.now().difference(lastVisit).inMinutes;
     if (minutes < 60) return '${minutes.clamp(1, 59)} min';
     final hours = DateTime.now().difference(lastVisit).inHours;
@@ -472,58 +438,6 @@ class _TerritoryInfoMetric extends StatelessWidget {
   }
 }
 
-class _TerritorySummaryMetric extends StatelessWidget {
-  final String value;
-  final String label;
-
-  const _TerritorySummaryMetric({required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Color(0xFF111827),
-            fontSize: 15,
-            height: 1.1,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Color(0xFF374151),
-            fontSize: 14,
-            height: 1.1,
-            fontWeight: FontWeight.w400,
-            letterSpacing: 0,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _MetricDivider extends StatelessWidget {
-  const _MetricDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(width: 1, height: 46, color: const Color(0xFFE5E7EB));
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Tile Info Bottom Sheet
 // ---------------------------------------------------------------------------
@@ -531,7 +445,6 @@ class _MetricDivider extends StatelessWidget {
 /// Shows info about a tapped territory and optionally an Attack / Claim button.
 ///
 /// Pass [tile] for a claimed territory, or null for an unclaimed area.
-/// [onAttackResult] fires with the RPC result map after a successful attack.
 void showTileInfoSheet({
   required BuildContext context,
   required Territory? tile,
@@ -566,11 +479,22 @@ class _TileInfoSheet extends ConsumerStatefulWidget {
 }
 
 class _TileInfoSheetState extends ConsumerState<_TileInfoSheet> {
-  bool _loading = false;
+  /// Action-in-flight flag; ValueNotifier so only the content panel rebuilds.
+  final ValueNotifier<bool> _loading = ValueNotifier(false);
+
+  @override
+  void dispose() {
+    _loading.dispose();
+    super.dispose();
+  }
 
   bool get _isOwn => widget.tile?.userId == widget.currentUserId;
-  bool get _isNeutral => widget.tile == null;
+  bool get _isNeutral => widget.tile == null || widget.tile!.userId.isEmpty;
   bool get _isProtected => widget.tile?.isProtected() ?? false;
+  bool get _isInCooldown {
+    final cooldownUntil = widget.tile?.cooldownUntil;
+    return cooldownUntil != null && cooldownUntil.isAfter(DateTime.now());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -599,19 +523,27 @@ class _TileInfoSheetState extends ConsumerState<_TileInfoSheet> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: _isNeutral
-                  ? _NeutralTileContent(
-                      onClaim: _handleClaim,
-                      loading: _loading,
-                    )
-                  : _isOwn
-                  ? _OwnTileContent(territory: territory!)
-                  : _EnemyTileContent(
-                      territory: territory!,
-                      onAttack: _handleAttack,
-                      loading: _loading,
-                      isProtected: _isProtected,
-                    ),
+              child: ValueListenableBuilder<bool>(
+                valueListenable: _loading,
+                builder: (context, loading, _) => _isNeutral
+                    ? _NeutralTileContent(
+                        onClaim: _handleClaim,
+                        loading: loading,
+                      )
+                    : _isOwn
+                    ? _OwnTileContent(
+                        territory: territory!,
+                        onReinforce: _handleAttack,
+                        loading: loading,
+                      )
+                    : _EnemyTileContent(
+                        territory: territory!,
+                        onAttack: _handleAttack,
+                        loading: loading,
+                        isProtected: _isProtected,
+                        isInCooldown: _isInCooldown,
+                      ),
+              ),
             ),
           ),
         ],
@@ -621,72 +553,43 @@ class _TileInfoSheetState extends ConsumerState<_TileInfoSheet> {
 
   Future<void> _handleAttack() async {
     if (widget.tile == null) return;
-    setState(() => _loading = true);
+    _loading.value = true;
 
     final result = await ref
         .read(mapProvider.notifier)
         .onEnterTerritory(widget.tile!.id);
 
     if (!mounted) return;
-    setState(() => _loading = false);
+    _loading.value = false;
 
-    if (result != null) {
-      final action = result['action']?.toString() ?? '';
-      final variant = AttackToastController.variantFromAction(action);
-      if (variant != null) {
-        widget.toastController.show(variant, _messageForResult(result));
-      }
-      Navigator.pop(context);
-    }
+    if (result != null) Navigator.pop(context);
   }
 
   Future<void> _handleClaim() async {
-    setState(() => _loading = true);
-    // Claiming happens while walking; manual tap only shows guidance.
+    _loading.value = true;
     final loc = ref.read(mapProvider).userLocation;
     if (loc == null) {
-      setState(() => _loading = false);
+      _loading.value = false;
       return;
     }
-    // Show a hint toast since physical proximity is needed
+
+    if (widget.tile != null) {
+      final result = await ref
+          .read(mapProvider.notifier)
+          .onEnterTerritory(widget.tile!.id);
+      if (!mounted) return;
+      _loading.value = false;
+      if (result != null) Navigator.pop(context);
+      return;
+    }
+
     widget.toastController.show(
       AttackToastVariant.claimed,
-      'Walk into this territory to claim it!',
+      'Move into a highlighted territory to claim it.',
     );
     if (mounted) {
-      setState(() => _loading = false);
+      _loading.value = false;
       Navigator.pop(context);
-    }
-  }
-
-  String _messageForResult(Map<String, dynamic> result) {
-    final action = result['action']?.toString() ?? '';
-    switch (action) {
-      case 'claimed':
-        return 'Territory claimed! ⚡';
-      case 'captured':
-        return 'Enemy territory captured!';
-      case 'damaged':
-        final before =
-            result['territory_energy_before'] ?? result['energy_before'] ?? '?';
-        final after =
-            result['territory_energy_after'] ?? result['energy_after'] ?? '?';
-        return 'Territory damaged: $before -> $after energy';
-      case 'reinforced':
-        final after = result['territory_energy_after'] ?? '?';
-        return 'Territory reinforced to $after energy';
-      case 'protected':
-        return 'Protected — come back later';
-      case 'shielded':
-        return 'Shielded — come back later';
-      case 'cooldown':
-        return 'Cooldown active — try later';
-      case 'no_energy':
-        return 'No attack energy — walk more!';
-      case 'not_friends':
-        return 'You can only attack your friends';
-      default:
-        return 'Something went wrong';
     }
   }
 }
@@ -697,12 +600,22 @@ class _TileInfoSheetState extends ConsumerState<_TileInfoSheet> {
 
 class _OwnTileContent extends StatelessWidget {
   final Territory territory;
-  const _OwnTileContent({required this.territory});
+  final VoidCallback onReinforce;
+  final bool loading;
+
+  const _OwnTileContent({
+    required this.territory,
+    required this.onReinforce,
+    required this.loading,
+  });
 
   @override
   Widget build(BuildContext context) {
     final protected = territory.isProtected();
     final shieldEnd = territory.shieldUntil ?? territory.protectedUntil;
+    final cooldownUntil = territory.cooldownUntil;
+    final isInCooldown =
+        cooldownUntil != null && cooldownUntil.isAfter(DateTime.now());
     final energy = territory.energy.clamp(0, 60);
 
     return Column(
@@ -780,6 +693,10 @@ class _OwnTileContent extends StatelessWidget {
               fontSize: 11,
             ),
           ),
+        if (isInCooldown) ...[
+          const SizedBox(height: 8),
+          _CooldownStatusPill(until: cooldownUntil),
+        ],
 
         const Spacer(),
 
@@ -787,7 +704,7 @@ class _OwnTileContent extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: energy < 60 ? () {} : null,
+            onPressed: energy < 60 && !loading ? onReinforce : null,
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xFF2196F3),
               side: const BorderSide(color: Color(0xFF2196F3)),
@@ -796,10 +713,16 @@ class _OwnTileContent extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            icon: const Icon(Icons.add_circle_outline, size: 16),
-            label: const Text(
-              'Reinforce',
-              style: TextStyle(fontWeight: FontWeight.w700),
+            icon: loading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.add_circle_outline, size: 16),
+            label: Text(
+              loading ? 'Reinforcing...' : 'Reinforce',
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
         ),
@@ -829,11 +752,13 @@ class _EnemyTileContent extends StatelessWidget {
   final VoidCallback onAttack;
   final bool loading;
   final bool isProtected;
+  final bool isInCooldown;
   const _EnemyTileContent({
     required this.territory,
     required this.onAttack,
     required this.loading,
     required this.isProtected,
+    required this.isInCooldown,
   });
 
   @override
@@ -841,6 +766,7 @@ class _EnemyTileContent extends StatelessWidget {
     final energy = territory.energy.clamp(0, 60);
     final color = _hexColor(territory.color);
     final shieldEnd = territory.shieldUntil ?? territory.protectedUntil;
+    final cooldownUntil = territory.cooldownUntil;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -864,27 +790,33 @@ class _EnemyTileContent extends StatelessWidget {
         _EnergyBar(current: energy, max: 60, color: color),
         const SizedBox(height: 12),
 
-        // Attack energy hint
-        const Row(
-          children: [
-            Icon(Icons.bolt, color: Color(0xFFFF9800), size: 14),
-            SizedBox(width: 4),
-            Text(
-              'Your energy is shown on the map ⚡',
-              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
-            ),
-          ],
-        ),
+        if (isInCooldown && cooldownUntil != null)
+          _CooldownStatusPill(until: cooldownUntil)
+        else
+          const Row(
+            children: [
+              Icon(Icons.bolt, color: Color(0xFFFF9800), size: 14),
+              SizedBox(width: 4),
+              Text(
+                'Your energy is shown on the map',
+                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+              ),
+            ],
+          ),
 
         const Spacer(),
 
-        // Attack button — disabled if protected or loading
+        // Attack button — disabled if protected, cooling down, or loading
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: (isProtected || loading) ? null : onAttack,
+            onPressed: (isProtected || isInCooldown || loading)
+                ? null
+                : onAttack,
             style: ElevatedButton.styleFrom(
-              backgroundColor: isProtected
+              backgroundColor: isInCooldown
+                  ? const Color(0xFFF59E0B)
+                  : isProtected
                   ? const Color(0xFF9C27B0)
                   : const Color(0xFFF44336),
               foregroundColor: Colors.white,
@@ -903,9 +835,18 @@ class _EnemyTileContent extends StatelessWidget {
                       color: Colors.white,
                     ),
                   )
-                : Icon(isProtected ? Icons.shield : Icons.flash_on, size: 16),
+                : Icon(
+                    isInCooldown
+                        ? Icons.timer_outlined
+                        : isProtected
+                        ? Icons.shield
+                        : Icons.flash_on,
+                    size: 16,
+                  ),
             label: Text(
-              isProtected && shieldEnd != null
+              isInCooldown && cooldownUntil != null
+                  ? 'Cooldown: ${_remaining(cooldownUntil)}'
+                  : isProtected && shieldEnd != null
                   ? 'Protected: ${_remaining(shieldEnd)}'
                   : 'Attack',
               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
@@ -933,6 +874,52 @@ class _EnemyTileContent extends StatelessWidget {
   }
 }
 
+class _CooldownStatusPill extends StatelessWidget {
+  const _CooldownStatusPill({required this.until});
+
+  final DateTime until;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF59E0B).withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: const Color(0xFFF59E0B).withValues(alpha: 0.45),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.timer_outlined, color: Color(0xFFF59E0B), size: 14),
+          const SizedBox(width: 6),
+          Text(
+            'Cooldown ${_formatCooldownRemaining(until)}',
+            style: const TextStyle(
+              color: Color(0xFFF59E0B),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatCooldownRemaining(DateTime end) {
+  final diff = end.difference(DateTime.now());
+  if (diff.isNegative) return 'expired';
+  final hours = diff.inHours;
+  final minutes = diff.inMinutes % 60;
+  final seconds = diff.inSeconds % 60;
+  if (hours > 0) return '${hours}h ${minutes}m';
+  if (minutes > 0) return '${minutes}m ${seconds}s';
+  return '${seconds}s';
+}
+
 class _NeutralTileContent extends StatelessWidget {
   final VoidCallback onClaim;
   final bool loading;
@@ -943,19 +930,13 @@ class _NeutralTileContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
-          children: [
-            Icon(Icons.hexagon_outlined, color: Color(0xFF94A3B8), size: 18),
-            SizedBox(width: 8),
-            Text(
-              'Unclaimed Territory',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
+        const Text(
+          'Unclaimed Territory',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(height: 16),
         _EnergyBar(current: 0, max: 60, color: const Color(0xFF94A3B8)),

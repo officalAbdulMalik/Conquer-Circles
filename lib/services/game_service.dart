@@ -22,29 +22,44 @@ class GameService {
   Future<Map<String, dynamic>> createCircle(
     String name, {
     bool isPrivate = true,
+    String? iconUrl,
   }) async {
     final user = currentUser;
     if (user == null) return {'success': false, 'error': 'Not signed in'};
     try {
       dynamic res;
+      final payload = {
+        'p_user_id': user.id,
+        'p_name': name,
+        'p_is_private': isPrivate,
+        if (iconUrl != null) 'p_icon_url': iconUrl,
+      };
       try {
-        // Preferred signature: create_circle(p_user_id, p_name, p_is_private)
-        res = await _client.rpc(
-          'create_circle',
-          params: {
-            'p_user_id': user.id,
-            'p_name': name,
-            'p_is_private': isPrivate,
-          },
+        // Preferred signature:
+        // create_circle(p_user_id, p_name, p_is_private, p_icon_url)
+        // ignore: avoid_print
+        print(
+          '[GameService.createCircle] Database payload: '
+          '${jsonEncode(payload)}',
         );
+        res = await _client.rpc('create_circle', params: payload);
       } catch (e) {
         // Backward compatibility with older RPC signature
-        res = await _client.rpc(
-          'create_circle',
-          params: {'p_user_id': user.id, 'p_name': name},
+        final fallbackPayload = {'p_user_id': user.id, 'p_name': name};
+        // ignore: avoid_print
+        print(
+          '[GameService.createCircle] Retrying with legacy payload: '
+          '${jsonEncode(fallbackPayload)}',
         );
+        res = await _client.rpc('create_circle', params: fallbackPayload);
       }
-      return Map<String, dynamic>.from(res as Map);
+      final response = Map<String, dynamic>.from(res as Map);
+      // ignore: avoid_print
+      print(
+        '[GameService.createCircle] Database response: '
+        '${jsonEncode(response)}',
+      );
+      return response;
     } catch (e) {
       _log('createCircle', e);
       return {'success': false, 'error': e.toString()};
@@ -165,6 +180,156 @@ class GameService {
     }
   }
 
+  Future<Map<String, dynamic>> requestToJoinCircle(String circleId) async {
+    final user = currentUser;
+    if (user == null) {
+      return {'success': false, 'error': 'Not signed in'};
+    }
+    if (!_isUuid(circleId)) {
+      return {'success': false, 'error': 'Invalid circle ID'};
+    }
+    try {
+      final response = await _client.rpc(
+        'request_to_join_circle',
+        params: {'p_circle_id': circleId, 'p_requester_id': user.id},
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      _log('requestToJoinCircle', e);
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getIncomingCircleJoinRequests() async {
+    final user = currentUser;
+    if (user == null) return [];
+    try {
+      final rows = await _client
+          .from('circle_join_requests')
+          .select(
+            'id, circle_id, requester_id, status, created_at, '
+            'circle:circles!circle_id!inner(id, name, owner_id), '
+            'requester:profiles!requester_id(username, full_name, avatar_url)',
+          )
+          .eq('status', 'pending')
+          .eq('circle.owner_id', user.id)
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(rows as List);
+    } catch (e) {
+      _log('getIncomingCircleJoinRequests', e);
+      return [];
+    }
+  }
+
+  Future<Map<String, String>> getMyCircleJoinRequestStatuses() async {
+    final user = currentUser;
+    if (user == null) return {};
+    try {
+      final rows = await _client
+          .from('circle_join_requests')
+          .select('circle_id, status')
+          .eq('requester_id', user.id);
+      return {
+        for (final row in List<Map<String, dynamic>>.from(rows as List))
+          if (row['circle_id'] != null)
+            row['circle_id'].toString(): row['status']?.toString() ?? '',
+      };
+    } catch (e) {
+      _log('getMyCircleJoinRequestStatuses', e);
+      return {};
+    }
+  }
+
+  Future<Map<String, dynamic>> respondToCircleJoinRequest({
+    required String requestId,
+    required bool accept,
+  }) async {
+    final user = currentUser;
+    if (user == null) {
+      return {'success': false, 'error': 'Not signed in'};
+    }
+    try {
+      final request = await _client
+          .from('circle_join_requests')
+          .select(
+            'id, circle_id, requester_id, status, '
+            'circle:circles!circle_id!inner(owner_id, max_members)',
+          )
+          .eq('id', requestId)
+          .eq('status', 'pending')
+          .maybeSingle();
+      if (request == null) {
+        return {'success': false, 'error': 'Pending request not found'};
+      }
+
+      final circle = Map<String, dynamic>.from(request['circle'] as Map? ?? {});
+      if (circle['owner_id']?.toString() != user.id) {
+        return {'success': false, 'error': 'Only the circle owner can respond'};
+      }
+
+      if (accept) {
+        final memberRows = await _client
+            .from('circle_members')
+            .select('user_id')
+            .eq('circle_id', request['circle_id']);
+        final maxMembers = (circle['max_members'] as num?)?.toInt() ?? 25;
+        if (memberRows.length >= maxMembers) {
+          return {'success': false, 'error': 'Circle is full'};
+        }
+
+        await _client.from('circle_members').upsert({
+          'circle_id': request['circle_id'],
+          'user_id': request['requester_id'],
+          'role': 'member',
+        }, onConflict: 'circle_id,user_id');
+      }
+
+      final status = accept ? 'accepted' : 'rejected';
+      await _client
+          .from('circle_join_requests')
+          .update({
+            'status': status,
+            'responded_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', requestId);
+
+      return {
+        'success': true,
+        'request_id': requestId,
+        'circle_id': request['circle_id'],
+        'requester_id': request['requester_id'],
+        'status': status,
+      };
+    } catch (e) {
+      _log('respondToCircleJoinRequest', e);
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> removeCircleMember({
+    required String circleId,
+    required String memberId,
+  }) async {
+    final user = currentUser;
+    if (user == null) {
+      return {'success': false, 'error': 'Not signed in'};
+    }
+    try {
+      final response = await _client.rpc(
+        'remove_circle_member',
+        params: {
+          'p_circle_id': circleId,
+          'p_member_id': memberId,
+          'p_owner_id': user.id,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      _log('removeCircleMember', e);
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // CIRCLE DATA
   // ---------------------------------------------------------------------------
@@ -254,168 +419,33 @@ class GameService {
   /// Call from: BrowseCirclesScreen on init
   Future<List<Map<String, dynamic>>> getAllCircles() async {
     try {
-      final baseRows = await _fetchAllCirclesBaseRows();
-      final circles = List<Map<String, dynamic>>.from(baseRows);
-      if (circles.isEmpty) return circles;
+      final rows = await _client.rpc(
+        'get_all_circles_ranked',
+        params: {'p_current_user_id': currentUser?.id},
+      );
 
-      final circleIds = circles
-          .map((circle) => circle['id']?.toString() ?? '')
-          .where((id) => id.isNotEmpty)
-          .toList();
-
-      final memberIdsByCircle = <String, Set<String>>{
-        for (final id in circleIds) id: <String>{},
-      };
-
-      try {
-        final memberRows = await _client
-            .from('circle_members')
-            .select('circle_id, user_id')
-            .inFilter('circle_id', circleIds);
-
-        for (final row in List<Map<String, dynamic>>.from(memberRows as List)) {
-          final circleId = row['circle_id']?.toString();
-          final userId = row['user_id']?.toString();
-          if (circleId == null || userId == null) continue;
-          memberIdsByCircle.putIfAbsent(circleId, () => <String>{}).add(userId);
-        }
-      } catch (e) {
-        _log('getAllCircles.memberCounts', e);
-      }
-
-      final allMemberIds = memberIdsByCircle.values
-          .expand((ids) => ids)
-          .toSet()
-          .toList();
-
-      final territoriesByUser = <String, int>{};
-      final raidsByUser = <String, int>{};
-
-      if (allMemberIds.isNotEmpty) {
-        try {
-          final territoryRows = await _client
-              .from('territories')
-              .select('user_id')
-              .inFilter('user_id', allMemberIds);
-
-          for (final row in List<Map<String, dynamic>>.from(
-            territoryRows as List,
-          )) {
-            final userId = row['user_id']?.toString();
-            if (userId == null || userId.isEmpty) continue;
-            territoriesByUser[userId] = (territoriesByUser[userId] ?? 0) + 1;
-          }
-        } catch (e) {
-          _log('getAllCircles.territories', e);
-        }
-
-        try {
-          final raidRows = await _client
-              .from('tile_attack_log')
-              .select('attacker_id')
-              .inFilter('attacker_id', allMemberIds)
-              .eq('captured', true);
-
-          for (final row in List<Map<String, dynamic>>.from(raidRows as List)) {
-            final userId = row['attacker_id']?.toString();
-            if (userId == null || userId.isEmpty) continue;
-            raidsByUser[userId] = (raidsByUser[userId] ?? 0) + 1;
-          }
-        } catch (e) {
-          _log('getAllCircles.raids', e);
-        }
-      }
-
-      final enriched = circles.map((circle) {
-        final row = Map<String, dynamic>.from(circle);
-        final circleId = row['id']?.toString() ?? '';
-        final memberIds = memberIdsByCircle[circleId] ?? <String>{};
-
-        int territories = 0;
-        int raidsWon = 0;
-        for (final memberId in memberIds) {
-          territories += territoriesByUser[memberId] ?? 0;
-          raidsWon += raidsByUser[memberId] ?? 0;
-        }
-
-        final memberCount = memberIds.length;
-        final rankScore = (territories * 3) + (raidsWon * 2) + memberCount;
-
-        row['member_count'] = memberCount;
-        row['territories'] = territories;
-        row['raids_won'] = raidsWon;
-        row['is_private'] = _parseCirclePrivacy(row);
-        row['_rank_score'] = rankScore;
-        return row;
+      return List<Map<String, dynamic>>.from(rows as List).map((row) {
+        final map = Map<String, dynamic>.from(row);
+        final rawProfiles = map['member_profiles'];
+        map['member_profiles'] = rawProfiles is List
+            ? List<Map<String, dynamic>>.from(
+                rawProfiles.map((p) => Map<String, dynamic>.from(p as Map)),
+              )
+            : <Map<String, dynamic>>[];
+        map['members'] = map['member_count'];
+        return map;
       }).toList();
-
-      enriched.sort((a, b) {
-        final scoreCompare = ((b['_rank_score'] as num?)?.toInt() ?? 0)
-            .compareTo((a['_rank_score'] as num?)?.toInt() ?? 0);
-        if (scoreCompare != 0) return scoreCompare;
-
-        final membersCompare = ((b['member_count'] as num?)?.toInt() ?? 0)
-            .compareTo((a['member_count'] as num?)?.toInt() ?? 0);
-        if (membersCompare != 0) return membersCompare;
-
-        final aCreated = a['created_at']?.toString() ?? '';
-        final bCreated = b['created_at']?.toString() ?? '';
-        return aCreated.compareTo(bCreated);
-      });
-
-      for (int i = 0; i < enriched.length; i++) {
-        enriched[i]['rank'] = i + 1;
-        enriched[i]['rank_trend'] = 0;
-        enriched[i].remove('_rank_score');
-      }
-
-      return enriched;
     } catch (e) {
       _log('getAllCircles', e);
-      return [];
+      rethrow;
     }
   }
 
-  Future<List<dynamic>> _fetchAllCirclesBaseRows() async {
-    try {
-      return await _client
-          .from('circles')
-          .select(
-            'id, name, invite_code, max_members, min_members, owner_id, is_active, created_at, is_private',
-          )
-          .eq('is_active', true)
-          .order('created_at', ascending: false);
-    } catch (_) {
-      return await _client
-          .from('circles')
-          .select(
-            'id, name, invite_code, max_members, min_members, owner_id, is_active, created_at',
-          )
-          .eq('is_active', true)
-          .order('created_at', ascending: false);
-    }
-  }
-
-  bool _parseCirclePrivacy(Map<String, dynamic> circle) {
-    final rawPrivate = circle['is_private'];
-    if (rawPrivate is bool) return rawPrivate;
-    if (rawPrivate is num) return rawPrivate != 0;
-    final privateText = rawPrivate?.toString().toLowerCase();
-    if (privateText == 'true' || privateText == '1') return true;
-    if (privateText == 'false' || privateText == '0') return false;
-
-    final rawVisibility = circle['visibility']?.toString().toLowerCase();
-    if (rawVisibility == 'private') return true;
-    if (rawVisibility == 'public') return false;
-
-    final rawPublic = circle['is_public'];
-    if (rawPublic is bool) return !rawPublic;
-    if (rawPublic is num) return rawPublic == 0;
-    final publicText = rawPublic?.toString().toLowerCase();
-    if (publicText == 'true' || publicText == '1') return false;
-    if (publicText == 'false' || publicText == '0') return true;
-
-    return false;
+  bool _isUuid(String value) {
+    return RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-'
+      r'[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+    ).hasMatch(value);
   }
 
   /// Leaves a circle. Owner cannot leave.
@@ -488,19 +518,113 @@ class GameService {
     int limit = 50,
   }) async {
     try {
-      final rows = await _client
-          .from('circle_messages')
-          .select(
-            'id, circle_id, user_id, message, sender_info, created_at, '
-            'circle_message_reactions(emoji, user_id, created_at)',
-          )
-          .eq('circle_id', circleId)
-          .order('created_at', ascending: false)
-          .limit(limit);
-      return List<Map<String, dynamic>>.from(rows as List);
+      dynamic rawMessages;
+      try {
+        rawMessages = await _client
+            .from('circle_messages')
+            .select(
+              'id, circle_id, user_id, message, sender_info, created_at, '
+              'edited_at',
+            )
+            .eq('circle_id', circleId)
+            .order('created_at', ascending: false)
+            .limit(limit);
+      } on PostgrestException catch (e) {
+        if (e.code != '42703') rethrow;
+        rawMessages = await _client
+            .from('circle_messages')
+            .select('id, circle_id, user_id, message, sender_info, created_at')
+            .eq('circle_id', circleId)
+            .order('created_at', ascending: false)
+            .limit(limit);
+      }
+
+      final messages = List<Map<String, dynamic>>.from(rawMessages as List);
+      if (messages.isEmpty) return messages;
+
+      final messageIds = messages
+          .map((message) => message['id']?.toString())
+          .whereType<String>()
+          .where((id) => id.isNotEmpty)
+          .toList();
+      final reactionsByMessage = <String, List<Map<String, dynamic>>>{};
+
+      if (messageIds.isNotEmpty) {
+        try {
+          final rawReactions = await _client
+              .from('circle_message_reactions')
+              .select('message_id, emoji, user_id, created_at')
+              .inFilter('message_id', messageIds);
+
+          for (final reaction in List<Map<String, dynamic>>.from(
+            rawReactions as List,
+          )) {
+            final messageId = reaction['message_id']?.toString();
+            if (messageId == null || messageId.isEmpty) continue;
+            reactionsByMessage
+                .putIfAbsent(messageId, () => <Map<String, dynamic>>[])
+                .add(reaction);
+          }
+        } on PostgrestException catch (e) {
+          if (e.code != 'PGRST205') {
+            _log('getCircleMessages.reactions', e);
+          }
+        } catch (e) {
+          _log('getCircleMessages.reactions', e);
+        }
+      }
+
+      return messages.map((message) {
+        final row = Map<String, dynamic>.from(message);
+        row['circle_message_reactions'] =
+            reactionsByMessage[row['id']?.toString()] ??
+            <Map<String, dynamic>>[];
+        return row;
+      }).toList();
     } catch (e) {
       _log('getCircleMessages', e);
-      return [];
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> editCircleMessage(
+    String messageId,
+    String message,
+  ) async {
+    final user = currentUser;
+    if (user == null) {
+      return {'success': false, 'error': 'Not signed in'};
+    }
+    try {
+      final response = await _client.rpc(
+        'edit_circle_message',
+        params: {
+          'p_message_id': messageId,
+          'p_user_id': user.id,
+          'p_message': message,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      _log('editCircleMessage', e);
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteCircleMessage(String messageId) async {
+    final user = currentUser;
+    if (user == null) {
+      return {'success': false, 'error': 'Not signed in'};
+    }
+    try {
+      final response = await _client.rpc(
+        'delete_circle_message',
+        params: {'p_message_id': messageId, 'p_user_id': user.id},
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      _log('deleteCircleMessage', e);
+      return {'success': false, 'error': e.toString()};
     }
   }
 
@@ -631,6 +755,16 @@ class GameService {
   Future<Map<String, dynamic>> setHomeBase(double lat, double lng) async {
     final user = currentUser;
     if (user == null) return {'success': false, 'error': 'Not signed in'};
+    // Never send invalid coordinates: doing so previously started the 30-day
+    // cooldown without saving a location, trapping the user.
+    if (lat.isNaN ||
+        lng.isNaN ||
+        lat < -90 ||
+        lat > 90 ||
+        lng < -180 ||
+        lng > 180) {
+      return {'success': false, 'error': 'Invalid home base coordinates'};
+    }
     try {
       final res = await _client.rpc(
         'set_home_base',

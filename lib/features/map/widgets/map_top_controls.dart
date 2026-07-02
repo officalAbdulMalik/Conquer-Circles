@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:test_steps/features/profile/view/profile_view.dart';
+import 'package:test_steps/features/profile/view/profile_bottom_sheet.dart';
 import 'package:test_steps/screens/notifications_screen.dart';
 import 'package:test_steps/widgets/shared/app_bar_icon_tile.dart';
 
@@ -43,11 +43,7 @@ class MapTopControls extends StatelessWidget {
           right: 16.sp,
           child: DashboardIconButton(
             icon: 'assets/icons/profile.png',
-            onTap: () {
-              Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const ProfileView()));
-            },
+            onTap: () => showProfileBottomSheet(context),
           ),
         ),
         Positioned(

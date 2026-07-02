@@ -1,7 +1,5 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/widgets/shared/app_borders.dart';
@@ -44,58 +42,48 @@ class ObjectiveTaskCard extends StatelessWidget {
         child: Row(
           children: [
             Container(
-             padding: EdgeInsets.all(8.w),
+              padding: EdgeInsets.all(8.w),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16.r),
                 border: Border.all(color: AppColors.borderColor, width: 1.w),
               ),
               child: Center(
-                    child: SvgPicture.asset(
-                      icon,
-                      width: 36.w,
-                      height: 36.w,
-                      colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
-                    ),
-                  ),
-                
-              
+                child: Image.asset(icon, width: 36.w, height: 36.w),
+              ),
             ),
             10.horizontalSpace,
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.montserrat(
-                          size: 16.sp,
-                          color: AppColors.textPrimary,
-                          weight: FontWeight.w700,
-                        ),
-                      ),
-                      10.horizontalSpace,
-                      
-                    ],
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.montserrat(
+                      size: 16.sp,
+                      color: AppColors.textPrimary,
+                      weight: FontWeight.w700,
+                    ),
                   ),
                   5.verticalSpace,
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        progressLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.montserrat(
-                          size: 14.sp,
-                          color: AppColors.textSecondary,
-                          weight: FontWeight.w400,
+                      Expanded(
+                        child: Text(
+                          progressLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.montserrat(
+                            size: 14.sp,
+                            color: AppColors.textSecondary,
+                            weight: FontWeight.w400,
+                          ),
                         ),
                       ),
+                      8.horizontalSpace,
                       Text(
                         '${(normalizedPercent * 100).round()}%',
                         style: AppTextStyles.montserrat(

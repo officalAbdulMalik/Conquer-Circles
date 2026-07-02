@@ -10,7 +10,7 @@ class DashboardSegmentedTabBar extends StatelessWidget {
     required this.labels,
     required this.selectedIndex,
     required this.onChanged,
-    this.height = 46,
+    this.height = 38,
     this.backgroundColor = AppColors.surface,
     this.inactiveTextColor = AppColors.textPrimary,
   });
@@ -24,13 +24,16 @@ class DashboardSegmentedTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(22.r);
+
     return Container(
       height: height.h,
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(24.r),
+        borderRadius: radius,
         border: AppBorders.raised(),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Row(
         children: List.generate(labels.length, (index) {
           return Expanded(
@@ -38,6 +41,8 @@ class DashboardSegmentedTabBar extends StatelessWidget {
               label: labels[index],
               selected: selectedIndex == index,
               inactiveTextColor: inactiveTextColor,
+              index: index,
+              itemCount: labels.length,
               onTap: () => onChanged(index),
             ),
           );
@@ -53,33 +58,65 @@ class DashboardSegmentedTabButton extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.inactiveTextColor,
+    required this.index,
+    required this.itemCount,
     required this.onTap,
   });
 
   final String label;
   final bool selected;
   final Color inactiveTextColor;
+  final int index;
+  final int itemCount;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: selected ? AppColors.blueColor : Colors.transparent,
-      borderRadius: BorderRadius.circular(24.r),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(24.r),
-        onTap: onTap,
-        child: Center(
-          child: Text(
-            label,
-            style: AppTextStyles.montserrat(
-              size: 14.sp,
-              color: selected ? AppColors.surface : inactiveTextColor,
-              weight: FontWeight.w400,
+    final selectedRadius = _selectedBorderRadius();
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      decoration: BoxDecoration(
+        color: selected ? AppColors.blueColor : Colors.transparent,
+        borderRadius: selectedRadius,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: selectedRadius,
+        child: InkWell(
+          borderRadius: selectedRadius,
+          onTap: onTap,
+          child: Center(
+            child: Text(
+              label,
+              style: AppTextStyles.montserrat(
+                size: 14.sp,
+                color: selected ? AppColors.surface : inactiveTextColor,
+                weight: FontWeight.w400,
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  BorderRadius _selectedBorderRadius() {
+    final radius = Radius.circular(22.r);
+
+    if (itemCount <= 1) {
+      return BorderRadius.all(radius);
+    }
+
+    if (index == 0) {
+      return BorderRadius.only(topLeft: radius, bottomLeft: radius);
+    }
+
+    if (index == itemCount - 1) {
+      return BorderRadius.only(topRight: radius, bottomRight: radius);
+    }
+
+    return BorderRadius.zero;
   }
 }

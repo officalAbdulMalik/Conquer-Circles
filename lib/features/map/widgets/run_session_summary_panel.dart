@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
-import 'package:test_steps/models/walk_models.dart';
 
 class RunSessionSummaryPanel extends StatefulWidget {
   const RunSessionSummaryPanel({
@@ -12,25 +11,25 @@ class RunSessionSummaryPanel extends StatefulWidget {
     required this.startedAt,
     required this.pausedAt,
     required this.distanceKm,
-    required this.totalAreaKm2,
+    required this.steps,
+    required this.claimedAreaKm2,
     required this.isPaused,
     required this.onPause,
     required this.onResume,
     required this.onFinish,
-    this.territories = const [],
-    this.onTerritoryTap,
+    required this.onHistory,
   });
 
-  final DateTime? startedAt;
+  final DateTime startedAt;
   final DateTime? pausedAt;
   final double distanceKm;
-  final double totalAreaKm2;
+  final int steps;
+  final double claimedAreaKm2;
   final bool isPaused;
   final VoidCallback onPause;
   final VoidCallback onResume;
   final VoidCallback onFinish;
-  final List<Territory> territories;
-  final ValueChanged<Territory>? onTerritoryTap;
+  final VoidCallback onHistory;
 
   @override
   State<RunSessionSummaryPanel> createState() => _RunSessionSummaryPanelState();
@@ -44,7 +43,9 @@ class _RunSessionSummaryPanelState extends State<RunSessionSummaryPanel> {
   void initState() {
     super.initState();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _now = DateTime.now());
+      if (mounted && !widget.isPaused) {
+        setState(() => _now = DateTime.now());
+      }
     });
   }
 
@@ -56,17 +57,13 @@ class _RunSessionSummaryPanelState extends State<RunSessionSummaryPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final timerEnd = widget.isPaused ? widget.pausedAt ?? _now : _now;
-    final elapsed = widget.startedAt == null
-        ? Duration.zero
-        : timerEnd.difference(widget.startedAt!);
+    final end = widget.isPaused ? widget.pausedAt ?? _now : _now;
+    final elapsed = end.difference(widget.startedAt);
 
     return DraggableScrollableSheet(
       initialChildSize: widget.isPaused ? 0.36 : 0.34,
       minChildSize: widget.isPaused ? 0.34 : 0.32,
       maxChildSize: 0.42,
-      snap: true,
-      snapSizes: widget.isPaused ? const [0.36, 0.42] : const [0.34, 0.42],
       builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(
@@ -82,42 +79,106 @@ class _RunSessionSummaryPanelState extends State<RunSessionSummaryPanel> {
           ),
           child: SafeArea(
             top: false,
-            child: CustomScrollView(
+            child: ListView(
               controller: scrollController,
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 49,
-                          height: 5,
-                          margin: EdgeInsets.only(bottom: 14.h),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFD9DCE4),
-                            borderRadius: BorderRadius.circular(99),
-                          ),
-                        ),
-                        _StatsCard(
-                          area: _formatArea(widget.totalAreaKm2),
-                          distance: _formatDistance(widget.distanceKm),
-                          duration: _formatDuration(elapsed),
-                          pace: _formatPace(elapsed, widget.distanceKm),
-                        ),
-                        SizedBox(height: 20.h),
-                        widget.isPaused
-                            ? _PausedRunActions(
-                                onResume: widget.onResume,
-                                onFinish: widget.onFinish,
-                              )
-                            : _PauseRunButton(onTap: widget.onPause),
-                        SizedBox(height: 14.h),
-                      ],
+              padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 14.h),
+              children: [
+                Center(
+                  child: Container(
+                    width: 49,
+                    height: 5,
+                    margin: EdgeInsets.only(bottom: 14.h),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD9DCE4),
+                      borderRadius: BorderRadius.circular(99),
                     ),
                   ),
                 ),
+                Container(
+                  padding: EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 16.h),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCEBFF),
+                    borderRadius: BorderRadius.circular(24.r),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _Metric(
+                              value: _formatArea(widget.claimedAreaKm2),
+                              label: 'Claimed Area',
+                            ),
+                          ),
+                          Expanded(
+                            child: _Metric(
+                              value: '${widget.steps}',
+                              label: 'Steps',
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 12.h),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _Metric(
+                              value: _formatDistance(widget.distanceKm),
+                              label: 'Total Distance',
+                            ),
+                          ),
+                          Expanded(
+                            child: _Metric(
+                              value: _formatDuration(elapsed),
+                              label: 'Duration',
+                            ),
+                          ),
+                          Expanded(
+                            child: _Metric(
+                              value: _formatPace(
+                                elapsed,
+                                widget.distanceKm,
+                                widget.steps,
+                              ),
+                              label: 'Average Pace',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 20.h),
+                TextButton(
+                  onPressed: widget.onHistory,
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size(40.w, 40.h),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Icon(Icons.history_rounded),
+                ),
+                if (widget.isPaused)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _RunButton(
+                          label: 'Resume Run',
+                          onTap: widget.onResume,
+                        ),
+                      ),
+                      SizedBox(width: 14.w),
+                      Expanded(
+                        child: _RunButton(
+                          label: 'Finish Run',
+                          onTap: widget.onFinish,
+                          filled: true,
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  _RunButton(label: 'Pause Run', onTap: widget.onPause),
               ],
             ),
           ),
@@ -126,30 +187,27 @@ class _RunSessionSummaryPanelState extends State<RunSessionSummaryPanel> {
     );
   }
 
-  String _formatArea(double value) {
-    if (value <= 0) return '0km²';
-    return '${value.toStringAsFixed(value < 10 ? 2 : 1)}km²';
-  }
-
-  String _formatDistance(double value) {
-    if (value <= 0) return '0km';
-    return '${value.toStringAsFixed(value < 10 ? 2 : 1)}km';
-  }
-
-  String _formatDuration(Duration duration) {
+  static String _formatDuration(Duration duration) {
     final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
     final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-    final hours = duration.inHours;
-
-    if (hours > 0) {
-      return '$hours:$minutes:$seconds';
+    if (duration.inHours > 0) {
+      return '${duration.inHours}:$minutes:$seconds';
     }
     return '$minutes:$seconds';
   }
 
-  String _formatPace(Duration elapsed, double distanceKm) {
-    if (distanceKm <= 0) return '0/km';
+  static String _formatDistance(double distanceKm) {
+    return '${distanceKm.toStringAsFixed(distanceKm < 10 ? 2 : 1)}km';
+  }
 
+  static String _formatArea(double areaKm2) {
+    return '${areaKm2.toStringAsFixed(areaKm2 < 1 ? 3 : 2)}km²';
+  }
+
+  static String _formatPace(Duration elapsed, double distanceKm, int steps) {
+    if (distanceKm < 0.02 || steps < 10 || elapsed.inSeconds <= 0) {
+      return '--/km';
+    }
     final secondsPerKm = elapsed.inSeconds / distanceKm;
     final minutes = secondsPerKm ~/ 60;
     final seconds = (secondsPerKm % 60).round().toString().padLeft(2, '0');
@@ -157,98 +215,33 @@ class _RunSessionSummaryPanelState extends State<RunSessionSummaryPanel> {
   }
 }
 
-class _StatsCard extends StatelessWidget {
-  const _StatsCard({
-    required this.area,
-    required this.distance,
-    required this.duration,
-    required this.pace,
-  });
-
-  final String area;
-  final String distance;
-  final String duration;
-  final String pace;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 16.h),
-      decoration: BoxDecoration(
-        color: const Color(0xFFDCEBFF),
-        borderRadius: BorderRadius.circular(24.r),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _Metric(value: area, label: 'Total Area', align: TextAlign.center),
-          SizedBox(height: 12.h),
-          Row(
-            children: [
-              Expanded(
-                child: _Metric(
-                  value: distance,
-                  label: 'Total Distance',
-                  align: TextAlign.left,
-                ),
-              ),
-              Expanded(
-                child: _Metric(
-                  value: duration,
-                  label: 'Duration',
-                  align: TextAlign.center,
-                ),
-              ),
-              Expanded(
-                child: _Metric(
-                  value: pace,
-                  label: 'Average Pace',
-                  align: TextAlign.right,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _Metric extends StatelessWidget {
-  const _Metric({
-    required this.value,
-    required this.label,
-    required this.align,
-  });
+  const _Metric({required this.value, required this.label});
 
   final String value;
   final String label;
-  final TextAlign align;
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: _crossAxisAlignment,
       children: [
         Text(
           value,
-          textAlign: align,
+          textAlign: TextAlign.center,
           style: AppTextStyles.poppins(
             size: 18,
             color: AppColors.textPrimary,
             weight: FontWeight.w800,
-            height: 1.1,
           ),
         ),
         SizedBox(height: 6.h),
         Text(
           label,
-          textAlign: align,
+          textAlign: TextAlign.center,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: AppTextStyles.montserrat(
-            size: 14,
+            size: 13,
             color: AppColors.textSecondary,
             weight: FontWeight.w500,
           ),
@@ -256,89 +249,18 @@ class _Metric extends StatelessWidget {
       ],
     );
   }
-
-  CrossAxisAlignment get _crossAxisAlignment {
-    switch (align) {
-      case TextAlign.left:
-        return CrossAxisAlignment.start;
-      case TextAlign.right:
-        return CrossAxisAlignment.end;
-      default:
-        return CrossAxisAlignment.center;
-    }
-  }
 }
 
-class _PauseRunButton extends StatelessWidget {
-  const _PauseRunButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 48.h,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24.r),
-          border: Border.all(color: AppColors.blueColor, width: 1.5),
-        ),
-        child: Text(
-          'Pause Run',
-          style: AppTextStyles.montserrat(
-            size: 16,
-            color: AppColors.blueColor,
-            weight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PausedRunActions extends StatelessWidget {
-  const _PausedRunActions({required this.onResume, required this.onFinish});
-
-  final VoidCallback onResume;
-  final VoidCallback onFinish;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _RunActionButton(
-            label: 'Resume Run',
-            onTap: onResume,
-            isFilled: false,
-          ),
-        ),
-        SizedBox(width: 14.w),
-        Expanded(
-          child: _RunActionButton(
-            label: 'Finish Run',
-            onTap: onFinish,
-            isFilled: true,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _RunActionButton extends StatelessWidget {
-  const _RunActionButton({
+class _RunButton extends StatelessWidget {
+  const _RunButton({
     required this.label,
     required this.onTap,
-    required this.isFilled,
+    this.filled = false,
   });
 
   final String label;
   final VoidCallback onTap;
-  final bool isFilled;
+  final bool filled;
 
   @override
   Widget build(BuildContext context) {
@@ -348,7 +270,7 @@ class _RunActionButton extends StatelessWidget {
         height: 48.h,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isFilled ? AppColors.blueColor : Colors.white,
+          color: filled ? AppColors.blueColor : Colors.white,
           borderRadius: BorderRadius.circular(24.r),
           border: Border.all(color: AppColors.blueColor, width: 1.5),
         ),
@@ -356,7 +278,7 @@ class _RunActionButton extends StatelessWidget {
           label,
           style: AppTextStyles.montserrat(
             size: 15,
-            color: isFilled ? Colors.white : AppColors.blueColor,
+            color: filled ? Colors.white : AppColors.blueColor,
             weight: FontWeight.w600,
           ),
         ),

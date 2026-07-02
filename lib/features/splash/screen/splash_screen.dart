@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:test_steps/features/onboarding/screen/onboarding_one_screen.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:test_steps/screens/get_started_screen.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../widgets/splash_logo.dart';
-import '../widgets/splash_decorative_elements.dart';
-import '../widgets/splash_floating_vector_icons.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,148 +12,56 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _progressController;
-  late Animation<double> _progressAnimation;
-
+class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _progressController = AnimationController(
-      duration: const Duration(seconds: 3),
-      vsync: this,
-    );
 
-    _progressAnimation =
-        Tween<double>(begin: 0, end: 1).animate(_progressController);
-
-    _progressController.forward();
-
-    // Navigate after animation completes
     Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-       
-       Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const OnboardingOneScreen()),
-        );
-      }
+      if (!mounted) return;
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const GetStartedScreen()),
+      );
     });
-  }
-
-
-  
-
-  @override
-  void dispose() {
-    _progressController.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
-
-    return Scaffold(
-      backgroundColor: AppColors.bgDeep,
-      body: SafeArea(
-        child: Stack(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: AppColors.splashBlueDeep,
+      ),
+      child: Scaffold(
+        backgroundColor: AppColors.splashBlue,
+        body: Stack(
           children: [
-            // Background container with gradient
-            Container(
-              width: screenSize.width,
-              height: screenSize.height,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.bgSoftPurple, // Light purple
-                    AppColors.surface, // White
-                    AppColors.brandLightCyan, // Light cyan
-                  ],
-                  stops: [0.08, 0.41, 0.91],
-                ),
+            IgnorePointer(
+              child: Image.asset(
+                'assets/images/back.png',
+                fit: BoxFit.cover,
+                height: 281.h,
+                color: const Color(0xff4C6FFF),
               ),
-              child: Stack(
-                children: [
-                  // Decorative floating circles
-                  const SplashDecorativeElements(),
+            ),
 
-                  // Main content centered
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Logo with badges
-                        const SplashLogo(),
-
-                        const SizedBox(height: 38),
-
-                        // FitQuest heading
-                        Text(
-                          'FitQuest',
-                          style: AppTextStyles.splashHeading,
-                        ),
-
-                        const SizedBox(height: 11),
-
-                        // Subtitle
-                        Text(
-                          'Level up your fitness journey',
-                          style: AppTextStyles.splashParagraph,
-                        ),
-
-                        const SizedBox(height: 78),
-
-                        // Progress bar
-                        AnimatedBuilder(
-                          animation: _progressAnimation,
-                          builder: (context, child) {
-                            return Stack(
-                              alignment: Alignment.centerLeft,
-                              children: [
-                                // Background
-                                Container(
-                                  width: 208,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.brandPurple
-                                        .withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(
-                                        21413900), // Very large for pill shape
-                                  ),
-                                ),
-                                // Progress fill
-                                Container(
-                                  width: 208 * _progressAnimation.value,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      begin: Alignment.centerLeft,
-                                      end: Alignment.centerRight,
-                                      colors: [
-                                        AppColors.brandPurple,
-                                        AppColors.brandCyan,
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(
-                                        21413900),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ],
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Center(
+                  child: Text(
+                    'Conquer Circles',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.montserrat(
+                      size: 30.sp,
+                      color: Colors.white,
+                      weight: FontWeight.w700,
                     ),
                   ),
-
-                  // Floating vector icons
-                  const SplashFloatingVectorIcons(),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),

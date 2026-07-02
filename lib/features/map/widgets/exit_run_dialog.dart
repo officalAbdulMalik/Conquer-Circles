@@ -88,7 +88,7 @@ class ExitRunDialog extends StatelessWidget {
               ),
               SizedBox(height: 10.h),
               Text(
-                'You have started a run and pressed\nback button, if you exit your run will\nlost. Are you sure want to exit?',
+                'Are you sure you want to finish this run?',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.montserrat(
                   size: 16.sp,

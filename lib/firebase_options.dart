@@ -51,7 +51,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyBilYKAGEfJBX1Sl1W_cmW4fNeoGUwPAKY',
-    appId: '1:482868800647:android:a531fc6352d8d36c3b1c22',
+    appId: '1:482868800647:android:5c9eb3c8caa139073b1c22',
     messagingSenderId: '482868800647',
     projectId: 'stepsapp-4363e',
     storageBucket: 'stepsapp-4363e.firebasestorage.app',
@@ -59,20 +59,20 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDhERWq-o7nmxgF_BrG3Remvv6I-MM7U5o',
-    appId: '1:482868800647:ios:140e1e0efe77c8bb3b1c22',
+    appId: '1:482868800647:ios:de02b983ff04930a3b1c22',
     messagingSenderId: '482868800647',
     projectId: 'stepsapp-4363e',
     storageBucket: 'stepsapp-4363e.firebasestorage.app',
-    iosBundleId: 'com.example.testSteps',
+    iosBundleId: 'com.walk.territory.conquer.game',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyDhERWq-o7nmxgF_BrG3Remvv6I-MM7U5o',
-    appId: '1:482868800647:ios:140e1e0efe77c8bb3b1c22',
+    appId: '1:482868800647:ios:de02b983ff04930a3b1c22',
     messagingSenderId: '482868800647',
     projectId: 'stepsapp-4363e',
     storageBucket: 'stepsapp-4363e.firebasestorage.app',
-    iosBundleId: 'com.example.testSteps',
+    iosBundleId: 'com.walk.territory.conquer.game',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

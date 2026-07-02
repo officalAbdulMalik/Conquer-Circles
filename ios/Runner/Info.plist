@@ -24,14 +24,33 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>GMSApiKey</key>
+	<string>AIzaSyCVYYYoDwNnxYh_M0uvOsPkxSOHnLKCw5o</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>io.supabase.conquercircles</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>io.supabase.conquercircles</string>
+			</array>
+		</dict>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSHealthShareUsageDescription</key>
 	<string>We need access to your health data to track your steps.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>We need access to your health data to track your steps.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>We use Bluetooth to find and connect your wearable device.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>We use Bluetooth to connect your wearable device.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>We need your location to show where you are on the map.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>We use motion activity to count your steps during walking sessions.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We use your photos so you can set a profile picture.</string>
 	<key>NSCameraUsageDescription</key>

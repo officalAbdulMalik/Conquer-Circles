@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
+import 'package:test_steps/widgets/shared/app_borders.dart';
 
 class NotificationsSummarySectionTile extends StatelessWidget {
   const NotificationsSummarySectionTile({
@@ -29,11 +30,11 @@ class NotificationsSummarySectionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 12.h),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(24.r),
-        border: Border.all(color: AppColors.borderLight),
+        borderRadius: BorderRadius.circular(22.r),
+        border: AppBorders.raised(),
       ),
       child: Row(
         children: [
@@ -103,7 +104,7 @@ class NotificationSummaryStatTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(14.r),
         onTap: onTap,
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 4.h),
+          padding: EdgeInsets.symmetric(vertical: 2.h),
           child: Column(
             children: [
               Container(
@@ -119,17 +120,19 @@ class NotificationSummaryStatTile extends StatelessWidget {
               SizedBox(height: 8.h),
               Text(
                 '$count',
-                style: AppTextStyles.cardTitle.copyWith(
-                  fontSize: 14.sp,
+                style: AppTextStyles.montserrat(
+                  size: 14,
                   color: AppColors.textNavy,
+                  weight: FontWeight.w800,
                 ),
               ),
               SizedBox(height: 2.h),
               Text(
                 label,
-                style: AppTextStyles.chipLabel.copyWith(
+                style: AppTextStyles.montserrat(
+                  size: 11,
                   color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
+                  weight: FontWeight.w600,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 1,

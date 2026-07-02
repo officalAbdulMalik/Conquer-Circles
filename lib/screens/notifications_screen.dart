@@ -8,9 +8,20 @@ class NotificationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: AppColors.bgLight,
-      body: SafeArea(child: NotificationsContentTile()),
+    return Scaffold(
+      backgroundColor: AppColors.scaffoldBackground,
+      body: Stack(
+        children: [
+          IgnorePointer(
+            child: Image.asset(
+              'assets/images/back.png',
+              fit: BoxFit.cover,
+              width: double.infinity,
+            ),
+          ),
+          const SafeArea(bottom: false, child: NotificationsContentTile()),
+        ],
+      ),
     );
   }
 }

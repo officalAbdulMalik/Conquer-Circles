@@ -8,8 +8,9 @@ class LeaderboardUser {
     required this.progressValue,
     required this.avatarEmoji,
     required this.avatarBgColor,
+    this.avatarUrl,
     this.badgeEmoji,
-    this.isOnline = false,
+    this.isOnline,
   });
 
   final int rank;
@@ -18,6 +19,7 @@ class LeaderboardUser {
   final double progressValue; // 0.0 – 1.0
   final String avatarEmoji;
   final Color avatarBgColor;
+  final String? avatarUrl;
   final String? badgeEmoji;
-  final bool isOnline;
+  final bool? isOnline;
 }

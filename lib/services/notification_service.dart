@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:ui';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -68,13 +69,15 @@ class NotificationService {
     );
 
     final token = await _messaging.getToken();
-    print('FCM TOKEN: $token');
+    developer.log('FCM TOKEN: $token', name: 'NotificationService');
     if (token != null) await _saveTokenToSupabase(token);
     _messaging.onTokenRefresh.listen(_saveTokenToSupabase);
 
     _setupMessageHandlers();
 
-    if (kDebugMode) print('[FCM] Ready');
+    if (kDebugMode) {
+      developer.log('[FCM] Ready', name: 'NotificationService');
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -96,6 +99,10 @@ class NotificationService {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       final notification = message.notification;
       final type = message.data['type'] as String? ?? 'general';
+
+      if (kDebugMode) {
+        developer.log('[FCM] foreground message received: type=$type title=${notification?.title} body=${notification?.body} data=${message.data}', name: 'NotificationService');
+      }
 
       if (notification != null) {
         _localNotifications.show(
@@ -357,6 +364,7 @@ class NotificationService {
       ownerId,
       'Your territory is under attack',
       'A rival is trying to capture one of your tiles. Walk nearby to defend it.',
+      type: 'territory_under_attack',
     );
   }
 
@@ -368,6 +376,7 @@ class NotificationService {
       ownerId,
       'You lost a tile',
       '$rivalUsername captured one of your territories. Walk there to take it back.',
+      type: 'territory_lost',
     );
   }
 
@@ -376,6 +385,7 @@ class NotificationService {
       ownerId,
       'Defense successful 🛡️',
       'Your tile resisted an attack. Your territory remains secure.',
+      type: 'territory_defended',
     );
   }
 
@@ -386,6 +396,7 @@ class NotificationService {
       userId,
       'Your territory just got stronger',
       'Walking through your tiles increased their defense energy.',
+      type: 'territory_strengthened',
     );
   }
 
@@ -403,9 +414,55 @@ class NotificationService {
         ownerUserId,
         'A rival is nearby',
         '$rivalUsername is walking close to your territory.',
+        type: 'rival_nearby',
       );
     } catch (e) {
       if (kDebugMode) print('[Notifications] notifyRivalNearby: $e');
+    }
+  }
+
+  static Future<void> notifyAttackFailed(
+    String userId,
+    String action, {
+    String? reason,
+  }) async {
+    final title = _attackFailureTitle(action);
+    final body = _attackFailureBody(action, reason);
+    await SupabaseService().sendNotification(
+      userId,
+      title,
+      body,
+      type: action,
+    );
+  }
+
+  static String _attackFailureTitle(String action) {
+    switch (action) {
+      case 'protected':
+        return 'Attack blocked';
+      case 'shielded':
+        return 'Attack blocked';
+      case 'cooldown':
+        return 'Attack cooldown';
+      case 'no_energy':
+        return 'No attack energy';
+      default:
+        return 'Attack failed';
+    }
+  }
+
+  static String _attackFailureBody(String action, String? reason) {
+    switch (action) {
+      case 'protected':
+        return reason ?? 'This territory is protected. Try again later.';
+      case 'shielded':
+        return reason ?? 'This territory is shielded while the owner is away.';
+      case 'cooldown':
+        return reason ?? 'You must wait before attacking this territory again.';
+      case 'no_energy':
+        return reason ?? 'You need more attack energy before trying again.';
+      default:
+        return reason ?? 'The attack could not be completed.';
     }
   }
 
@@ -478,6 +535,7 @@ class NotificationService {
       userId,
       'Territory captured 🎉',
       'You successfully conquered a tile from $victimUsername.',
+      type: 'raid_victory',
     );
   }
 
@@ -486,6 +544,7 @@ class NotificationService {
       userId,
       'Raid failed',
       'That tile was stronger than expected. Walk more and try again.',
+      type: 'raid_failed',
     );
   }
 
@@ -747,7 +806,7 @@ class NotificationService {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) return;
 
-    print('Notification test called');
+    developer.log('Notification test called', name: 'NotificationService');
     try {
       await SupabaseService().sendNotification(
         userId,
@@ -755,7 +814,7 @@ class NotificationService {
         'If you see this, the notification system is working!',
       );
     } catch (e) {
-      print('[Notifications] sendTestNotification: $e');
+      developer.log('[Notifications] sendTestNotification: $e', name: 'NotificationService');
     }
   }
 }

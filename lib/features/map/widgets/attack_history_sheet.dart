@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../models/dashboard_model.dart';
 import '../../../services/supabase_service.dart';
 
 // ---------------------------------------------------------------------------
@@ -10,8 +10,7 @@ import '../../../services/supabase_service.dart';
 
 class AttackLogEntry {
   final String territoryId;
-  final String
-  action; // 'captured', 'damaged', 'protected', 'cooldown', 'claimed'
+  final String action; // 'captured', 'damaged', 'reinforced', 'claimed'
   final int? energyBefore;
   final int? energyAfter;
   final DateTime timestamp;
@@ -39,6 +38,17 @@ class AttackLogEntry {
       isDefence: json['is_defence'] as bool? ?? false,
     );
   }
+
+  factory AttackLogEntry.fromTerritoryHistory(TerritoryHistoryEntry entry) {
+    return AttackLogEntry(
+      territoryId: entry.territoryId,
+      action: entry.action,
+      energyBefore: entry.energyBefore,
+      energyAfter: entry.energyAfter,
+      timestamp: entry.createdAt,
+      isDefence: entry.isDefence,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -53,32 +63,8 @@ final attackHistoryProvider = FutureProvider.autoDispose<List<AttackLogEntry>>((
   final user = svc.currentUser;
   if (user == null) return [];
 
-  try {
-    final rows = await Supabase.instance.client
-        .from('territory_attack_log')
-        .select()
-        .or('attacker_id.eq.${user.id},defender_id.eq.${user.id}')
-        .order('created_at', ascending: false)
-        .limit(50);
-
-    return (rows as List).map((r) {
-      final isDefence =
-          r['defender_id'] == user.id && r['attacker_id'] != user.id;
-      return AttackLogEntry(
-        territoryId:
-            r['territory_id']?.toString() ?? r['tile_id']?.toString() ?? '',
-        action: r['action']?.toString() ?? '',
-        energyBefore: r['energy_before'] as int?,
-        energyAfter: r['energy_after'] as int?,
-        timestamp: r['created_at'] != null
-            ? DateTime.parse(r['created_at'] as String)
-            : DateTime.now(),
-        isDefence: isDefence,
-      );
-    }).toList();
-  } catch (e) {
-    return [];
-  }
+  final history = await svc.getTerritoryHistory(limit: 50);
+  return history.map(AttackLogEntry.fromTerritoryHistory).toList();
 });
 
 // ---------------------------------------------------------------------------
@@ -139,7 +125,7 @@ class _AttackHistorySheet extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Attack History',
+                          'Territory History',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -148,7 +134,7 @@ class _AttackHistorySheet extends ConsumerWidget {
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'Your recent territory battles',
+                          'Claims, attacks, and reinforcements',
                           style: TextStyle(
                             color: Color(0xFF64748B),
                             fontSize: 12,
@@ -342,6 +328,14 @@ class _AttackLogRow extends StatelessWidget {
           iconBg: const Color(0xFF2196F3).withValues(alpha: 0.2),
           badge: 'CLAIMED',
           badgeColor: const Color(0xFF2196F3),
+          filled: true,
+        );
+      case 'reinforced':
+        return _RowConfig(
+          icon: '🔋',
+          iconBg: const Color(0xFF00BCD4).withValues(alpha: 0.2),
+          badge: 'REINFORCED',
+          badgeColor: const Color(0xFF00BCD4),
           filled: true,
         );
       default:

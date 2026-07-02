@@ -3,7 +3,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 
 class DashboardIconButton extends StatelessWidget {
-  const DashboardIconButton({super.key, required this.icon, required this.onTap});
+  const DashboardIconButton({
+    super.key,
+    required this.icon,
+    required this.onTap,
+  });
 
   final String icon;
   final VoidCallback onTap;
@@ -21,6 +25,13 @@ class DashboardIconButton extends StatelessWidget {
           shape: BoxShape.circle,
           color: Colors.white,
           border: Border.all(color: AppColors.borderColor),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0x140F172A),
+              blurRadius: 10.r,
+              offset: Offset(0, 3.h),
+            ),
+          ],
         ),
         child: Image.asset(icon, color: const Color(0xFF0F172A)),
       ),

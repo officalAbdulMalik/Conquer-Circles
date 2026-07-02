@@ -11,12 +11,14 @@ class DashboardScreenHeader extends StatelessWidget {
     required this.energy,
     required this.onNotificationsTap,
     required this.onProfileTap,
+    this.onEnergyTap,
   });
 
   final String title;
   final int energy;
   final VoidCallback onNotificationsTap;
   final VoidCallback onProfileTap;
+  final VoidCallback? onEnergyTap;
 
   @override
   Widget build(BuildContext context) {
@@ -28,9 +30,9 @@ class DashboardScreenHeader extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTextStyles.montserrat(
-              size: 18.sp,
+              size: 20.sp,
               color: const Color(0xFF111827),
-              weight: FontWeight.w700,
+              weight: FontWeight.w800,
             ),
           ),
         ),
@@ -44,31 +46,42 @@ class DashboardScreenHeader extends StatelessWidget {
           onTap: onProfileTap,
         ),
         10.horizontalSpace,
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 9.w, vertical: 9.sp),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24.r),
-            border: Border.all(color: AppColors.borderColor),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '$energy',
-                style: AppTextStyles.montserrat(
-                  size: 14.sp,
-                  color: const Color(0xFF111827),
-                  weight: FontWeight.w700,
+        InkWell(
+          borderRadius: BorderRadius.circular(24.r),
+          onTap: onEnergyTap,
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 9.w, vertical: 9.sp),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24.r),
+              border: Border.all(color: AppColors.borderColor),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0x140F172A),
+                  blurRadius: 10.r,
+                  offset: Offset(0, 3.h),
                 ),
-              ),
-              6.horizontalSpace,
-              Image.asset(
-                'assets/icons/battery.png',
-                width: 22.sp,
-                height: 22.sp,
-              ),
-            ],
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '$energy',
+                  style: AppTextStyles.montserrat(
+                    size: 14.sp,
+                    color: const Color(0xFF111827),
+                    weight: FontWeight.w700,
+                  ),
+                ),
+                6.horizontalSpace,
+                Image.asset(
+                  'assets/icons/battery.png',
+                  width: 22.sp,
+                  height: 22.sp,
+                ),
+              ],
+            ),
           ),
         ),
       ],

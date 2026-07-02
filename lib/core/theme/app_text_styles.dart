@@ -26,7 +26,7 @@ class AppTextStyles {
 
   static TextStyle montserrat({
     required double size,
-    required Color color,
+    Color? color,
     FontWeight weight = FontWeight.w400,
     double? height,
     double letterSpacing = 0,
@@ -34,7 +34,7 @@ class AppTextStyles {
     return style(
       fontFamily: 'Montserrat',
       size: size,
-      color: color,
+      color: color?? AppColors.textPrimary,
       weight: weight,
       height: height,
       letterSpacing: letterSpacing,
@@ -43,7 +43,7 @@ class AppTextStyles {
 
   static TextStyle poppins({
     required double size,
-    required Color color,
+    Color? color,
     FontWeight weight = FontWeight.w400,
     double? height,
     double letterSpacing = 0,
@@ -51,7 +51,7 @@ class AppTextStyles {
     return style(
       fontFamily: 'Poppins',
       size: size,
-      color: color,
+      color: color ?? AppColors.textPrimary,
       weight: weight,
       height: height,
       letterSpacing: letterSpacing,
@@ -144,14 +144,19 @@ class AppTextStyles {
     weight: FontWeight.w700,
     color: AppColors.textNavy,
     height: 1.2,
-    
   );
 
-  static TextStyle get cardSubtitle =>
-      montserrat(size: 12, color: AppColors.textSecondary, weight: FontWeight.w500);
+  static TextStyle get cardSubtitle => montserrat(
+    size: 12,
+    color: AppColors.textSecondary,
+    weight: FontWeight.w500,
+  );
 
-  static TextStyle get chipLabel =>
-      montserrat(size: 11, color: AppColors.textSecondary, weight: FontWeight.w600);
+  static TextStyle get chipLabel => montserrat(
+    size: 11,
+    color: AppColors.textSecondary,
+    weight: FontWeight.w600,
+  );
 
   static TextStyle get buttonLabel => poppins(
     size: 14,
@@ -162,16 +167,16 @@ class AppTextStyles {
 
   // Splash styles
   static TextStyle get splashHeading => poppins(
-    size: 36,
+    size: 31,
     weight: FontWeight.w800,
-    color: AppColors.textPrimary,
-    height: 1.3,
+    color: AppColors.surface,
+    height: 1.16,
   );
 
   static TextStyle get splashParagraph => poppins(
-    size: 15,
-    weight: FontWeight.w400,
-    color: AppColors.textSecondary,
-    height: 1.5,
+    size: 14,
+    weight: FontWeight.w500,
+    color: AppColors.surface.withValues(alpha: 0.78),
+    height: 1.45,
   );
 }

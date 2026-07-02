@@ -37,12 +37,15 @@ class CircleLeaderboardList extends StatelessWidget {
                         borderRadius: BorderRadius.circular(16.r),
                         border: Border.all(color: AppColors.borderColor),
                       ),
-                      child: Center(
-                        child: Text(
-                          members[index].avatar,
-                          style: TextStyle(fontSize: 28.sp),
-                        ),
-                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: members[index].avatarUrl != null
+                          ? Image.network(
+                              members[index].avatarUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  _avatarFallback(members[index].avatar),
+                            )
+                          : _avatarFallback(members[index].avatar),
                     ),
                     if (members[index].medal != null)
                       Positioned(
@@ -140,6 +143,12 @@ class CircleLeaderboardList extends StatelessWidget {
           ),
         );
       }),
+    );
+  }
+
+  Widget _avatarFallback(String avatar) {
+    return Center(
+      child: Text(avatar, style: TextStyle(fontSize: 28.sp)),
     );
   }
 }

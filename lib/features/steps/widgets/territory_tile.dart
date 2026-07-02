@@ -2,12 +2,20 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
+import 'package:test_steps/models/dashboard_model.dart';
 import 'package:test_steps/widgets/shared/app_borders.dart';
 
 class TerritoryHistoryCard extends StatelessWidget {
-  const TerritoryHistoryCard({super.key, required this.onTap});
+  const TerritoryHistoryCard({
+    super.key,
+    required this.entry,
+    required this.onTap,
+  });
+
+  final TerritoryHistoryEntry entry;
   final VoidCallback onTap;
 
   @override
@@ -39,7 +47,7 @@ class TerritoryHistoryCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '+0.42 km² Captured',
+                        _title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.montserrat(
@@ -50,7 +58,7 @@ class TerritoryHistoryCard extends StatelessWidget {
                       ),
                       5.verticalSpace,
                       Text(
-                        'Near Central Park',
+                        _territoryLabel,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.montserrat(
@@ -61,7 +69,7 @@ class TerritoryHistoryCard extends StatelessWidget {
                       ),
                       5.verticalSpace,
                       Text(
-                        'Today · 8:42 PM',
+                        _formattedTime,
                         style: AppTextStyles.montserrat(
                           size: 12.sp,
                           color: AppColors.textSecondary,
@@ -76,12 +84,46 @@ class TerritoryHistoryCard extends StatelessWidget {
             12.verticalSpace,
             Padding(
               padding: EdgeInsets.only(left: 8.sp),
-              child: _HistoryMetricRow(),
+              child: _HistoryMetricRow(entry: entry),
             ),
           ],
         ),
       ),
     );
+  }
+
+  String get _title {
+    final direction = entry.isDefence ? 'Defence' : 'Territory';
+    switch (entry.action) {
+      case 'claimed':
+        return 'Territory Claimed';
+      case 'captured':
+        return entry.isDefence ? 'Territory Lost' : 'Territory Captured';
+      case 'damaged':
+        return '$direction Damaged';
+      case 'reinforced':
+        return 'Territory Reinforced';
+      default:
+        return entry.action.isEmpty ? 'Territory Activity' : entry.action;
+    }
+  }
+
+  String get _territoryLabel {
+    final id = entry.territoryId;
+    final shortId = id.length > 8 ? id.substring(0, 8) : id;
+    return shortId.isEmpty ? 'Territory' : 'Territory ${shortId.toUpperCase()}';
+  }
+
+  String get _formattedTime {
+    final local = entry.createdAt.toLocal();
+    final now = DateTime.now();
+    final isToday =
+        local.year == now.year &&
+        local.month == now.month &&
+        local.day == now.day;
+    return isToday
+        ? 'Today · ${DateFormat.jm().format(local)}'
+        : DateFormat('MMM d · h:mm a').format(local);
   }
 }
 
@@ -112,15 +154,17 @@ class TerritoryThumbnailPainter extends CustomPainter {
 }
 
 class _HistoryMetricRow extends StatelessWidget {
-  const _HistoryMetricRow();
+  const _HistoryMetricRow({required this.entry});
+
+  final TerritoryHistoryEntry entry;
 
   @override
   Widget build(BuildContext context) {
-    const metrics = [
-      ('8,420', 'Steps'),
-      ('8.72km', 'Distance'),
-      ('45:10', 'Duration'),
-      ('42', 'Energy'),
+    final metrics = [
+      ('${entry.energyUsed}', 'Energy Used'),
+      (_energyValue(entry.energyBefore), 'Before'),
+      (_energyValue(entry.energyAfter), 'After'),
+      (entry.isDefence ? 'Defence' : 'Attack', 'Role'),
     ];
 
     return Row(
@@ -169,6 +213,8 @@ class _HistoryMetricRow extends StatelessWidget {
       }),
     );
   }
+
+  String _energyValue(int? value) => value?.toString() ?? '--';
 }
 
 void _paintMapBase(Canvas canvas, Size size, {required bool showLabels}) {

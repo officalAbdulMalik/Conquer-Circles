@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 // ---------------------------------------------------------------------------
@@ -13,6 +15,7 @@ enum AttackToastVariant {
   cooldown,
   noEnergy,
   restricted,
+  generic,
 }
 
 extension _AttackToastVariantExt on AttackToastVariant {
@@ -34,6 +37,8 @@ extension _AttackToastVariantExt on AttackToastVariant {
         return '⚡';
       case AttackToastVariant.restricted:
         return '🚫';
+      case AttackToastVariant.generic:
+        return '🔔';
     }
   }
 
@@ -55,6 +60,8 @@ extension _AttackToastVariantExt on AttackToastVariant {
         return const Color(0xFFB71C1C);
       case AttackToastVariant.restricted:
         return const Color(0xFF263238);
+      case AttackToastVariant.generic:
+        return const Color(0xFF1E88E5);
     }
   }
 
@@ -76,6 +83,8 @@ extension _AttackToastVariantExt on AttackToastVariant {
         return const Color(0xFFF44336);
       case AttackToastVariant.restricted:
         return const Color(0xFF90A4AE);
+      case AttackToastVariant.generic:
+        return const Color(0xFF64B5F6);
     }
   }
 }
@@ -119,12 +128,12 @@ class AttackToastController extends ChangeNotifier {
         return AttackToastVariant.reinforced;
       case 'protected':
       case 'shielded':
-        return AttackToastVariant.protected;
+        return AttackToastVariant.restricted;
       case 'cooldown':
         return AttackToastVariant.cooldown;
       case 'no_energy':
         return AttackToastVariant.noEnergy;
-      case 'not_friends':
+      case 'error':
         return AttackToastVariant.restricted;
       default:
         return null;
@@ -150,6 +159,7 @@ class _AttackToastOverlayState extends State<AttackToastOverlay>
   late AnimationController _animController;
   late Animation<Offset> _slideAnim;
   late Animation<double> _fadeAnim;
+  Timer? _hideTimer;
 
   AttackToastVariant? _currentVariant;
   String? _currentMessage;
@@ -185,8 +195,9 @@ class _AttackToastOverlayState extends State<AttackToastOverlay>
         _currentVariant = variant;
         _currentMessage = message;
       });
+      _hideTimer?.cancel();
       _animController.forward(from: 0).then((_) {
-        Future.delayed(const Duration(milliseconds: 2500), () {
+        _hideTimer = Timer(const Duration(milliseconds: 3500), () {
           if (mounted) {
             _animController.reverse().then((_) {
               widget.controller.clear();
@@ -199,6 +210,7 @@ class _AttackToastOverlayState extends State<AttackToastOverlay>
 
   @override
   void dispose() {
+    _hideTimer?.cancel();
     widget.controller.removeListener(_onControllerUpdate);
     _animController.dispose();
     super.dispose();
@@ -209,6 +221,19 @@ class _AttackToastOverlayState extends State<AttackToastOverlay>
     if (_currentVariant == null) return const SizedBox.shrink();
 
     final variant = _currentVariant!;
+
+    if (variant == AttackToastVariant.cooldown) {
+      return SlideTransition(
+        position: _slideAnim,
+        child: FadeTransition(
+          opacity: _fadeAnim,
+          child: _CooldownToastCard(
+            message: _currentMessage ?? '29 minutes remaining',
+            onClose: _dismiss,
+          ),
+        ),
+      );
+    }
 
     return SlideTransition(
       position: _slideAnim,
@@ -251,6 +276,100 @@ class _AttackToastOverlayState extends State<AttackToastOverlay>
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  void _dismiss() {
+    _hideTimer?.cancel();
+    _animController.reverse().then((_) {
+      if (mounted) widget.controller.clear();
+    });
+  }
+}
+
+class _CooldownToastCard extends StatelessWidget {
+  const _CooldownToastCard({required this.message, required this.onClose});
+
+  final String message;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: double.infinity,
+        constraints: const BoxConstraints(minHeight: 64),
+        padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.14),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEAF1FF),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.alarm,
+                color: Color(0xFF4169FF),
+                size: 26,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Cooldown Time',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Color(0xFF111827),
+                      fontSize: 15,
+                      height: 1.1,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    message,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF8A94A6),
+                      fontSize: 15,
+                      height: 1.1,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              onPressed: onClose,
+              icon: const Icon(Icons.close, color: Color(0xFF111827)),
+              tooltip: 'Dismiss',
+            ),
+          ],
         ),
       ),
     );

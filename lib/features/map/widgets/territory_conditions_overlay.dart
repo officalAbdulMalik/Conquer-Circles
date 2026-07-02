@@ -112,7 +112,7 @@ class _TerritoryConditionsOverlayState extends State<TerritoryConditionsOverlay>
 
   /// Build the energy bar showing remaining territory energy
   Widget _buildEnergyBar() {
-    final maxEnergy = 10; // Territory max energy
+    final maxEnergy = 60; // Territory max energy
     final currentEnergy = widget.territory.energy;
     final energyRatio = (currentEnergy / maxEnergy).clamp(0.0, 1.0);
 
@@ -133,7 +133,7 @@ class _TerritoryConditionsOverlayState extends State<TerritoryConditionsOverlay>
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -173,8 +173,9 @@ class _TerritoryConditionsOverlayState extends State<TerritoryConditionsOverlay>
 
   /// Build protection status badge
   Widget _buildProtectionBadge() {
-    final timeRemaining = _formatTimeRemaining(widget.territory.protectedUntil ??
-        widget.territory.shieldUntil);
+    final timeRemaining = _formatTimeRemaining(
+      widget.territory.protectedUntil ?? widget.territory.shieldUntil,
+    );
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
@@ -183,7 +184,7 @@ class _TerritoryConditionsOverlayState extends State<TerritoryConditionsOverlay>
         borderRadius: BorderRadius.circular(6),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 2,
             offset: const Offset(0, 1),
           ),
@@ -205,8 +206,10 @@ class _TerritoryConditionsOverlayState extends State<TerritoryConditionsOverlay>
     final timeRemaining = _formatTimeRemaining(widget.territory.cooldownUntil);
 
     return FadeTransition(
-      opacity: Tween<double>(begin: 0.5, end: 1.0)
-          .animate(_cooldownAnimationController),
+      opacity: Tween<double>(
+        begin: 0.5,
+        end: 1.0,
+      ).animate(_cooldownAnimationController),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         decoration: BoxDecoration(
@@ -214,7 +217,7 @@ class _TerritoryConditionsOverlayState extends State<TerritoryConditionsOverlay>
           borderRadius: BorderRadius.circular(6),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 2,
               offset: const Offset(0, 1),
             ),

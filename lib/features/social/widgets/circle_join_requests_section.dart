@@ -5,36 +5,23 @@ import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/social/models/circle_detail_models.dart';
 import 'package:test_steps/widgets/shared/app_borders.dart';
 
-class CircleJoinRequestsSection extends StatefulWidget {
-  const CircleJoinRequestsSection({super.key, required this.requests});
+class CircleJoinRequestsSection extends StatelessWidget {
+  const CircleJoinRequestsSection({
+    super.key,
+    required this.requests,
+    required this.onAccept,
+    required this.onDelete,
+    this.respondingRequestIds = const {},
+  });
 
   final List<CircleJoinRequest> requests;
-
-  @override
-  State<CircleJoinRequestsSection> createState() =>
-      _CircleJoinRequestsSectionState();
-}
-
-class _CircleJoinRequestsSectionState extends State<CircleJoinRequestsSection> {
-  late List<CircleJoinRequest> _requests;
-
-  @override
-  void initState() {
-    super.initState();
-    _requests = List<CircleJoinRequest>.from(widget.requests);
-  }
-
-  @override
-  void didUpdateWidget(CircleJoinRequestsSection oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.requests != widget.requests) {
-      _requests = List<CircleJoinRequest>.from(widget.requests);
-    }
-  }
+  final ValueChanged<String> onAccept;
+  final ValueChanged<String> onDelete;
+  final Set<String> respondingRequestIds;
 
   @override
   Widget build(BuildContext context) {
-    if (_requests.isEmpty) {
+    if (requests.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -50,25 +37,22 @@ class _CircleJoinRequestsSectionState extends State<CircleJoinRequestsSection> {
           ),
         ),
         12.verticalSpace,
-        ...List.generate(_requests.length, (index) {
-          final request = _requests[index];
+        ...List.generate(requests.length, (index) {
+          final request = requests[index];
           return Padding(
             padding: EdgeInsets.only(
-              bottom: index == _requests.length - 1 ? 0 : 12.h,
+              bottom: index == requests.length - 1 ? 0 : 12.h,
             ),
             child: CircleJoinRequestTile(
               request: request,
-              onAccept: () => _removeRequest(request),
-              onDelete: () => _removeRequest(request),
+              isLoading: respondingRequestIds.contains(request.id),
+              onAccept: () => onAccept(request.id),
+              onDelete: () => onDelete(request.id),
             ),
           );
         }),
       ],
     );
-  }
-
-  void _removeRequest(CircleJoinRequest request) {
-    setState(() => _requests.removeWhere((item) => item.id == request.id));
   }
 }
 
@@ -78,11 +62,13 @@ class CircleJoinRequestTile extends StatelessWidget {
     required this.request,
     required this.onAccept,
     required this.onDelete,
+    this.isLoading = false,
   });
 
   final CircleJoinRequest request;
   final VoidCallback onAccept;
   final VoidCallback onDelete;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -104,13 +90,15 @@ class CircleJoinRequestTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(16.r),
               border: Border.all(color: AppColors.borderColor),
             ),
-            child: Text(
-              request.avatar,
-              style: AppTextStyles.montserrat(
-                size: 27.sp,
-                color: AppColors.textPrimary,
-              ),
-            ),
+            clipBehavior: Clip.antiAlias,
+            child: request.avatarUrl != null
+                ? Image.network(
+                    request.avatarUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) =>
+                        _avatarFallback(request.avatar),
+                  )
+                : _avatarFallback(request.avatar),
           ),
           12.horizontalSpace,
           Expanded(
@@ -131,15 +119,15 @@ class CircleJoinRequestTile extends StatelessWidget {
                 Row(
                   children: [
                     CircleJoinRequestButton(
-                      label: 'Accept',
+                      label: isLoading ? 'Wait' : 'Accept',
                       selected: true,
-                      onTap: onAccept,
+                      onTap: isLoading ? null : onAccept,
                     ),
                     6.horizontalSpace,
                     CircleJoinRequestButton(
                       label: 'Delete',
                       selected: false,
-                      onTap: onDelete,
+                      onTap: isLoading ? null : onDelete,
                     ),
                   ],
                 ),
@@ -147,6 +135,18 @@ class CircleJoinRequestTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _avatarFallback(String avatar) {
+    return Center(
+      child: Text(
+        avatar,
+        style: AppTextStyles.montserrat(
+          size: 27.sp,
+          color: AppColors.textPrimary,
+        ),
       ),
     );
   }
@@ -162,7 +162,7 @@ class CircleJoinRequestButton extends StatelessWidget {
 
   final String label;
   final bool selected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

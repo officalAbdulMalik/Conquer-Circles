@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class SettingsTile extends StatelessWidget {
   final String title;
   final String? subtitle;
   final Widget? trailing;
-  final IconData? icon;
+  final String? icon;
   final Color? iconColor;
   final Color? iconBgColor;
   final VoidCallback? onTap;
@@ -33,10 +34,11 @@ class SettingsTile extends StatelessWidget {
                 color: iconBgColor ?? const Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(
-                icon,
-                color: iconColor ?? const Color(0xFF64748B),
-                size: 20,
+              child: Image.asset(
+                icon!,
+              
+                width: 20.sp,
+                height: 20.sp,
               ),
             )
           : null,

@@ -22,9 +22,10 @@ class NotificationDayHeaderTile extends StatelessWidget {
         children: [
           Text(
             label,
-            style: AppTextStyles.cardTitle.copyWith(
-              fontSize: 14.sp,
-              color: AppColors.textNavy,
+            style: AppTextStyles.montserrat(
+              size: 14,
+              color: AppColors.textPrimary,
+              weight: FontWeight.w700,
             ),
           ),
           SizedBox(width: 8.w),
@@ -36,9 +37,10 @@ class NotificationDayHeaderTile extends StatelessWidget {
             ),
             child: Text(
               '$itemCount',
-              style: AppTextStyles.chipLabel.copyWith(
+              style: AppTextStyles.montserrat(
+                size: 11,
                 color: AppColors.brandPurple,
-                fontWeight: FontWeight.w700,
+                weight: FontWeight.w700,
               ),
             ),
           ),

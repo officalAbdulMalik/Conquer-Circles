@@ -38,7 +38,7 @@ serve(async (req) => {
         // 2. Fetch Members and their Profiles
         const { data: members, error: membersError } = await supabaseClient
             .from('circle_members')
-            .select('user_id, role, profiles(username, xp, level, avatar_url, attack_energy)')
+            .select('user_id, role, profiles(username, full_name, xp, level, avatar_url, attack_energy)')
             .eq('circle_id', circle_id);
 
         if (membersError) {
@@ -122,7 +122,8 @@ serve(async (req) => {
             const profile = m.profiles as any;
             return {
                 user_id: m.user_id,
-                username: profile?.username || 'Unknown',
+                username: profile?.username || null,
+                full_name: profile?.full_name || null,
                 avatar_url: profile?.avatar_url,
                 role: m.role,
                 xp: profile?.xp || 0,
@@ -138,7 +139,11 @@ serve(async (req) => {
         leaderboard.sort((a, b) => (b.steps - a.steps) || (b.xp - a.xp));
 
         return new Response(JSON.stringify({
-            circle,
+            circle: {
+                ...circle,
+                member_count: members.length,
+                members: members.length,
+            },
             leaderboard,
             recent_messages: recentMessages,
             raid_alerts: raidAlerts,

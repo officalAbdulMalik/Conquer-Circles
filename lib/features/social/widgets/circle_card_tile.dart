@@ -8,16 +8,19 @@ import 'package:test_steps/widgets/shared/primary_button.dart';
 
 enum CircleCardAction { request, join, full }
 
-enum CircleCardStatus { active, private, full, joined }
+enum CircleCardStatus { active, private, full, joined, requested }
 
 class CircleCardTileData {
   const CircleCardTileData({
     required this.id,
     required this.name,
     required this.icon,
+    this.iconUrl,
     required this.iconBackground,
     required this.territory,
     required this.membersLabel,
+    required this.memberNames,
+    required this.memberAvatarUrls,
     required this.rank,
     required this.status,
     required this.action,
@@ -26,9 +29,12 @@ class CircleCardTileData {
   final String id;
   final String name;
   final String icon;
+  final String? iconUrl;
   final Color iconBackground;
   final String territory;
   final String membersLabel;
+  final List<String> memberNames;
+  final List<String?> memberAvatarUrls;
   final int rank;
   final CircleCardStatus status;
   final CircleCardAction action;
@@ -40,11 +46,13 @@ class CircleCardTile extends StatelessWidget {
     required this.data,
     this.onTap,
     this.onRequestJoin,
+    this.isRequesting = false,
   });
 
   final CircleCardTileData data;
   final VoidCallback? onTap;
   final VoidCallback? onRequestJoin;
+  final bool isRequesting;
 
   @override
   Widget build(BuildContext context) {
@@ -72,9 +80,15 @@ class CircleCardTile extends StatelessWidget {
                       color: AppColors.blueContiner,
                       borderRadius: BorderRadius.circular(20.r),
                     ),
-                    child: Center(
-                      child: Text(data.icon, style: TextStyle(fontSize: 28.sp)),
-                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: data.iconUrl != null
+                        ? Image.network(
+                            data.iconUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _iconFallback(data.icon),
+                          )
+                        : _iconFallback(data.icon),
                   ),
                   10.horizontalSpace,
                   Expanded(
@@ -149,7 +163,9 @@ class CircleCardTile extends StatelessWidget {
               Row(
                 children: [
                   AppAvatarStack(
-                    emojis: const ['👩', '👱', '🧑', '👨'],
+                    emojis: List.filled(data.memberNames.take(4).length, '👤'),
+                    imageUrls: data.memberAvatarUrls.take(4).toList(),
+                    labels: data.memberNames.take(4).toList(),
                     size: 30,
                     overlap: 18,
                     backgroundColor: AppColors.surface,
@@ -180,6 +196,7 @@ class CircleCardTile extends StatelessWidget {
                       fontSize: 14.sp,
                     ),
                     label: 'Request to Join',
+                    isLoading: isRequesting,
                     onTap: onRequestJoin,
                   ),
                 ),
@@ -188,6 +205,12 @@ class CircleCardTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _iconFallback(String icon) {
+    return Center(
+      child: Text(icon, style: TextStyle(fontSize: 28.sp)),
     );
   }
 }
@@ -213,6 +236,10 @@ class CircleStatusPill extends StatelessWidget {
         const Color(0xFFFF9B53),
       ),
       CircleCardStatus.joined => (const Color(0xFFE0EAFF), AppColors.blueColor),
+      CircleCardStatus.requested => (
+        const Color(0xFFFFF4D8),
+        const Color(0xFFB7791F),
+      ),
     };
 
     return Container(
@@ -240,6 +267,7 @@ extension CircleCardStatusLabel on CircleCardStatus {
       CircleCardStatus.private => 'Private',
       CircleCardStatus.full => 'Full',
       CircleCardStatus.joined => 'Joined',
+      CircleCardStatus.requested => 'Requested',
     };
   }
 }

@@ -2,36 +2,47 @@ import 'package:flutter/material.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 
 class SplashProgressBar extends StatelessWidget {
-  const SplashProgressBar({super.key});
+  const SplashProgressBar({required this.progress, super.key});
+
+  final double progress;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 208,
-      height: 8,
-      decoration: BoxDecoration(
-        color: AppColors.brandPurple.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(21413900), // Very large for pill shape
-      ),
-      child: Stack(
-        children: [
-          // Animated progress indicator
-          Container(
-            width: 208,
-            height: 8,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  AppColors.brandPurple, // Purple
-                  AppColors.brandCyan, // Cyan
-                ],
+    return SizedBox(
+      width: 184,
+      height: 5,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(999),
+        child: Stack(
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.surface.withValues(alpha: 0.22),
               ),
-              borderRadius: BorderRadius.circular(21413900),
+              child: const SizedBox.expand(),
             ),
-          ),
-        ],
+            FractionallySizedBox(
+              widthFactor: progress.clamp(0, 1),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.surface,
+                      AppColors.splashAqua.withValues(alpha: 0.95),
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.splashAqua.withValues(alpha: 0.55),
+                      blurRadius: 14,
+                    ),
+                  ],
+                ),
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

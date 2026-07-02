@@ -4,8 +4,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/social/models/circle_detail_models.dart';
+import 'package:test_steps/features/social/models/circle_models.dart';
 import 'package:test_steps/features/social/view/circle_comms_view.dart';
 import 'package:test_steps/features/social/widgets/circle_activity_list.dart';
+import 'package:test_steps/features/social/widgets/circle_admin_options_sheet.dart';
 import 'package:test_steps/features/social/widgets/circle_details_header.dart';
 import 'package:test_steps/features/social/widgets/circle_details_loading.dart';
 import 'package:test_steps/features/social/widgets/circle_join_requests_section.dart';
@@ -22,24 +24,25 @@ class CirclesDetailsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeCircleId =
-        circleId ??
-        ref
-            .watch(circlesProvider)
-            .circles
-            .firstOrNull?['circle_id']
-            ?.toString();
+        circleId ?? ref.watch(circlesProvider).circles.firstOrNull?.id;
     final detailsAsync = activeCircleId == null
         ? null
         : ref.watch(circleDetailsProvider(activeCircleId));
     final details = detailsAsync?.hasValue == true ? detailsAsync?.value : null;
-    final circle = details?['circle'] as Map<String, dynamic>?;
-    final leaderboard = details?['leaderboard'] as List<dynamic>?;
-    final requests = details?['requests'] as List<dynamic>?;
-    final circleName = _circleName(circle);
+    final circle = details?.circle;
+    final circlesState = ref.watch(circlesProvider);
+    final circleName = circle?.name ?? 'Unnamed Circle';
     final currentUserId = ref.watch(currentCircleUserIdProvider);
-    final isCreator =
-        currentUserId != null &&
-        circle?['owner_id']?.toString() == currentUserId;
+    final displayMembers = _leaderboardMembers(
+      details?.members ?? const [],
+      currentUserId,
+    );
+    final isCreator = currentUserId != null && circle?.ownerId == currentUserId;
+    final requests = activeCircleId == null
+        ? const <CircleJoinRequestModel>[]
+        : circlesState.incomingJoinRequests
+              .where((request) => request.circleId == activeCircleId)
+              .toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFD),
@@ -64,14 +67,60 @@ class CirclesDetailsScreen extends ConsumerWidget {
                   CircleDetailsHeader(
                     name: circleName,
                     status: _statusLabel(circle),
+                    members: displayMembers,
                     onBack: () => Navigator.maybePop(context),
+                    onOptions: isCreator
+                        ? () => _showAdminOptions(context)
+                        : null,
                   ),
                   16.verticalSpace,
-                  CircleMetricsRow(metrics: _metrics(circle)),
+                  CircleMetricsRow(
+                    metrics: _metrics(circle),
+                    circleName: circleName,
+                    members: displayMembers,
+                    canRemoveMembers: isCreator,
+                    removingMemberIds: circlesState.removingMemberIds,
+                    onRemoveMember: activeCircleId == null
+                        ? null
+                        : (memberId) async {
+                            final response = await ref
+                                .read(circlesProvider.notifier)
+                                .removeCircleMember(
+                                  circleId: activeCircleId,
+                                  memberId: memberId,
+                                );
+                            if (response['success'] == true) {
+                              ref.invalidate(
+                                circleDetailsProvider(activeCircleId),
+                              );
+                            }
+                            return response;
+                          },
+                  ),
                   if (isCreator) ...[
                     18.verticalSpace,
                     CircleJoinRequestsSection(
                       requests: _joinRequests(requests),
+                      respondingRequestIds: circlesState.respondingRequestIds,
+                      onAccept: (requestId) async {
+                        final response = await ref
+                            .read(circlesProvider.notifier)
+                            .respondToJoinRequest(
+                              requestId: requestId,
+                              accept: true,
+                            );
+                        if (response['success'] == true) {
+                          ref.invalidate(
+                            circleDetailsProvider(activeCircleId!),
+                          );
+                        }
+                      },
+                      onDelete: (requestId) => ref
+                          .read(circlesProvider.notifier)
+                          .respondToJoinRequest(
+                            requestId: requestId,
+                            accept: false,
+                          ),
                     ),
                   ],
                   18.verticalSpace,
@@ -108,9 +157,7 @@ class CirclesDetailsScreen extends ConsumerWidget {
                     ],
                   ),
                   12.verticalSpace,
-                  CircleLeaderboardList(
-                    members: _leaderboardMembers(leaderboard),
-                  ),
+                  CircleLeaderboardList(members: displayMembers),
                   24.verticalSpace,
                   Row(
                     children: [
@@ -162,6 +209,7 @@ class CirclesDetailsScreen extends ConsumerWidget {
                       builder: (_) => CircleCommsView(
                         circleId: activeCircleId ?? '',
                         circleName: circleName,
+                        members: displayMembers,
                       ),
                     ),
                   );
@@ -174,116 +222,79 @@ class CirclesDetailsScreen extends ConsumerWidget {
     );
   }
 
-  String _circleName(Map<String, dynamic>? circle) {
-    final name = circle?['name']?.toString().trim();
-    return name?.isNotEmpty == true ? name! : 'StromWalker Team';
+  String _statusLabel(CircleModel? circle) =>
+      circle?.isPrivate == true ? 'Private' : 'Active';
+
+  void _showAdminOptions(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => CircleAdminOptionsSheet(
+        onBlockChat: () => Navigator.pop(sheetContext),
+        onEditCircle: () => Navigator.pop(sheetContext),
+        onDeleteCircle: () => Navigator.pop(sheetContext),
+      ),
+    );
   }
 
-  String _statusLabel(Map<String, dynamic>? circle) {
-    final isPrivate = (circle?['is_private'] as bool?) == true;
-    return isPrivate ? 'Private' : 'Active';
-  }
-
-  List<CircleDetailMetric> _metrics(Map<String, dynamic>? circle) {
-    final maxMembers = (circle?['max_members'] as int?) ?? 25;
-    final members = (circle?['members'] as int?) ?? 14;
-
+  List<CircleDetailMetric> _metrics(CircleModel? circle) {
     return [
-      const CircleDetailMetric(
+      CircleDetailMetric(
         icon: 'assets/images/rank.png',
         label: 'Rank',
-        value: '#2',
+        value: circle == null || circle.rank <= 0 ? '#-' : '#${circle.rank}',
       ),
-      const CircleDetailMetric(
+      CircleDetailMetric(
         icon: 'assets/images/terr.png',
         label: 'Territory',
-        value: '48.2 km²',
+        value: '${circle?.territories ?? 0}',
       ),
       CircleDetailMetric(
         icon: 'assets/images/member.png',
         label: 'Members',
-        value: '$members / $maxMembers',
+        value: '${circle?.memberCount ?? 0} / ${circle?.maxMembers ?? 25}',
       ),
     ];
   }
 
   List<CircleLeaderboardMember> _leaderboardMembers(
-    List<dynamic>? leaderboard,
+    List<CircleMemberModel> members,
+    String? currentUserId,
   ) {
-    if (leaderboard == null || leaderboard.isEmpty) return _previewLeaderboard;
-
-    return leaderboard.take(4).toList().asMap().entries.map((entry) {
+    return members.asMap().entries.map((entry) {
       final index = entry.key;
-      final item = entry.value as Map<String, dynamic>;
-      final name =
-          item['username']?.toString() ??
-          item['name']?.toString() ??
-          _previewLeaderboard[index % _previewLeaderboard.length].name;
-      final score = (item['score'] as num?)?.toInt() ?? 950 - index * 37;
+      final member = entry.value;
 
       return CircleLeaderboardMember(
-        name: name,
+        userId: member.userId,
+        name: member.name,
         rank: '#${index + 1}',
-        score: score,
-        avatar: _previewLeaderboard[index % _previewLeaderboard.length].avatar,
-        medal: index < 3 ? _previewLeaderboard[index].medal : null,
-        isCurrentUser: index == 2,
+        score: member.attackEnergy,
+        avatar: '👤',
+        avatarUrl: member.avatarUrl,
+        role: member.role,
+        medal: index < _leaderboardMedals.length
+            ? _leaderboardMedals[index]
+            : null,
+        isCurrentUser: currentUserId != null && member.userId == currentUserId,
       );
     }).toList();
   }
 
-  List<CircleJoinRequest> _joinRequests(List<dynamic>? requests) {
-    if (requests == null || requests.isEmpty) return _previewJoinRequests;
-
-    return requests.toList().asMap().entries.map((entry) {
-      final item = entry.value as Map<String, dynamic>;
+  List<CircleJoinRequest> _joinRequests(List<CircleJoinRequestModel> requests) {
+    return requests.map((request) {
       return CircleJoinRequest(
-        id: item['id']?.toString() ?? 'request-${entry.key}',
-        name:
-            item['username']?.toString() ??
-            item['name']?.toString() ??
-            'Circle member',
-        avatar: item['avatar']?.toString() ?? '👤',
+        id: request.id,
+        name: request.requesterName,
+        avatar: '👤',
+        avatarUrl: request.avatarUrl,
       );
     }).toList();
   }
 }
 
-const _previewJoinRequests = [
-  CircleJoinRequest(id: 'ali-raza', name: 'Ali Raza', avatar: '👨🏼'),
-  CircleJoinRequest(id: 'haider-malik', name: 'Haider Malik', avatar: '🧑🏽'),
-];
-
-const _previewLeaderboard = [
-  CircleLeaderboardMember(
-    name: 'Aqib Javid',
-    rank: '#1',
-    score: 950,
-    avatar: '👨🏽',
-    medal: '🥇',
-  ),
-  CircleLeaderboardMember(
-    name: 'Sarah Ahmed',
-    rank: '#2',
-    score: 901,
-    avatar: '👩🏼',
-    medal: '🥈',
-  ),
-  CircleLeaderboardMember(
-    name: 'Micheal Waliam',
-    rank: '#3',
-    score: 879,
-    avatar: '🧔🏽',
-    medal: '🥉',
-    isCurrentUser: true,
-  ),
-  CircleLeaderboardMember(
-    name: 'Asim Kamal',
-    rank: '#4',
-    score: 843,
-    avatar: '👨🏻',
-  ),
-];
+const _leaderboardMedals = ['🥇', '🥈', '🥉'];
 
 const _activityItems = [
   CircleActivityItem(

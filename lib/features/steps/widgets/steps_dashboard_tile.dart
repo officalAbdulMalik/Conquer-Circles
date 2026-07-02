@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/widgets/shared/app_borders.dart';
+import 'package:test_steps/widgets/shared/app_shimmer.dart';
 
 class StepsDashboardTile extends StatelessWidget {
   const StepsDashboardTile({
@@ -11,8 +11,8 @@ class StepsDashboardTile extends StatelessWidget {
     required this.title,
     required this.value,
     required this.icon,
-    required this.iconColor,
     required this.iconBackgroundColor,
+    this.isLoading = false,
     this.unit,
     this.footer,
     this.footerIcon,
@@ -24,8 +24,8 @@ class StepsDashboardTile extends StatelessWidget {
   final String value;
   final String? unit;
   final String icon;
-  final Color iconColor;
   final Color iconBackgroundColor;
+  final bool isLoading;
   final String? footer;
   final IconData? footerIcon;
   final Color? footerIconColor;
@@ -36,9 +36,9 @@ class StepsDashboardTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 12.sp, horizontal: 12.w),
+        padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 18.w),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18.r),
+          borderRadius: BorderRadius.circular(22.r),
           border: AppBorders.raised(),
           color: Colors.white,
           // boxShadow: [
@@ -57,7 +57,7 @@ class StepsDashboardTile extends StatelessWidget {
               height: 50.w,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16.r),
+                borderRadius: BorderRadius.circular(18.r),
                 border: Border.all(color: AppColors.borderColor, width: 1.w),
               ),
               child: Center(
@@ -68,56 +68,60 @@ class StepsDashboardTile extends StatelessWidget {
                     color: iconBackgroundColor,
                     shape: BoxShape.circle,
                   ),
-                  child: SvgPicture.asset(
-                    icon,
-                    colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
-                    width: 18.w,
-                    height: 18.w,
+                  child: Padding(
+                    padding: EdgeInsets.all(6.w),
+                    child: Image.asset(
+                      icon,
+                      fit: BoxFit.contain,
+                      filterQuality: FilterQuality.high,
+                    ),
                   ),
                 ),
               ),
             ),
-            //
-            12.verticalSpace,
+            const Spacer(),
             Text(
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.montserrat(
-                size: 14.sp,
+                size: 15.sp,
                 color: AppColors.textPrimary,
                 weight: FontWeight.w400,
               ),
             ),
             8.verticalSpace,
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text.rich(
-                TextSpan(
-                  text: value,
-                  style: AppTextStyles.montserrat(
-                    size: 20.sp,
-                    color: AppColors.textPrimary,
-                    weight: FontWeight.w800,
-                    height: 1.1,
-                  ),
-                  children: [
-                    if (unit != null)
-                      TextSpan(
-                        text: ' $unit',
-                        style: AppTextStyles.montserrat(
-                          size: 16.sp,
-                          color: AppColors.textPrimary,
-                          weight: FontWeight.w500,
+            if (isLoading)
+              AppShimmerBox(width: 82.w, height: 22.h, borderRadius: 7.r)
+            else
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text.rich(
+                  TextSpan(
+                    text: value,
+                    style: AppTextStyles.montserrat(
+                      size: 20.sp,
+                      color: AppColors.textPrimary,
+                      weight: FontWeight.w800,
+                      height: 1.1,
+                    ),
+                    children: [
+                      if (unit != null)
+                        TextSpan(
+                          text: ' $unit',
+                          style: AppTextStyles.montserrat(
+                            size: 16.sp,
+                            color: AppColors.textPrimary,
+                            weight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
             if (footer != null) ...[
-              8.verticalSpace,
+              6.verticalSpace,
               Row(
                 children: [
                   if (footerIcon != null) ...[
@@ -134,7 +138,7 @@ class StepsDashboardTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.montserrat(
-                        size: 12.sp,
+                        size: 11.sp,
                         color: AppColors.textSecondary,
                         weight: FontWeight.w400,
                       ),

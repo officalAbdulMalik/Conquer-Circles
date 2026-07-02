@@ -63,8 +63,14 @@ serve(async (req: Request) => {
     }
 
     if (!serviceAccount.project_id || !serviceAccount.client_email || !serviceAccount.private_key) {
-      throw new Error('Missing Firebase credentials (FIREBASE_SERVICE_ACCOUNT or individual vars)');
+      throw new Error(
+        'Missing Firebase credentials (FIREBASE_SERVICE_ACCOUNT or individual vars). '
+        + `Configured project_id=${serviceAccount.project_id ?? 'null'}`
+      );
     }
+
+    console.log('Firebase service account project_id:', serviceAccount.project_id);
+    console.log('Firebase service account client_email:', serviceAccount.client_email);
 
     const auth = new GoogleAuth({
       credentials: {
@@ -113,7 +119,10 @@ serve(async (req: Request) => {
     if (!response.ok) {
       console.error('FCM API Error:', JSON.stringify(result, null, 2));
       console.log('Attempted Project ID:', serviceAccount.project_id);
-      throw new Error(`FCM API Error: ${result.error?.message || 'Unknown error'}`);
+      throw new Error(
+        `FCM API Error: ${result.error?.message || 'Unknown error'} `
+        + `(project_id=${serviceAccount.project_id})`
+      );
     }
 
     // 4. Record notification history in database

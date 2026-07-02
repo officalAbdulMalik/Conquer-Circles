@@ -12,18 +12,24 @@ class CircleDetailMetric {
 
 class CircleLeaderboardMember {
   const CircleLeaderboardMember({
+    required this.userId,
     required this.name,
     required this.rank,
     required this.score,
     required this.avatar,
+    this.avatarUrl,
+    this.role,
     this.isCurrentUser = false,
     this.medal,
   });
 
+  final String userId;
   final String name;
   final String rank;
   final int score;
   final String avatar;
+  final String? avatarUrl;
+  final String? role;
   final bool isCurrentUser;
   final String? medal;
 }
@@ -40,9 +46,11 @@ class CircleJoinRequest {
     required this.id,
     required this.name,
     required this.avatar,
+    this.avatarUrl,
   });
 
   final String id;
   final String name;
   final String avatar;
+  final String? avatarUrl;
 }

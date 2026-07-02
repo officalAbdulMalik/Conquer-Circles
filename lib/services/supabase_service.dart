@@ -1,15 +1,25 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:test_steps/features/leaderboard/models/leaderboard_participant.dart';
+import 'package:test_steps/services/auth/apple_auth_service.dart';
+import 'package:test_steps/services/auth/google_auth_service.dart';
 import '../models/invite_model.dart';
 import '../models/notification_model.dart';
 import '../models/profile_data_model.dart';
 import '../models/walk_models.dart';
+import '../models/dashboard_model.dart';
 
 /// Central service for all Supabase interactions.
 /// Every method is safe to call from any provider or screen.
 class SupabaseService {
+  static const oauthCallbackUrl = 'io.supabase.conquercircles://login-callback';
+
   final _client = Supabase.instance.client;
+  late final AppleAuthService _appleAuthService = AppleAuthService(_client);
+  late final GoogleAuthService _googleAuthService = GoogleAuthService(_client);
 
   // ---------------------------------------------------------------------------
   // Auth helpers
@@ -17,32 +27,51 @@ class SupabaseService {
 
   Session? get currentSession => _client.auth.currentSession;
   User? get currentUser => _client.auth.currentUser;
+  bool get hasActiveUser => currentUser != null;
   Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
 
   Future<AuthResponse> signUp({
     required String email,
     required String password,
-  }) => _client.auth.signUp(email: email, password: password);
+    String? name,
+  }) => _client.auth.signUp(
+    email: email,
+    password: password,
+    data: {
+      if (name != null && name.trim().isNotEmpty) 'full_name': name.trim(),
+    },
+  );
 
   Future<AuthResponse> signIn({
     required String email,
     required String password,
   }) => _client.auth.signInWithPassword(email: email, password: password);
 
-  Future<void> signOut() => _client.auth.signOut();
+  Future<AuthResponse> verifySignupOtp({
+    required String email,
+    required String token,
+  }) =>
+      _client.auth.verifyOTP(email: email, token: token, type: OtpType.signup);
 
-  Future<void> signInWithGoogle() async {
-    await _client.auth.signInWithOAuth(
-      OAuthProvider.google,
-      redirectTo: 'io.supabase.conquercircles://login-callback',
+  Future<void> sendPasswordResetEmail({required String email}) {
+    return _client.auth.resetPasswordForEmail(
+      email,
+      redirectTo: oauthCallbackUrl,
     );
   }
 
+  Future<UserResponse> updatePassword({required String password}) {
+    return _client.auth.updateUser(UserAttributes(password: password));
+  }
+
+  Future<void> signOut() => _client.auth.signOut();
+
+  Future<void> signInWithGoogle() async {
+    await _googleAuthService.signIn(oauthCallbackUrl: oauthCallbackUrl);
+  }
+
   Future<void> signInWithApple() async {
-    await _client.auth.signInWithOAuth(
-      OAuthProvider.apple,
-      redirectTo: 'io.supabase.conquercircles://login-callback',
-    );
+    await _appleAuthService.signIn(oauthCallbackUrl: oauthCallbackUrl);
   }
 
   // ---------------------------------------------------------------------------
@@ -67,10 +96,18 @@ class SupabaseService {
 
   /// Creates a profile row if one does not yet exist.
   /// Call this immediately after sign-up and on app launch.
-  Future<void> ensureProfileExists() async {
+  Future<void> ensureProfileExists({String? name}) async {
     final user = currentUser;
     if (user == null) return;
     try {
+      final metadata = user.userMetadata ?? {};
+      final metadataName =
+          metadata['full_name']?.toString().trim().isNotEmpty == true
+          ? metadata['full_name'].toString().trim()
+          : metadata['name']?.toString().trim();
+      final profileName = name?.trim().isNotEmpty == true
+          ? name!.trim()
+          : metadataName;
       final existing = await _client
           .from('profiles')
           .select('id')
@@ -80,8 +117,11 @@ class SupabaseService {
       if (existing == null) {
         await _client.from('profiles').insert({
           'id': user.id,
-          'username':
-              user.email?.split('@').first ?? 'User_${user.id.substring(0, 5)}',
+          'username': profileName?.isNotEmpty == true
+              ? profileName
+              : user.email?.split('@').first ??
+                    'User_${user.id.substring(0, 5)}',
+          if (profileName?.isNotEmpty == true) 'full_name': profileName,
         });
       }
     } catch (e) {
@@ -120,24 +160,27 @@ class SupabaseService {
     final objectPath = '${user.id}/$fileName';
     final contentType = _mimeTypeForExtension(ext);
 
-    const candidateBuckets = ['avatars', 'profile-images', 'profiles'];
-    Object? lastError;
+    print(_client.auth.currentSession?.accessToken);
 
-    for (final bucket in candidateBuckets) {
+
+print(user.id);
+
+    Object? lastError;
       try {
         await _client.storage
-            .from(bucket)
+            .from('avatars')
             .uploadBinary(
               objectPath,
               bytes,
               fileOptions: FileOptions(upsert: true, contentType: contentType),
             );
-        return _client.storage.from(bucket).getPublicUrl(objectPath);
+        return _client.storage.from('avatars').getPublicUrl(objectPath);
       } catch (e) {
         lastError = e;
-      }
-    }
 
+        print('[SupabaseService.uploadProfileAvatar] Failed to upload to "avatars" bucket: $e');
+      }
+  
     throw Exception('Failed to upload avatar: $lastError');
   }
 
@@ -178,6 +221,24 @@ class SupabaseService {
     } catch (e) {
       _log('getStepsForDate', e);
       return 0;
+    }
+  }
+
+  Future<Map<String, dynamic>> getTodayActivity() async {
+    final user = currentUser;
+    if (user == null) return const {};
+    final date = DateTime.now().toIso8601String().split('T').first;
+    try {
+      final row = await _client
+          .from('daily_steps')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('date', date)
+          .maybeSingle();
+      return row == null ? const {} : Map<String, dynamic>.from(row);
+    } catch (e) {
+      _log('getTodayActivity', e);
+      return const {};
     }
   }
 
@@ -246,6 +307,50 @@ class SupabaseService {
     }
   }
 
+  Future<Map<String, dynamic>> syncWalkProgress({
+    required int steps,
+    required double distanceKm,
+    required int durationSeconds,
+  }) async {
+    final user = currentUser;
+    if (user == null) return {'success': false, 'error': 'Not signed in'};
+
+    try {
+      final response = await _client.rpc(
+        'sync_walk_progress',
+        params: {
+          'p_steps_today': steps,
+          'p_distance_km': distanceKm,
+          'p_duration_seconds': durationSeconds,
+        },
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      _log('syncWalkProgress', e);
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Persists today's steps when the richer walk-progress RPC is unavailable.
+  Future<Map<String, dynamic>> syncDailyStepCount(int steps) async {
+    final user = currentUser;
+    if (user == null) return {'success': false, 'error': 'Not signed in'};
+    final date = DateTime.now().toIso8601String().split('T').first;
+
+    try {
+      await _client.from('daily_steps').upsert({
+        'user_id': user.id,
+        'date': date,
+        'steps': steps,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }, onConflict: 'user_id,date');
+      return {'success': true};
+    } catch (e) {
+      _log('syncDailyStepCount', e);
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Attack Energy
   // ---------------------------------------------------------------------------
@@ -303,6 +408,26 @@ class SupabaseService {
     }
   }
 
+  Future<LatLng?> getHomeBaseLocation() async {
+    final user = currentUser;
+    if (user == null) return null;
+
+    try {
+      final profile = await _client
+          .from('profiles')
+          .select('home_base_lat, home_base_lng')
+          .eq('id', user.id)
+          .maybeSingle();
+      final lat = (profile?['home_base_lat'] as num?)?.toDouble();
+      final lng = (profile?['home_base_lng'] as num?)?.toDouble();
+      if (lat == null || lng == null) return null;
+      return LatLng(lat, lng);
+    } catch (e) {
+      _log('getHomeBaseLocation', e);
+      return null;
+    }
+  }
+
   Future<ProfileDataModel> getProfileData() async {
     final user = currentUser;
     if (user == null) throw Exception('No active user');
@@ -346,6 +471,25 @@ class SupabaseService {
     }
   }
 
+  Future<void> updateGoals({
+    required String weightGoal,
+    required int dailyStepsGoal,
+  }) async {
+    final user = currentUser;
+    if (user == null) throw Exception('Not signed in');
+    try {
+      await _client.from('profiles').update({
+        'weight_goal': weightGoal,
+        'step_goal': dailyStepsGoal,
+        'daily_steps_goal': dailyStepsGoal,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', user.id);
+    } catch (e) {
+      _log('updateGoals', e);
+      rethrow;
+    }
+  }
+
   /// Fetches unified dashboard data from the Edge Function with retry logic.
   Future<Map<String, dynamic>> getStepsDashboardData() async {
     var session = _client.auth.currentSession;
@@ -361,11 +505,366 @@ class SupabaseService {
       }
 
       _log('getStepsDashboardData - FunctionException', e);
-      rethrow;
+      return _getStepsDashboardDataFromDatabase();
     } catch (e) {
       _log('getStepsDashboardData', e);
+      return _getStepsDashboardDataFromDatabase();
+    }
+  }
+
+  Future<List<TerritoryHistoryEntry>> getTerritoryHistory({
+    int limit = 20,
+  }) async {
+    final user = currentUser;
+    if (user == null) throw Exception('No active user');
+
+    try {
+      final rows = await _selectTerritoryHistoryRows(user.id, limit: limit);
+
+      return rows.map((rawRow) {
+        final row = Map<String, dynamic>.from(rawRow);
+        return TerritoryHistoryEntry.fromJson({
+          ...row,
+          'action': _resolveTerritoryHistoryAction(row),
+          'is_defence':
+              row['defender_id'] == user.id && row['attacker_id'] != user.id,
+        });
+      }).toList();
+    } catch (e) {
+      _log('getTerritoryHistory', e);
       rethrow;
     }
+  }
+
+  /// Returns one distance value per day for the signed-in user in the
+  /// inclusive [from] to [to] date range.
+  Future<List<DashboardDistanceDay>> getDistanceGraphData({
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    final user = currentUser;
+    if (user == null) throw Exception('No active user');
+
+    final fromDate = DateTime(from.year, from.month, from.day);
+    final toDate = DateTime(to.year, to.month, to.day);
+    if (toDate.isBefore(fromDate)) {
+      throw ArgumentError(
+        'The graph end date must not be before its start date',
+      );
+    }
+
+    try {
+      final rows = await _client
+          .from('daily_steps')
+          .select('*')
+          .eq('user_id', user.id)
+          .gte('date', _dateOnly(fromDate))
+          .lte('date', _dateOnly(toDate))
+          .order('date', ascending: true);
+
+      final rowsByDate = <DateTime, DashboardDistanceDay>{};
+      for (final rawRow in rows) {
+        final row = Map<String, dynamic>.from(rawRow);
+        final parsedDate = DateTime.tryParse(row['date']?.toString() ?? '');
+        if (parsedDate == null) continue;
+
+        final date = DateTime(
+          parsedDate.year,
+          parsedDate.month,
+          parsedDate.day,
+        );
+        final storedDistance = _readDoubleValue(
+          row['distance_km'] ?? row['total_distance_km'],
+        );
+        final steps = _readIntValue(
+          row['steps'] ?? row['step_count'] ?? row['total_steps'],
+        );
+        final distance = storedDistance > 0 ? storedDistance : steps * 0.00073;
+        final storedDurationSeconds = _readIntValue(
+          row['duration_seconds'] ??
+              row['active_seconds'] ??
+              row['walking_seconds'],
+        );
+        final durationSeconds = storedDurationSeconds > 0
+            ? storedDurationSeconds
+            : _estimatedDurationSeconds(steps);
+        final previous = rowsByDate[date];
+
+        rowsByDate[date] = DashboardDistanceDay(
+          date: date,
+          steps: (previous?.steps ?? 0) + steps,
+          distanceKm: (previous?.distanceKm ?? 0) + distance,
+          durationSeconds: (previous?.durationSeconds ?? 0) + durationSeconds,
+        );
+      }
+
+      return List.generate(toDate.difference(fromDate).inDays + 1, (index) {
+        final date = fromDate.add(Duration(days: index));
+        return rowsByDate[date] ??
+            DashboardDistanceDay(
+              date: date,
+              steps: 0,
+              distanceKm: 0,
+              durationSeconds: 0,
+            );
+      });
+    } catch (e) {
+      _log('getDistanceGraphData', e);
+      rethrow;
+    }
+  }
+
+  Future<List<DashboardDistanceDay>> getAllTimeDistanceGraphData() async {
+    final user = currentUser;
+    if (user == null) throw Exception('No active user');
+
+    try {
+      final rows = await _client
+          .from('daily_steps')
+          .select('*')
+          .eq('user_id', user.id)
+          .lte('date', _dateOnly(DateTime.now()))
+          .order('date', ascending: true);
+
+      return _distanceDaysFromRows(rows);
+    } catch (e) {
+      _log('getAllTimeDistanceGraphData', e);
+      rethrow;
+    }
+  }
+
+  Future<List<DashboardTerritoryDay>> getTerritoryGraphData({
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    final user = currentUser;
+    if (user == null) throw Exception('No active user');
+
+    final fromDate = DateTime(from.year, from.month, from.day);
+    final toDate = DateTime(to.year, to.month, to.day);
+    if (toDate.isBefore(fromDate)) {
+      throw ArgumentError(
+        'The graph end date must not be before its start date',
+      );
+    }
+
+    try {
+      final rows = await _client
+          .from('territory_attack_log')
+          .select('created_at, territory_id, territory:territories(*)')
+          .eq('attacker_id', user.id)
+          .eq('captured', true)
+          .gte('created_at', fromDate.toUtc().toIso8601String())
+          .lt(
+            'created_at',
+            toDate.add(const Duration(days: 1)).toUtc().toIso8601String(),
+          )
+          .order('created_at', ascending: true);
+
+      return _territoryDaysFromRows(
+        rows,
+        from: fromDate,
+        to: toDate,
+        fillMissingDays: true,
+      );
+    } catch (e) {
+      _log('getTerritoryGraphData', e);
+      rethrow;
+    }
+  }
+
+  Future<List<DashboardTerritoryDay>> getAllTimeTerritoryGraphData() async {
+    final user = currentUser;
+    if (user == null) throw Exception('No active user');
+
+    try {
+      final rows = await _client
+          .from('territory_attack_log')
+          .select('created_at, territory_id, territory:territories(*)')
+          .eq('attacker_id', user.id)
+          .eq('captured', true)
+          .lte('created_at', DateTime.now().toUtc().toIso8601String())
+          .order('created_at', ascending: true);
+
+      return _territoryDaysFromRows(rows);
+    } catch (e) {
+      _log('getAllTimeTerritoryGraphData', e);
+      rethrow;
+    }
+  }
+
+  List<DashboardTerritoryDay> _territoryDaysFromRows(
+    List<dynamic> rows, {
+    DateTime? from,
+    DateTime? to,
+    bool fillMissingDays = false,
+  }) {
+    final areaByDate = <DateTime, double>{};
+    for (final rawRow in rows) {
+      final row = Map<String, dynamic>.from(rawRow);
+      final territory = _relatedTerritory(row['territory']);
+      final capturedAt = DateTime.tryParse(
+        row['capture_date']?.toString() ??
+            row['capture_time']?.toString() ??
+            row['captured_at']?.toString() ??
+            row['created_at']?.toString() ??
+            '',
+      )?.toLocal();
+      if (capturedAt == null) continue;
+
+      final date = DateTime(capturedAt.year, capturedAt.month, capturedAt.day);
+      final areaKm2 = _territoryAreaKm2(territory);
+      areaByDate[date] = (areaByDate[date] ?? 0) + areaKm2;
+    }
+
+    if (fillMissingDays && from != null && to != null) {
+      return List.generate(to.difference(from).inDays + 1, (index) {
+        final date = from.add(Duration(days: index));
+        return DashboardTerritoryDay(
+          date: date,
+          areaKm2: areaByDate[date] ?? 0,
+        );
+      });
+    }
+
+    return areaByDate.entries
+        .map(
+          (entry) =>
+              DashboardTerritoryDay(date: entry.key, areaKm2: entry.value),
+        )
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+  }
+
+  Map<String, dynamic> _relatedTerritory(Object? value) {
+    if (value is Map) return Map<String, dynamic>.from(value);
+    if (value is List && value.isNotEmpty && value.first is Map) {
+      return Map<String, dynamic>.from(value.first as Map);
+    }
+    return const {};
+  }
+
+  double _territoryAreaKm2(Map<String, dynamic> territory) {
+    final storedKm2 = _readDoubleValue(
+      territory['area_km2'] ??
+          territory['total_area_km2'] ??
+          territory['captured_area_km2'],
+    );
+    if (storedKm2 > 0) return storedKm2;
+
+    final storedM2 = _readDoubleValue(
+      territory['area_m2'] ??
+          territory['total_area_m2'] ??
+          territory['captured_area_m2'],
+    );
+    if (storedM2 > 0) return storedM2 / 1000000;
+
+    return _polygonAreaKm2(
+      territory['geom'] ??
+          territory['geometry'] ??
+          territory['polygon'] ??
+          territory['polygon_points'],
+    );
+  }
+
+  double _polygonAreaKm2(Object? geometry) {
+    Object? coordinates;
+    if (geometry is Map) {
+      coordinates = geometry['coordinates'] ?? geometry['polygon_points'];
+    } else if (geometry is List) {
+      coordinates = geometry;
+    }
+
+    if (coordinates is! List || coordinates.isEmpty) return 0;
+    var ring = coordinates;
+    while (ring.isNotEmpty &&
+        ring.first is List &&
+        (ring.first as List).isNotEmpty &&
+        (ring.first as List).first is List) {
+      ring = ring.first as List;
+    }
+
+    final points = <({double lat, double lng})>[];
+    for (final rawPoint in ring) {
+      if (rawPoint is Map) {
+        final lat = _readDoubleValue(rawPoint['lat']);
+        final lng = _readDoubleValue(rawPoint['lng']);
+        points.add((lat: lat, lng: lng));
+      } else if (rawPoint is List && rawPoint.length >= 2) {
+        points.add((
+          lat: _readDoubleValue(rawPoint[1]),
+          lng: _readDoubleValue(rawPoint[0]),
+        ));
+      }
+    }
+    if (points.length < 3) return 0;
+
+    const earthRadiusKm = 6371.0088;
+    var area = 0.0;
+    for (var index = 0; index < points.length; index++) {
+      final current = points[index];
+      final next = points[(index + 1) % points.length];
+      area +=
+          _degreesToRadians(next.lng - current.lng) *
+          (2 +
+              math.sin(_degreesToRadians(current.lat)) +
+              math.sin(_degreesToRadians(next.lat)));
+    }
+    return (area * earthRadiusKm * earthRadiusKm / 2).abs();
+  }
+
+  double _degreesToRadians(double degrees) => degrees * math.pi / 180;
+
+  List<DashboardDistanceDay> _distanceDaysFromRows(List<dynamic> rows) {
+    final rowsByDate = <DateTime, DashboardDistanceDay>{};
+    for (final rawRow in rows) {
+      final row = Map<String, dynamic>.from(rawRow);
+      final parsedDate = DateTime.tryParse(row['date']?.toString() ?? '');
+      if (parsedDate == null) continue;
+
+      final date = DateTime(parsedDate.year, parsedDate.month, parsedDate.day);
+      final storedDistance = _readDoubleValue(
+        row['distance_km'] ?? row['total_distance_km'],
+      );
+      final steps = _readIntValue(
+        row['steps'] ?? row['step_count'] ?? row['total_steps'],
+      );
+      final distance = storedDistance > 0 ? storedDistance : steps * 0.00073;
+      final storedDurationSeconds = _readIntValue(
+        row['duration_seconds'] ??
+            row['active_seconds'] ??
+            row['walking_seconds'],
+      );
+      final durationSeconds = storedDurationSeconds > 0
+          ? storedDurationSeconds
+          : _estimatedDurationSeconds(steps);
+      final previous = rowsByDate[date];
+
+      rowsByDate[date] = DashboardDistanceDay(
+        date: date,
+        steps: (previous?.steps ?? 0) + steps,
+        distanceKm: (previous?.distanceKm ?? 0) + distance,
+        durationSeconds: (previous?.durationSeconds ?? 0) + durationSeconds,
+      );
+    }
+
+    return rowsByDate.values.toList()..sort((a, b) => a.date.compareTo(b.date));
+  }
+
+  String _dateOnly(DateTime date) {
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '${date.year}-$month-$day';
+  }
+
+  int _readIntValue(Object? value) {
+    if (value is num) return value.round();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  double _readDoubleValue(Object? value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   Future<Map<String, dynamic>> checkAndAwardBadges(
@@ -432,63 +931,161 @@ class SupabaseService {
     return Map<String, dynamic>.from(response.data as Map);
   }
 
-  /// Creates a new walking session row. Returns the session UUID.
-  /// Automatically cancels any previously stuck active session first.
-  /// Call this when the user presses "Start Walk".
-  Future<String?> startWalkingSession() async {
+  Future<Map<String, dynamic>> _getStepsDashboardDataFromDatabase() async {
     final user = currentUser;
-    if (user == null) return null;
+    if (user == null) throw Exception('No active user');
+
+    final today = DateTime.now().toIso8601String().split('T').first;
+    final sevenDaysAgo = DateTime(
+      DateTime.now().year,
+      DateTime.now().month,
+      DateTime.now().day,
+    ).subtract(const Duration(days: 6)).toIso8601String().split('T').first;
+
+    final profile =
+        await _client
+            .from('profiles')
+            .select(
+              'username, level, xp, xp_goal, step_goal, daily_streak, attack_energy',
+            )
+            .eq('id', user.id)
+            .maybeSingle() ??
+        <String, dynamic>{};
+
+    final todayStepsRow = await _client
+        .from('daily_steps')
+        .select('steps')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .order('updated_at', ascending: false)
+        .limit(1)
+        .maybeSingle();
+
+    final weeklyRows = await _client
+        .from('daily_steps')
+        .select('date, steps')
+        .eq('user_id', user.id)
+        .gte('date', sevenDaysAgo)
+        .order('date', ascending: true);
+
+    final badgesRows = await _client
+        .from('user_badges')
+        .select(
+          'unlocked_at, badge:badges(id, number, name, description, category, icon)',
+        )
+        .eq('user_id', user.id)
+        .order('unlocked_at', ascending: false);
+
+    List<Map<String, dynamic>> territoryHistory = [];
     try {
-      await ensureProfileExists();
+      final historyRows = await _selectTerritoryHistoryRows(user.id);
 
-      // RPC auto-cancels any existing active session then creates a new one
-      final response = await _client.rpc(
-        'start_walking_session',
-        params: {'p_user_id': user.id},
-      );
-
-      final result = Map<String, dynamic>.from(response as Map);
-      final success = result['success'] as bool? ?? false;
-      if (!success) return null;
-
-      return result['session_id'] as String;
+      territoryHistory = historyRows.map((row) {
+        final historyRow = Map<String, dynamic>.from(row);
+        return {
+          ...historyRow,
+          'action': _resolveTerritoryHistoryAction(historyRow),
+          'is_defence':
+              historyRow['defender_id'] == user.id &&
+              historyRow['attacker_id'] != user.id,
+        };
+      }).toList();
     } catch (e) {
-      _log('startWalkingSession', e);
-      rethrow;
+      _log('getStepsDashboardData territory history fallback', e);
+    }
+
+    final steps = (todayStepsRow?['steps'] as num?)?.round() ?? 0;
+    final calories = (steps * 0.04).round();
+    final distanceKm = double.parse((steps * 0.00073).toStringAsFixed(2));
+    final durationSeconds = _estimatedDurationSeconds(steps);
+    final totalAreaKm2 = double.parse((distanceKm * 0.28).toStringAsFixed(1));
+    final badges = badgesRows.map((row) {
+      final badge = Map<String, dynamic>.from(row['badge'] as Map? ?? {});
+      return {...badge, 'unlocked_at': row['unlocked_at']};
+    }).toList();
+
+    return {
+      'profile': {
+        'username':
+            profile['username'] ?? user.email?.split('@').first ?? 'User',
+        'level': profile['level'] ?? 1,
+        'xp': profile['xp'] ?? 0,
+        'xp_goal': profile['xp_goal'] ?? 1000,
+        'step_goal': profile['step_goal'] ?? 10000,
+        'streak': profile['daily_streak'] ?? 0,
+        'attack_energy': profile['attack_energy'] ?? 0,
+      },
+      'today': {
+        'steps': steps,
+        'calories': calories,
+        'distance_km': distanceKm,
+        'duration_seconds': durationSeconds,
+        'total_area_km2': totalAreaKm2,
+        'heart_rate': null,
+      },
+      'weekly_steps': weeklyRows,
+      'badges': badges,
+      'territory_history': territoryHistory,
+    };
+  }
+
+  int _estimatedDurationSeconds(int steps) {
+    if (steps <= 0) return 0;
+    final minutes = (steps / 1160).round().clamp(1, 24 * 60);
+    return (minutes * 60) + 39;
+  }
+
+  Future<List<dynamic>> _selectTerritoryHistoryRows(
+    String userId, {
+    int limit = 20,
+  }) async {
+    const baseColumns =
+        'id, territory_id, attacker_id, defender_id, energy_used, energy_before, energy_after, captured, created_at';
+
+    Future<List<dynamic>> query(String columns) {
+      return _client
+          .from('territory_attack_log')
+          .select(columns)
+          .or('attacker_id.eq.$userId,defender_id.eq.$userId')
+          .order('created_at', ascending: false)
+          .limit(limit);
+    }
+
+    try {
+      return await query('$baseColumns, action');
+    } on PostgrestException catch (e) {
+      if (e.code != '42703') rethrow;
+      return query(baseColumns);
     }
   }
 
-  /// Inserts a single GPS point. Call every ~5 seconds while walking.
-  Future<void> recordLocationPoint(LocationPoint point) async {
-    try {
-      await _client.from('location_points').insert(point.toJson());
-    } catch (e) {
-      _log('recordLocationPoint', e);
+  String _resolveTerritoryHistoryAction(Map<String, dynamic> row) {
+    final storedAction = row['action']?.toString().trim();
+    if (storedAction?.isNotEmpty == true) {
+      return storedAction!;
     }
-  }
 
-  /// Ends the session, merges the new convex hull into the existing territory,
-  /// and sets a 12-hour protection window.
-  /// Returns the RPC result map with keys: status, area_m2, merged, point_count.
-  Future<Map<String, dynamic>> endWalkingSession(String sessionId) async {
-    try {
-      final response = await _client.rpc(
-        'end_walking_session',
-        params: {'p_session_id': sessionId},
-      );
-      return Map<String, dynamic>.from(response as Map);
-    } catch (e) {
-      _log('endWalkingSession', e);
-      return {'error': 'Failed to end walk: $e'};
+    if (row['captured'] == true) {
+      return 'captured';
     }
+
+    final defenderId = row['defender_id']?.toString();
+    if (defenderId == null || defenderId.isEmpty) {
+      return 'claimed';
+    }
+
+    final energyBefore = _readIntValue(row['energy_before']);
+    final energyAfter = _readIntValue(row['energy_after']);
+    return energyAfter > energyBefore ? 'reinforced' : 'damaged';
   }
 
   // ---------------------------------------------------------------------------
   // Territory
   // ---------------------------------------------------------------------------
 
-  /// Returns territories within [radius] metres of [lat]/[lng].
-  /// Own territory is forced to blue. Strangers are excluded (friends only).
+  /// Returns every territory within [radius] metres of [lat]/[lng].
+  /// Visibility is intentionally not restricted to friends so the map can show
+  /// the complete claimed-territory history for the viewed area.
   Future<List<Territory>> getNearbyTerritories(
     double lat,
     double lng, {
@@ -502,17 +1099,7 @@ class SupabaseService {
         params: {'p_lat': lat, 'p_lng': lng, 'p_radius_m': radius},
       );
 
-      // Fetch accepted friend IDs
-      final friendIds = await getAcceptedInviteUserIds();
-      final friendSet = Set<String>.from(friendIds);
-
-      // Filter to own + friends only
-      final filtered = raw.where((t) {
-        final tid = t['user_id']?.toString();
-        return tid == null || tid == user.id || friendSet.contains(tid);
-      }).toList();
-
-      return filtered.map((t) {
+      return raw.map((t) {
         final territory = Territory.fromJson(t as Map<String, dynamic>);
         return t['user_id'] == user.id
             ? territory.copyWith(color: '#2196F3')
@@ -520,6 +1107,29 @@ class SupabaseService {
       }).toList();
     } catch (e) {
       _log('getNearbyTerritories', e);
+      return [];
+    }
+  }
+
+  Future<List<Territory>> getAllTerritories({
+    double lat = 0,
+    double lng = 0,
+  }) async {
+    final user = currentUser;
+    try {
+      final List<dynamic> raw = await _client.rpc(
+        'get_territories_nearby',
+        params: {'p_lat': lat, 'p_lng': lng, 'p_radius_m': 21000000},
+      );
+
+      return raw.map((t) {
+        final territory = Territory.fromJson(t as Map<String, dynamic>);
+        return user != null && t['user_id'] == user.id
+            ? territory.copyWith(color: '#2196F3')
+            : territory;
+      }).toList();
+    } catch (e) {
+      _log('getAllTerritories', e);
       return [];
     }
   }
@@ -541,8 +1151,9 @@ class SupabaseService {
     }
   }
 
-  /// Upserts only metadata fields (color, shield, energy).
-  /// Never writes the geom column — that is owned by the SQL RPC.
+  /// Updates metadata for one territory row.
+  /// A user can own multiple disconnected territories, so this must target the
+  /// territory ID rather than using user_id as an upsert conflict key.
   Future<void> upsertTerritoryMetadata(Territory territory) async {
     final user = currentUser;
     if (user == null) return;
@@ -550,12 +1161,18 @@ class SupabaseService {
       final profile = await getProfile();
       final username = profile?['username'] as String? ?? 'Conqueror';
       final json = territory.toJson()
+        ..remove('id')
+        ..remove('user_id')
         ..remove('geom')
         ..remove('polygon_points')
         ..['username'] = username
         ..['updated_at'] = DateTime.now().toIso8601String();
 
-      await _client.from('territories').upsert(json, onConflict: 'user_id');
+      await _client
+          .from('territories')
+          .update(json)
+          .eq('id', territory.id)
+          .eq('user_id', user.id);
     } catch (e) {
       _log('upsertTerritoryMetadata', e);
     }
@@ -580,11 +1197,16 @@ class SupabaseService {
   ///   'cooldown'    — attacker on 30-min cooldown for this territory
   ///   'no_energy'   — attacker has 0 attack energy
   ///   'error'       — validation failed (speed, friend, not_found, etc)
+  /// [attackAreaGeoJson] is a GeoJSON MultiPoint/LineString of the attacker's
+  /// walk route for this session. When supplied, a capture only carves out the
+  /// part of the defender's territory the attacker actually covered (convex
+  /// hull of the route) instead of taking the whole polygon.
   Future<Map<String, dynamic>> attackOrClaimTerritory({
     required String territoryId,
     required double speedKmh,
     required double lat,
     required double lng,
+    String? attackAreaGeoJson,
   }) async {
     final user = currentUser;
     if (user == null) return {'action': 'error', 'message': 'not signed in'};
@@ -597,6 +1219,7 @@ class SupabaseService {
           'p_speed_kmh': speedKmh,
           'p_lat': lat,
           'p_lng': lng,
+          if (attackAreaGeoJson != null) 'p_attack_geom': attackAreaGeoJson,
         },
       );
       final result = Map<String, dynamic>.from(response as Map);
@@ -607,6 +1230,21 @@ class SupabaseService {
     }
   }
 
+  Future<Map<String, dynamic>> mergeTouchingOwnedTerritories(
+    String territoryId,
+  ) async {
+    try {
+      final response = await _client.rpc(
+        'merge_touching_owned_territories',
+        params: {'p_territory_id': territoryId},
+      );
+      return Map<String, dynamic>.from(response as Map);
+    } catch (e) {
+      _log('mergeTouchingOwnedTerritories', e);
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   Future<void> updateProfile(Map<String, dynamic> updates) async {
     final user = currentUser;
     if (user == null) return;
@@ -614,6 +1252,65 @@ class SupabaseService {
       await _client.from('profiles').update(updates).eq('id', user.id);
     } catch (e) {
       _log('updateProfile', e);
+      rethrow;
+    }
+  }
+
+  bool isProfileOnboardingComplete(Map<String, dynamic>? profile) {
+    if (profile == null) return false;
+    return profile['onboarding_completed'] == true &&
+        profile['gender'] != null &&
+        profile['age'] != null &&
+        profile['height_cm'] != null &&
+        profile['weight_kg'] != null;
+  }
+
+  Future<void> saveOnboardingProfile({
+    required String? gender,
+    required int age,
+    required int weight,
+    required String weightUnit,
+    required int height,
+    required String heightUnit,
+    required String weightGoal,
+    required int dailyStepsGoal,
+    String? name,
+  }) async {
+    final user = currentUser;
+    if (user == null) throw Exception('Not signed in');
+
+    final fallbackUsername =
+        user.email?.split('@').first ?? 'User_${user.id.substring(0, 5)}';
+    final displayName = name?.trim();
+
+    try {
+      await ensureProfileExists(name: displayName);
+      final existingProfile = await getProfile();
+      final existingUsername = existingProfile?['username']?.toString().trim();
+      await _client.from('profiles').upsert({
+        'id': user.id,
+        'username': existingUsername?.isNotEmpty == true
+            ? existingUsername
+            : displayName?.isNotEmpty == true
+            ? displayName
+            : fallbackUsername,
+        if (displayName?.isNotEmpty == true) 'full_name': displayName,
+        'gender': gender,
+        'age': age,
+        'weight_kg': weightUnit == 'kg'
+            ? weight
+            : (weight * 0.45359237).round(),
+        'height_cm': heightUnit == 'cm' ? height : (height * 30.48).round(),
+        'weight_unit': weightUnit,
+        'height_unit': heightUnit,
+        'weight_goal': weightGoal,
+        'step_goal': dailyStepsGoal,
+        'daily_steps_goal': dailyStepsGoal,
+        'onboarding_completed': true,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }, onConflict: 'id');
+    } catch (e) {
+      _log('saveOnboardingProfile', e);
       rethrow;
     }
   }
@@ -771,16 +1468,264 @@ class SupabaseService {
     }
   }
 
-  /// Streams the latest 20 location_points rows in real time.
-  /// Used by map_provider to show live friend locations on the map.
-  /// Filters to friends only happen in the provider, not here.
-  Stream<List<Map<String, dynamic>>> getLocationStream() {
-    return _client
-        .from('location_points')
-        .stream(primaryKey: ['id'])
-        .order('recorded_at', ascending: false)
-        .limit(20)
-        .map((rows) => List<Map<String, dynamic>>.from(rows));
+  // ---------------------------------------------------------------------------
+  // Leaderboard
+  // ---------------------------------------------------------------------------
+
+  Future<LeaderboardData> getSeasonLeaderboard({
+    LeaderboardMetric metric = LeaderboardMetric.territoryTiles,
+  }) async {
+    final season = await _getLeaderboardSeason();
+    final profiles = await _safeSelectList('profiles');
+    final dailySteps = await _safeSelectList('daily_steps');
+    final territories = await _safeSelectList('territories');
+    final attackLogs = await _safeSelectList(
+      'territory_attack_log',
+      columns: 'attacker_id, defender_id, captured, created_at',
+    );
+
+    final currentUserId = currentUser?.id;
+    final profileByUserId = <String, Map<String, dynamic>>{};
+    for (final profile in profiles) {
+      final id = _stringValue(profile['id'] ?? profile['user_id']);
+      if (id != null) profileByUserId[id] = profile;
+    }
+
+    final statsByUserId = <String, _LeaderboardStats>{};
+    _LeaderboardStats statsFor(String userId) {
+      return statsByUserId.putIfAbsent(userId, () => _LeaderboardStats());
+    }
+
+    for (final row in dailySteps) {
+      if (!_isWithinSeason(row['date'] ?? row['created_at'], season)) continue;
+      final userId = _stringValue(row['user_id']);
+      if (userId == null) continue;
+      final steps = _intValue(row['steps']);
+      final stats = statsFor(userId)..totalSteps += steps;
+      final date = _dateKey(row['date'] ?? row['created_at']);
+      if (steps > 0 && date != null) stats.activeWalkDates.add(date);
+    }
+
+    for (final row in territories) {
+      if (!_isWithinSeason(
+        row['capture_time'] ?? row['created_at'] ?? row['updated_at'],
+        season,
+        includeUnknownDates: true,
+      )) {
+        continue;
+      }
+      final userId = _stringValue(
+        row['user_id'] ?? row['owner_id'] ?? row['claimed_by'],
+      );
+      if (userId == null) continue;
+      final stats = statsFor(userId);
+      stats.territoryTiles += 1;
+      stats.territoryEnergy += _intValue(row['energy']);
+    }
+
+    for (final row in attackLogs) {
+      if (!_isWithinSeason(row['created_at'], season)) continue;
+      final attackerId = _stringValue(row['attacker_id']);
+      final defenderId = _stringValue(row['defender_id']);
+      final captured = row['captured'] == true;
+
+      if (attackerId != null && attackerId != defenderId) {
+        final attacker = statsFor(attackerId)..attacksStarted += 1;
+        if (captured) attacker.raidsWon += 1;
+      }
+
+      if (defenderId != null && defenderId != attackerId && !captured) {
+        statsFor(defenderId).defensesWon += 1;
+      }
+    }
+
+    for (final userId in profileByUserId.keys) {
+      final stats = statsFor(userId);
+      if (userId == currentUserId) stats.isCurrentUser = true;
+    }
+    if (currentUserId != null) statsFor(currentUserId).isCurrentUser = true;
+
+    final participants = <LeaderboardParticipant>[];
+    for (final entry in statsByUserId.entries) {
+      final userId = entry.key;
+      final stats = entry.value;
+      if (!stats.hasActivity && userId != currentUserId) continue;
+      final profile = profileByUserId[userId];
+      participants.add(
+        LeaderboardParticipant(
+          userId: userId,
+          name: _leaderboardName(profile, userId),
+          score: stats.scoreFor(metric),
+          rank: 0,
+          avatarUrl: _stringValue(profile?['avatar_url'] ?? profile?['avatar']),
+          isCurrentUser: userId == currentUserId,
+          territoryTiles: stats.territoryTiles,
+          totalSteps: stats.totalSteps,
+          raidsWon: stats.raidsWon,
+          territoryEnergy: stats.territoryEnergy,
+          attacksStarted: stats.attacksStarted,
+          defensesWon: stats.defensesWon,
+          activeWalkDays: stats.activeWalkDates.length,
+        ),
+      );
+    }
+
+    return LeaderboardData(
+      season: season,
+      participants: _rankParticipants(participants, metric),
+      specialRankings: LeaderboardSpecialRankings(
+        mostAggressive: _topSpecial(
+          participants,
+          (participant) => participant.attacksStarted,
+        ),
+        bestDefender: _topSpecial(
+          participants,
+          (participant) => participant.defensesWon,
+        ),
+        mostConsistent: _topSpecial(
+          participants,
+          (participant) => participant.activeWalkDays,
+        ),
+      ),
+    );
+  }
+
+  Future<LeaderboardSeason> _getLeaderboardSeason() async {
+    try {
+      final row = await _client
+          .from('seasons')
+          .select()
+          .eq('is_active', true)
+          .order('started_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      if (row != null) return _leaderboardSeasonFromRow(row);
+    } catch (e) {
+      _log('getSeasonLeaderboard.season', e);
+    }
+
+    final now = DateTime.now();
+    return LeaderboardSeason(
+      name: 'Current Season',
+      startedAt: DateTime(now.year, now.month),
+    );
+  }
+
+  LeaderboardSeason _leaderboardSeasonFromRow(Map<String, dynamic> row) {
+    return LeaderboardSeason(
+      id: _stringValue(row['id']),
+      name:
+          _stringValue(row['name'] ?? row['title'] ?? row['season_name']) ??
+          'Current Season',
+      startedAt: _dateTimeValue(row['started_at'] ?? row['start_date']),
+      endsAt: _dateTimeValue(
+        row['ends_at'] ?? row['ended_at'] ?? row['end_date'],
+      ),
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> _safeSelectList(
+    String table, {
+    String columns = '*',
+  }) async {
+    try {
+      final rows = await _client.from(table).select(columns);
+      return (rows as List)
+          .whereType<Map>()
+          .map((row) => Map<String, dynamic>.from(row))
+          .toList();
+    } catch (e) {
+      _log('getSeasonLeaderboard.$table', e);
+      return [];
+    }
+  }
+
+  List<LeaderboardParticipant> _rankParticipants(
+    List<LeaderboardParticipant> participants,
+    LeaderboardMetric metric,
+  ) {
+    final sorted = [...participants]
+      ..sort((a, b) {
+        final byScore = b.score.compareTo(a.score);
+        if (byScore != 0) return byScore;
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
+
+    return [
+      for (var index = 0; index < sorted.length; index++)
+        sorted[index].copyWith(
+          rank: index + 1,
+          score: sorted[index].scoreFor(metric),
+          medal: index == 0
+              ? '🥇'
+              : index == 1
+              ? '🥈'
+              : index == 2
+              ? '🥉'
+              : null,
+        ),
+    ];
+  }
+
+  LeaderboardParticipant? _topSpecial(
+    List<LeaderboardParticipant> participants,
+    int Function(LeaderboardParticipant participant) readValue,
+  ) {
+    final ranked = participants.where((item) => readValue(item) > 0).toList()
+      ..sort((a, b) {
+        final byValue = readValue(b).compareTo(readValue(a));
+        if (byValue != 0) return byValue;
+        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
+    return ranked.isEmpty ? null : ranked.first;
+  }
+
+  bool _isWithinSeason(
+    Object? value,
+    LeaderboardSeason season, {
+    bool includeUnknownDates = false,
+  }) {
+    final date = _dateTimeValue(value);
+    if (date == null) return includeUnknownDates;
+    final start = season.startedAt;
+    final end = season.endsAt;
+    if (start != null && date.isBefore(start)) return false;
+    if (end != null && date.isAfter(end)) return false;
+    return true;
+  }
+
+  String _leaderboardName(Map<String, dynamic>? profile, String userId) {
+    return _stringValue(
+          profile?['username'] ??
+              profile?['full_name'] ??
+              profile?['name'] ??
+              profile?['display_name'],
+        ) ??
+        (userId == currentUser?.id
+            ? currentUser?.email?.split('@').first
+            : null) ??
+        'Player ${userId.substring(0, math.min(4, userId.length)).toUpperCase()}';
+  }
+
+  String? _stringValue(Object? value) {
+    final text = value?.toString().trim();
+    return text == null || text.isEmpty ? null : text;
+  }
+
+  int _intValue(Object? value) {
+    if (value is num) return value.round();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  DateTime? _dateTimeValue(Object? value) {
+    if (value is DateTime) return value;
+    return DateTime.tryParse(value?.toString() ?? '');
+  }
+
+  String? _dateKey(Object? value) {
+    final date = _dateTimeValue(value);
+    if (date == null) return null;
+    return '${date.year}-${date.month}-${date.day}';
   }
 
   // ---------------------------------------------------------------------------
@@ -848,5 +1793,39 @@ class SupabaseService {
     // Replace with your logger of choice (e.g. logger package).
     // ignore: avoid_print
     print('[SupabaseService.$method] $error');
+  }
+}
+
+class _LeaderboardStats {
+  int territoryTiles = 0;
+  int totalSteps = 0;
+  int raidsWon = 0;
+  int territoryEnergy = 0;
+  int attacksStarted = 0;
+  int defensesWon = 0;
+  bool isCurrentUser = false;
+  final Set<String> activeWalkDates = <String>{};
+
+  bool get hasActivity {
+    return territoryTiles > 0 ||
+        totalSteps > 0 ||
+        raidsWon > 0 ||
+        territoryEnergy > 0 ||
+        attacksStarted > 0 ||
+        defensesWon > 0 ||
+        activeWalkDates.isNotEmpty;
+  }
+
+  int scoreFor(LeaderboardMetric metric) {
+    switch (metric) {
+      case LeaderboardMetric.territoryTiles:
+        return territoryTiles;
+      case LeaderboardMetric.totalSteps:
+        return totalSteps;
+      case LeaderboardMetric.raidsWon:
+        return raidsWon;
+      case LeaderboardMetric.territoryEnergy:
+        return territoryEnergy;
+    }
   }
 }

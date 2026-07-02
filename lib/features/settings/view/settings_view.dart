@@ -1,26 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:test_steps/providers/settings_provider.dart';
 import '../widgets/settings_header.dart';
 import '../widgets/settings_section.dart';
 import '../widgets/settings_tile.dart';
 import '../widgets/theme_selector.dart';
 
-class SettingsView extends StatefulWidget {
+class SettingsView extends ConsumerWidget {
   const SettingsView({super.key});
 
   @override
-  State<SettingsView> createState() => _SettingsViewState();
-}
-
-class _SettingsViewState extends State<SettingsView> {
-  String _selectedTheme = 'Light';
-  bool _dailyAlerts = true;
-  bool _reminders = false;
-  String _units = 'Metric';
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final user = Supabase.instance.client.auth.currentUser;
+    final settings = ref.watch(settingsProvider);
+    final settingsNotifier = ref.read(settingsProvider.notifier);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -35,13 +29,13 @@ class _SettingsViewState extends State<SettingsView> {
                 SettingsTile(
                   title: user?.email?.split('@')[0] ?? 'User',
                   subtitle: user?.email ?? '',
-                  icon: Icons.person_outline,
+                  icon: 'assets/icons/edit.png',
                   onTap: () {},
                 ),
                 SettingsTile(
                   title: 'Password',
                   subtitle: 'Last changed 3 months ago',
-                  icon: Icons.lock_outline,
+                  icon: 'assets/icons/lock.png',
                   onTap: () {},
                 ),
               ],
@@ -54,16 +48,16 @@ class _SettingsViewState extends State<SettingsView> {
                   title: 'Daily Alerts',
                   subtitle: 'Get notified about territory challenges',
                   trailing: _buildSwitch(
-                    _dailyAlerts,
-                    (v) => setState(() => _dailyAlerts = v),
+                    settings.dailyAlerts,
+                    settingsNotifier.setDailyAlerts,
                   ),
                 ),
                 SettingsTile(
                   title: 'Reminders',
                   subtitle: 'Walk reminders based on your goal',
                   trailing: _buildSwitch(
-                    _reminders,
-                    (v) => setState(() => _reminders = v),
+                    settings.reminders,
+                    settingsNotifier.setReminders,
                   ),
                 ),
               ],
@@ -73,14 +67,13 @@ class _SettingsViewState extends State<SettingsView> {
               title: 'Theme Mode',
               children: [
                 // ThemeSelector(
-                //   selectedMode: _selectedTheme,
-                //   onModeSelected: (mode) =>
-                //       setState(() => _selectedTheme = mode),
+                //   selectedMode: settings.selectedTheme,
+                //   onModeSelected: settingsNotifier.setTheme,
                 // ),
               ],
             ),
             const SizedBox(height: 32),
-            _buildDangerZone(),
+            _buildDangerZone(context),
             const SizedBox(height: 48),
           ],
         ),
@@ -96,7 +89,7 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 
-  Widget _buildDangerZone() {
+  Widget _buildDangerZone(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(

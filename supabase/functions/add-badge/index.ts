@@ -99,8 +99,6 @@ serve(async (req) => {
                 'cluster_creator': 'Cluster Creator',
                 'territory_emperor': 'Territory Emperor',
                 'comeback_king': 'Comeback King',
-                'early_bird': 'Early Bird',
-                'night_walker': 'Night Walker',
                 'consistency_hero': 'Consistency Hero',
                 'energy_hoarder': 'Energy Hoarder',
                 'war_hero': 'War Hero',
@@ -154,7 +152,7 @@ serve(async (req) => {
 
         // === EVENT HANDLERS ===
 
-        if (event_type === 'walking_session_complete') {
+        if (event_type === 'steps_synced') {
             // 👟 Step Rookie
             const { data: stepsEntry } = await supabaseClient
                 .from('daily_steps')
@@ -162,7 +160,7 @@ serve(async (req) => {
                 .eq('user_id', user_id)
                 .eq('date', todayStr)
                 .maybeSingle()
-            if (stepsEntry && stepsEntry.steps >= 5000) await awardBadge('rookie')
+            if (stepsEntry && stepsEntry.steps >= 5000) await awardBadge('step_rookie')
 
             // 🏃 Marathon Walker
             const { data: profile } = await supabaseClient
@@ -189,21 +187,6 @@ serve(async (req) => {
             })
             if (weekendSum >= 20000) await awardBadge('weekend_warrior')
 
-            // 🌅 Early Bird
-            const { data: isEarlyBird } = await supabaseClient.rpc('check_early_bird_sessions', {
-                p_user_id: user_id,
-                p_threshold_hour: 7,
-                p_days: 7
-            })
-            if (isEarlyBird) await awardBadge('early_bird')
-
-            // 🌙 Night Walker
-            const { data: isNightWalker } = await supabaseClient.rpc('check_night_walker_sessions', {
-                p_user_id: user_id,
-                p_threshold_hour: 22,
-                p_days: 5
-            })
-            if (isNightWalker) await awardBadge('night_walker')
         }
 
         if (event_type === 'steps_synced') {

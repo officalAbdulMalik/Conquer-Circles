@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/widgets/notifications/notification_filter_mode.dart';
+import 'package:test_steps/widgets/shared/app_borders.dart';
 
 class NotificationsHeaderTile extends StatelessWidget {
   const NotificationsHeaderTile({
@@ -28,7 +29,7 @@ class NotificationsHeaderTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(20.w, 10.h, 20.w, 8.h),
+      padding: EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 10.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -38,7 +39,7 @@ class NotificationsHeaderTile extends StatelessWidget {
                 icon: Icons.arrow_back_ios_new_rounded,
                 onTap: () => Navigator.maybePop(context),
               ),
-              SizedBox(width: 10.w),
+              12.horizontalSpace,
               Expanded(
                 child: NotificationsTitleTile(
                   unreadCount: unreadCount,
@@ -47,7 +48,7 @@ class NotificationsHeaderTile extends StatelessWidget {
               ),
               if (unreadCount > 0) ...[
                 ReadAllActionTile(onTap: onMarkAllRead),
-                SizedBox(width: 8.w),
+                8.horizontalSpace,
               ],
               HeaderIconButtonTile(
                 icon: Icons.tune_rounded,
@@ -55,9 +56,10 @@ class NotificationsHeaderTile extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 14.h),
+          16.verticalSpace,
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
             child: Row(
               children: [
                 ...NotificationFilterMode.values.map(
@@ -96,15 +98,23 @@ class NotificationsTitleTile extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [Text('Notifications', style: AppTextStyles.screenTitle)],
+        Text(
+          'Notifications',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.montserrat(
+            size: 18,
+            color: const Color(0xFF111827),
+            weight: FontWeight.w700,
+          ),
         ),
-        SizedBox(height: 2.h),
+        4.verticalSpace,
         Text(
           '$unreadCount unread · $totalCount total',
-          style: AppTextStyles.cardSubtitle.copyWith(
+          style: AppTextStyles.montserrat(
+            size: 12,
             color: AppColors.textSecondary,
-            fontWeight: FontWeight.w600,
+            weight: FontWeight.w500,
           ),
         ),
       ],
@@ -120,27 +130,28 @@ class ReadAllActionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.brandPurple.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(999.r),
+      color: AppColors.blueColor,
+      borderRadius: BorderRadius.circular(24.r),
       child: InkWell(
-        borderRadius: BorderRadius.circular(999.r),
+        borderRadius: BorderRadius.circular(24.r),
         onTap: onTap,
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 13.w, vertical: 8.h),
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 Icons.done_all_rounded,
-                color: AppColors.brandPurple,
+                color: AppColors.surface,
                 size: 14.sp,
               ),
-              SizedBox(width: 5.w),
+              5.horizontalSpace,
               Text(
                 'Read all',
-                style: AppTextStyles.chipLabel.copyWith(
-                  color: AppColors.brandPurple,
-                  fontWeight: FontWeight.w700,
+                style: AppTextStyles.montserrat(
+                  size: 11,
+                  color: AppColors.surface,
+                  weight: FontWeight.w700,
                 ),
               ),
             ],
@@ -159,12 +170,12 @@ class NotificationChipIconTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 38.w,
-      height: 34.h,
+      width: 42.w,
+      height: 42.w,
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.78),
-        borderRadius: BorderRadius.circular(999.r),
-        border: Border.all(color: AppColors.borderLight),
+        color: AppColors.surface,
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.borderColor),
       ),
       alignment: Alignment.center,
       child: Icon(icon, color: AppColors.textSecondary, size: 17.sp),
@@ -186,14 +197,18 @@ class HeaderIconButtonTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(12.r),
+      shape: const CircleBorder(),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12.r),
+        customBorder: const CircleBorder(),
         onTap: onTap,
-        child: SizedBox(
-          width: 34.w,
-          height: 34.h,
-          child: Icon(icon, color: AppColors.textNavy, size: 17.sp),
+        child: Container(
+          width: 42.w,
+          height: 42.w,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.borderColor),
+          ),
+          child: Icon(icon, color: const Color(0xFF0F172A), size: 17.sp),
         ),
       ),
     );
@@ -216,9 +231,10 @@ class HeaderBadgeTile extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: AppTextStyles.chipLabel.copyWith(
+        style: AppTextStyles.montserrat(
+          size: 10,
           color: AppColors.surface,
-          fontWeight: FontWeight.w700,
+          weight: FontWeight.w700,
         ),
       ),
     );
@@ -244,33 +260,39 @@ class NotificationsFilterChipTile extends StatelessWidget {
     final Color baseColor = filter.accentColor;
 
     return Material(
-      color: isSelected
-          ? baseColor.withValues(alpha: 0.18)
-          : AppColors.surface.withValues(alpha: 0.78),
-      borderRadius: BorderRadius.circular(999.r),
+      color: isSelected ? AppColors.blueColor : AppColors.surface,
+      borderRadius: BorderRadius.circular(24.r),
       child: InkWell(
-        borderRadius: BorderRadius.circular(999.r),
+        borderRadius: BorderRadius.circular(24.r),
         onTap: onTap,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 11.w, vertical: 8.h),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24.r),
+            border: AppBorders.raised(),
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 filter.icon,
                 size: 14.sp,
-                color: isSelected ? baseColor : AppColors.textSecondary,
+                color: isSelected ? AppColors.surface : baseColor,
               ),
-              SizedBox(width: 5.w),
+              6.horizontalSpace,
               Text(
                 filter.label,
-                style: AppTextStyles.chipLabel.copyWith(
-                  color: isSelected ? baseColor : AppColors.textSecondary,
-                  fontWeight: FontWeight.w700,
+                style: AppTextStyles.montserrat(
+                  size: 12,
+                  color: isSelected
+                      ? AppColors.surface
+                      : const Color(0xFF111827),
+                  weight: FontWeight.w500,
                 ),
               ),
               if (count > 0) ...[
-                SizedBox(width: 6.w),
+                8.horizontalSpace,
                 HeaderBadgeTile(text: '$count', color: AppColors.error),
               ],
             ],

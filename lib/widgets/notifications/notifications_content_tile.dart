@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
-
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/models/notification_model.dart';
+import 'package:test_steps/providers/notifications_provider.dart';
 import 'package:test_steps/services/notification_service.dart';
 import 'package:test_steps/widgets/notifications/notification_activity_tile.dart';
 import 'package:test_steps/widgets/notifications/notification_day_header_tile.dart';
@@ -13,30 +14,26 @@ import 'package:test_steps/widgets/notifications/notification_filter_mode.dart';
 import 'package:test_steps/widgets/notifications/notifications_header_tile.dart';
 import 'package:test_steps/widgets/notifications/notifications_summary_section_tile.dart';
 import 'package:test_steps/screens/main_navigation.dart';
+import 'package:test_steps/widgets/shared/app_borders.dart';
 
-class NotificationsContentTile extends StatefulWidget {
+class NotificationsContentTile extends ConsumerStatefulWidget {
   const NotificationsContentTile({super.key});
 
   @override
-  State<NotificationsContentTile> createState() =>
+  ConsumerState<NotificationsContentTile> createState() =>
       NotificationsContentTileState();
 }
 
-class NotificationsContentTileState extends State<NotificationsContentTile> {
+/// Pure view: all fetching, pagination and read-state logic lives in
+/// [NotificationsNotifier]. This state object only owns the scroll
+/// controller (infinite-scroll trigger) and navigation side effects.
+class NotificationsContentTileState
+    extends ConsumerState<NotificationsContentTile> {
   final ScrollController _scrollController = ScrollController();
-  NotificationFilterMode selectedFilter = NotificationFilterMode.all;
-  
-  List<UserNotification> _allNotifications = [];
-  bool _isLoading = true;
-  bool _isFetchingMore = false;
-  bool _hasMore = true;
-  int _currentIndex = 0;
-  static const int _pageSize = 30;
 
   @override
   void initState() {
     super.initState();
-    _fetchNotifications();
     _scrollController.addListener(_onScroll);
   }
 
@@ -48,79 +45,22 @@ class NotificationsContentTileState extends State<NotificationsContentTile> {
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
-    
-    if (_scrollController.position.pixels >= 
+
+    if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      if (!_isFetchingMore && _hasMore) {
-        _fetchNotifications();
-      }
-    }
-  }
-
-  Future<void> _fetchNotifications({bool isRefresh = false}) async {
-    if (isRefresh) {
-      setState(() {
-        _currentIndex = 0;
-        _hasMore = true;
-        _isLoading = true;
-      });
-    } else if (_isFetchingMore || !_hasMore) {
-      return;
-    }
-
-    if (_currentIndex > 0) {
-      setState(() => _isFetchingMore = true);
-    }
-
-    try {
-      final rawList = await NotificationService.getMyNotifications(
-        from: _currentIndex,
-        to: _currentIndex + _pageSize - 1,
-      );
-      
-      final List<UserNotification> newItems = rawList
-          .map(UserNotification.fromJson)
-          .toList();
-
-      setState(() {
-        if (isRefresh) {
-          _allNotifications = newItems;
-        } else {
-          _allNotifications.addAll(newItems);
-        }
-        
-        _hasMore = newItems.length == _pageSize;
-        _currentIndex += newItems.length;
-        _isLoading = false;
-        _isFetchingMore = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _isFetchingMore = false;
-      });
-      _showMessage('Error loading notifications');
+      ref.read(notificationsProvider.notifier).fetch();
     }
   }
 
   void onFilterChanged(NotificationFilterMode mode) {
-    if (selectedFilter == mode) {
-      return;
-    }
-    setState(() {
-      selectedFilter = mode;
-    });
+    ref.read(notificationsProvider.notifier).setFilter(mode);
   }
 
   Future<void> _handleNotificationTap(UserNotification notification) async {
     if (!notification.isRead) {
-      await NotificationService.markAsRead(notification.id);
-      setState(() {
-        final index = _allNotifications.indexWhere((n) => n.id == notification.id);
-        if (index != -1) {
-          _allNotifications[index] = _allNotifications[index].copyWith(isRead: true);
-        }
-      });
+      await ref
+          .read(notificationsProvider.notifier)
+          .markAsRead(notification.id);
     }
 
     await HapticFeedback.selectionClick();
@@ -152,14 +92,7 @@ class NotificationsContentTileState extends State<NotificationsContentTile> {
       _showMessage('Notification is already read');
       return;
     }
-    await NotificationService.markAsRead(notification.id);
-    
-    setState(() {
-      final index = _allNotifications.indexWhere((n) => n.id == notification.id);
-      if (index != -1) {
-        _allNotifications[index] = _allNotifications[index].copyWith(isRead: true);
-      }
-    });
+    await ref.read(notificationsProvider.notifier).markAsRead(notification.id);
 
     if (!mounted) {
       return;
@@ -183,12 +116,12 @@ class NotificationsContentTileState extends State<NotificationsContentTile> {
       context: context,
       backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
       ),
       builder: (BuildContext sheetContext) {
         return SafeArea(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 16.h),
+            padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 18.h),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -230,8 +163,9 @@ class NotificationsContentTileState extends State<NotificationsContentTile> {
                   title: 'Mark all as read',
                   onTap: () async {
                     Navigator.of(sheetContext).pop();
-                    await NotificationService.markAllRead();
-                    await _fetchNotifications(isRefresh: true);
+                    await ref
+                        .read(notificationsProvider.notifier)
+                        .markAllRead();
                   },
                 ),
               ],
@@ -264,28 +198,34 @@ class NotificationsContentTileState extends State<NotificationsContentTile> {
 
   @override
   Widget build(BuildContext context) {
-    final int unreadCount = _allNotifications
-        .where((n) => !n.isRead)
-        .length;
-    final int totalCount = _allNotifications.length;
+    final notificationsState = ref.watch(notificationsProvider);
+    final allNotifications = notificationsState.notifications;
+    final selectedFilter = notificationsState.filter;
+
+    // Surface fetch errors as snackbars without holding UI state for them.
+    ref.listen<NotificationsState>(notificationsProvider, (previous, next) {
+      final error = next.error;
+      if (error != null && previous?.error != error) {
+        _showMessage(error);
+      }
+    });
+
+    final int unreadCount = allNotifications.where((n) => !n.isRead).length;
+    final int totalCount = allNotifications.length;
     final NotificationCategoryMetrics metrics =
-        NotificationCategoryMetrics.from(_allNotifications);
+        NotificationCategoryMetrics.from(allNotifications);
     final Map<NotificationFilterMode, int> filterCounts =
         <NotificationFilterMode, int>{
           NotificationFilterMode.all: totalCount,
           NotificationFilterMode.unread: unreadCount,
-          NotificationFilterMode.alerts:
-              NotificationFilterResolver.apply(
-                NotificationFilterMode.alerts,
-                _allNotifications,
-              ).length,
+          NotificationFilterMode.alerts: NotificationFilterResolver.apply(
+            NotificationFilterMode.alerts,
+            allNotifications,
+          ).length,
         };
 
     final List<UserNotification> filteredNotifications =
-        NotificationFilterResolver.apply(
-          selectedFilter,
-          _allNotifications,
-        );
+        NotificationFilterResolver.apply(selectedFilter, allNotifications);
     final List<NotificationDayGroup> groups =
         NotificationDayGrouping.createGroups(filteredNotifications);
 
@@ -297,101 +237,98 @@ class NotificationsContentTileState extends State<NotificationsContentTile> {
           selectedFilter: selectedFilter,
           filterCounts: filterCounts,
           onFilterChanged: onFilterChanged,
-          onMarkAllRead: () async {
-            await NotificationService.markAllRead();
-            await _fetchNotifications(isRefresh: true);
-          },
+          onMarkAllRead: () =>
+              ref.read(notificationsProvider.notifier).markAllRead(),
           onOptionsTap: _openOptionsSheet,
         ),
         Expanded(
-          child: _isLoading && totalCount == 0
+          child: notificationsState.isLoading && totalCount == 0
               ? const NotificationsLoadingTile()
               : totalCount == 0
-                  ? const NotificationsStateMessageTile(
-                      icon: Icons.notifications_off_outlined,
-                      title: 'No notifications found',
-                      message:
-                          'New updates from your circles will appear here.',
-                      iconColor: AppColors.textNavy,
-                    )
-                  : RefreshIndicator(
-                      color: AppColors.brandPrimary,
-                      onRefresh: () => _fetchNotifications(isRefresh: true),
-                      child: ListView(
-                        controller: _scrollController,
-                        physics: const AlwaysScrollableScrollPhysics(
-                          parent: BouncingScrollPhysics(),
-                        ),
-                        padding: EdgeInsets.fromLTRB(20.w, 0, 20.w, 20.h),
-                        children: [
-                          NotificationsSummarySectionTile(
-                            raidsCount: metrics.raids,
-                            awardsCount: metrics.awards,
-                            questsCount: metrics.quests,
-                            xpEventsCount: metrics.xpEvents,
-                            onRaidsTap: () {
-                              onFilterChanged(NotificationFilterMode.alerts);
-                              _showMessage('Showing alert notifications');
-                            },
-                            onAwardsTap: () => _openFirstCategoryNotification(
-                              NotificationCategoryTypes.awards,
-                              _allNotifications,
-                              'award',
-                            ),
-                            onQuestsTap: () => _openFirstCategoryNotification(
-                              NotificationCategoryTypes.quests,
-                              _allNotifications,
-                              'quest',
-                            ),
-                            onXpEventsTap: () =>
-                                _openFirstCategoryNotification(
-                                  NotificationCategoryTypes.xpEvents,
-                                  _allNotifications,
-                                  'XP event',
-                                ),
-                          ),
-                          SizedBox(height: 14.h),
-                          if (groups.isEmpty)
-                            const NotificationsInlineMessageTile(
-                              message:
-                                  'No updates in this filter right now. Try another tab.',
-                            )
-                          else
-                            ...groups.map(
-                              (NotificationDayGroup group) =>
-                                  NotificationDayGroupTile(
-                                    group: group,
-                                    onNotificationTap: _handleNotificationTap,
-                                    onNotificationActionTap:
-                                        _handleNotificationTap,
-                                    onNotificationLongPress:
-                                        _handleNotificationLongPress,
-                                  ),
-                            ),
-                          if (_isFetchingMore)
-                            Padding(
-                              padding: EdgeInsets.symmetric(vertical: 16.h),
-                              child: const Center(
-                                child: CircularProgressIndicator(
-                                  color: AppColors.brandPrimary,
-                                ),
-                              ),
-                            ),
-                          if (!_hasMore && totalCount > 0)
-                            Padding(
-                              padding: EdgeInsets.symmetric(vertical: 16.h),
-                              child: Center(
-                                child: Text(
-                                  'No more notifications to show',
-                                  style: AppTextStyles.bodySmall.copyWith(
-                                    color: AppColors.textSecondary,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
+              ? const NotificationsStateMessageTile(
+                  icon: Icons.notifications_off_outlined,
+                  title: 'No notifications found',
+                  message: 'New updates from your circles will appear here.',
+                  iconColor: AppColors.textNavy,
+                )
+              : RefreshIndicator(
+                  color: AppColors.brandPrimary,
+                  onRefresh: () => ref
+                      .read(notificationsProvider.notifier)
+                      .fetch(isRefresh: true),
+                  child: ListView(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
                     ),
+                    padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 28.h),
+                    children: [
+                      NotificationsSummarySectionTile(
+                        raidsCount: metrics.raids,
+                        awardsCount: metrics.awards,
+                        questsCount: metrics.quests,
+                        xpEventsCount: metrics.xpEvents,
+                        onRaidsTap: () {
+                          onFilterChanged(NotificationFilterMode.alerts);
+                          _showMessage('Showing alert notifications');
+                        },
+                        onAwardsTap: () => _openFirstCategoryNotification(
+                          NotificationCategoryTypes.awards,
+                          allNotifications,
+                          'award',
+                        ),
+                        onQuestsTap: () => _openFirstCategoryNotification(
+                          NotificationCategoryTypes.quests,
+                          allNotifications,
+                          'quest',
+                        ),
+                        onXpEventsTap: () => _openFirstCategoryNotification(
+                          NotificationCategoryTypes.xpEvents,
+                          allNotifications,
+                          'XP event',
+                        ),
+                      ),
+                      SizedBox(height: 14.h),
+                      if (groups.isEmpty)
+                        const NotificationsInlineMessageTile(
+                          message:
+                              'No updates in this filter right now. Try another tab.',
+                        )
+                      else
+                        ...groups.map(
+                          (NotificationDayGroup group) =>
+                              NotificationDayGroupTile(
+                                group: group,
+                                onNotificationTap: _handleNotificationTap,
+                                onNotificationActionTap: _handleNotificationTap,
+                                onNotificationLongPress:
+                                    _handleNotificationLongPress,
+                              ),
+                        ),
+                      if (notificationsState.isFetchingMore)
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16.h),
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.brandPrimary,
+                            ),
+                          ),
+                        ),
+                      if (totalCount > 0)
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16.h),
+                          child: Center(
+                            child: Text(
+                              'No more notifications to show',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
         ),
       ],
     );
@@ -471,16 +408,21 @@ class NotificationsStateMessageTile extends StatelessWidget {
             SizedBox(height: 12.h),
             Text(
               title,
-              style: AppTextStyles.cardTitle.copyWith(
+              style: AppTextStyles.montserrat(
+                size: 17,
                 color: AppColors.textNavy,
+                weight: FontWeight.w800,
               ),
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 6.h),
             Text(
               message,
-              style: AppTextStyles.bodySmall.copyWith(
+              style: AppTextStyles.montserrat(
+                size: 13,
                 color: AppColors.textSecondary,
+                weight: FontWeight.w400,
+                height: 1.45,
               ),
               textAlign: TextAlign.center,
             ),
@@ -502,12 +444,16 @@ class NotificationsInlineMessageTile extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.h),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: AppColors.borderLight),
+        borderRadius: BorderRadius.circular(18.r),
+        border: AppBorders.raised(),
       ),
       child: Text(
         message,
-        style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+        style: AppTextStyles.montserrat(
+          size: 13,
+          color: AppColors.textSecondary,
+          weight: FontWeight.w500,
+        ),
         textAlign: TextAlign.center,
       ),
     );
@@ -532,19 +478,34 @@ class NotificationQuickActionTile extends StatelessWidget {
       color: AppColors.surface.withValues(alpha: 0),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14.r),
-        child: Padding(
+        borderRadius: BorderRadius.circular(18.r),
+        child: Container(
+          margin: EdgeInsets.only(bottom: 8.h),
           padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(18.r),
+            border: Border.all(color: AppColors.borderColor),
+          ),
           child: Row(
             children: [
-              Icon(icon, size: 20.sp, color: AppColors.textNavy),
-              SizedBox(width: 12.w),
+              Container(
+                width: 34.w,
+                height: 34.w,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFDDEBFF),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 18.sp, color: AppColors.blueColor),
+              ),
+              12.horizontalSpace,
               Expanded(
                 child: Text(
                   title,
-                  style: AppTextStyles.cardSubtitle.copyWith(
+                  style: AppTextStyles.montserrat(
+                    size: 13,
                     color: AppColors.textNavy,
-                    fontWeight: FontWeight.w600,
+                    weight: FontWeight.w600,
                   ),
                 ),
               ),

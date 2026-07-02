@@ -3,13 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/widgets/shared/app_borders.dart';
 
-class CircleIconOption {
-  const CircleIconOption({required this.id, required this.asset});
-
-  final String id;
-  final String asset;
-}
-
 class CircleIconPicker extends StatelessWidget {
   const CircleIconPicker({
     super.key,
@@ -18,9 +11,9 @@ class CircleIconPicker extends StatelessWidget {
     required this.onSelected,
   });
 
-  final List<CircleIconOption> options;
+  final List<String> options;
   final String selectedId;
-  final ValueChanged<CircleIconOption> onSelected;
+  final ValueChanged<String> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -37,23 +30,34 @@ class CircleIconPicker extends StatelessWidget {
         children: [
           Padding(
             padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 24.h),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                children: [
-                  Wrap(
-                  
-                    children: _buildRowItems(options.take(5).toList()),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                const itemsPerRow = 5;
+                final spacing = 10.w;
+                final tileWidth =
+                    (constraints.maxWidth - spacing * (itemsPerRow - 1)) /
+                    itemsPerRow;
+
+                return SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Wrap(
+                    spacing: spacing,
+                    runSpacing: 10.h,
+                    children: options
+                        .map(
+                          (option) => SizedBox(
+                            width: tileWidth,
+                            child: CircleIconPickerTile(
+                              option: option,
+                              selected: option == selectedId,
+                              onTap: () => onSelected(option),
+                            ),
+                          ),
+                        )
+                        .toList(),
                   ),
-                  10.verticalSpace,
-                   Wrap(
-                  
-                    children: _buildRowItems(options.take(5).toList()),
-                  ),
-                  
-                ],
-              ),
+                );
+              },
             ),
           ),
           Positioned(
@@ -75,21 +79,6 @@ class CircleIconPicker extends StatelessWidget {
       ),
     );
   }
-
-  List<Widget> _buildRowItems(List<CircleIconOption> rowOptions) {
-    return rowOptions
-        .map(
-          (option) => Padding(
-            padding: EdgeInsets.only(right: 12.w),
-            child: CircleIconPickerTile(
-              option: option,
-              selected: option.id == selectedId,
-              onTap: () => onSelected(option),
-            ),
-          ),
-        )
-        .toList();
-  }
 }
 
 class CircleIconPickerTile extends StatelessWidget {
@@ -100,28 +89,46 @@ class CircleIconPickerTile extends StatelessWidget {
     required this.onTap,
   });
 
-  final CircleIconOption option;
+  final String option;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(13.sp),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(15.r),
-        color: Colors.white,
-        border: Border.all(color: AppColors.borderColor),
-      ),
-    
+    return Material(
+      color: selected ? AppColors.lightBlueColor : Colors.white,
+      borderRadius: BorderRadius.circular(15.r),
       child: InkWell(
         borderRadius: BorderRadius.circular(15.r),
         onTap: onTap,
-        child: Image.asset(
-          option.asset,
-          width: 26.sp,
-          height: 26.sp,
-          fit: BoxFit.contain,
+        child: Container(
+          height: 56.w,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15.r),
+            border: Border.all(
+              color: selected ? AppColors.blueColor : AppColors.borderColor,
+              width: selected ? 2.w : 1.w,
+            ),
+          ),
+          child: SizedBox.square(
+            dimension: 34.sp,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6.r),
+              child: Image.network(
+                option,
+                width: 34.sp,
+                height: 34.sp,
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
+                errorBuilder: (_, __, ___) => Icon(
+                  Icons.image_not_supported_outlined,
+                  size: 24.sp,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

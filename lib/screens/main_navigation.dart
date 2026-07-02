@@ -1,75 +1,69 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
-import 'package:test_steps/features/leaderboard/view/leaderboard_view.dart';
+import 'package:test_steps/features/profile/view/profile_bottom_sheet.dart';
 import 'package:test_steps/features/social/view/browse_cicle.dart';
+import 'package:test_steps/features/steps/view/player_energy_screen.dart';
 import 'package:test_steps/features/steps/view/steps_view.dart';
 import 'package:test_steps/features/map/view/map_view.dart';
 import 'package:test_steps/screens/notifications_screen.dart';
+import 'package:test_steps/services/dashboard_service.dart';
 
-class MainNavigation extends StatefulWidget {
+class MainNavigation extends ConsumerStatefulWidget {
   const MainNavigation({super.key, this.initialIndex = 0});
 
   final int initialIndex;
 
   @override
-  State<MainNavigation> createState() => _MainNavigationState();
+  ConsumerState<MainNavigation> createState() => _MainNavigationState();
 }
 
-class _MainNavigationState extends State<MainNavigation> {
-  static const Color _activeColor = Color(0xFF0D968B);
-  static const Color _inactiveColor = Color(0xFF94A3B8);
+class _MainNavigationState extends ConsumerState<MainNavigation> {
+  static const Color _activeColor = Color(0xFF5169FF);
+  static const Color _activeBackground = Color(0xFFDBEAFE);
+  static const Color _inactiveColor = Color(0xFF030712);
 
   late int _selectedIndex;
 
-  final List<Widget> _screens = const [
-    StepsView(),
-    MapView(),
-    AllCirclesPage(),
-    LeaderboardView(),
-  ];
-
   final List<_NavItem> _navItems = const [
-    _NavItem(
-      label: 'Home',
-      iconAsset: 'assets/icons/dashboard_nav_home_icon.svg',
-    ),
-    _NavItem(
-      label: 'Map',
-      iconAsset: 'assets/icons/dashboard_nav_map_icon.svg',
-    ),
-    _NavItem(
-      label: 'Circle',
-      iconAsset: 'assets/icons/dashboard_nav_circles_icon.svg',
-    ),
-    _NavItem(
-      label: 'Leaderboard',
-      iconAsset: 'assets/icons/dashboard_medal_icon.svg',
-    ),
+    _NavItem(label: 'Home', iconAsset: 'assets/icons/home.png'),
+    _NavItem(label: 'Map', iconAsset: 'assets/icons/map.png'),
+    _NavItem(label: 'Circle', iconAsset: 'assets/icons/messages.png'),
+    _NavItem(label: 'Shop', iconAsset: 'assets/icons/shop.png'),
+    _NavItem(label: 'Profile', iconAsset: 'assets/icons/profile.png'),
   ];
 
   @override
   void initState() {
     super.initState();
-    _selectedIndex = widget.initialIndex.clamp(0, _screens.length - 1).toInt();
+    _selectedIndex = widget.initialIndex.clamp(0, _navItems.length - 1).toInt();
   }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
   }
 
   @override
   Widget build(BuildContext context) {
+    final dashboardState = ref.watch(dashboardProvider);
+    final screens = [
+      const StepsView(),
+      const MapView(),
+      const AllCirclesPage(),
+      PlayerEnergyScreen(energy: dashboardState.attackEnergy),
+      const ProfileScreen(),
+    ];
+
     return Scaffold(
       appBar:
           (_selectedIndex == 0 ||
               _selectedIndex == 1 ||
               _selectedIndex == 2 ||
-              _selectedIndex == 3)
+              _selectedIndex == 3 ||
+              _selectedIndex == 4)
           ? null
           : AppBar(
               toolbarHeight: 60.sp,
@@ -122,23 +116,25 @@ class _MainNavigationState extends State<MainNavigation> {
                       ),
               ),
             ),
-      body: IndexedStack(index: _selectedIndex, children: _screens),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: [
+          // TickerMode pauses each tab's animations (e.g. the map's pulsing
+          // marker / smooth movement) while that tab is off-screen, so hidden
+          // tabs don't rebuild in the background and slow the whole app.
+          for (var i = 0; i < screens.length; i++)
+            TickerMode(enabled: _selectedIndex == i, child: screens[i]),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
-          border: Border(top: BorderSide(color: AppColors.tileNeutral)),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x140F172A),
-              blurRadius: 14,
-              offset: Offset(0, -4),
-            ),
-          ],
+          border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
         ),
         child: SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+            padding: EdgeInsets.fromLTRB(8.w, 7.h, 8.w, 8.h),
             child: Row(
               children: List.generate(_navItems.length, (index) {
                 final item = _navItems[index];
@@ -147,45 +143,39 @@ class _MainNavigationState extends State<MainNavigation> {
 
                 return Expanded(
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(22.r),
                     onTap: () => _onItemTapped(index),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOut,
+                      height: 58.h,
+                      margin: EdgeInsets.symmetric(horizontal: 2.w),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? _activeBackground
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(22.r),
+                      ),
                       child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            height: 2,
-                            width: 24,
-                            margin: const EdgeInsets.only(bottom: 6),
-                            decoration: BoxDecoration(
-                              color: selected
-                                  ? _activeColor
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
+                          _BottomNavIcon(
+                            asset: item.iconAsset,
+                            color: itemColor,
                           ),
-                          SvgPicture.asset(
-                            item.iconAsset,
-                            width: 19,
-                            height: 19,
-                            colorFilter: ColorFilter.mode(
-                              itemColor,
-                              BlendMode.srcIn,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            item.label.toUpperCase(),
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 10,
-                              fontWeight: selected
-                                  ? FontWeight.w700
-                                  : FontWeight.w600,
-                              letterSpacing: 0.3,
-                              color: itemColor,
+                          3.verticalSpace,
+                          Transform.translate(
+                            offset: Offset(0, -1.h),
+                            child: Text(
+                              item.label,
+                              style: TextStyle(
+                                fontFamily: 'Montserrat',
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w500,
+                                height: 1.1,
+                                color: itemColor,
+                              ),
                             ),
                           ),
                         ],
@@ -287,4 +277,33 @@ class _NavItem {
 
   final String label;
   final String iconAsset;
+}
+
+class _BottomNavIcon extends StatelessWidget {
+  const _BottomNavIcon({required this.asset, required this.color});
+
+  final String asset;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = 25.sp;
+    if (asset.endsWith('.svg')) {
+      return SvgPicture.asset(
+        asset,
+        width: size,
+        height: size,
+        colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+      );
+    }
+
+    return Image.asset(
+      asset,
+      width: size,
+      height: size,
+      color: color,
+      colorBlendMode: BlendMode.srcIn,
+      filterQuality: FilterQuality.high,
+    );
+  }
 }

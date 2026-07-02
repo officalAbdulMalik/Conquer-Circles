@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/models/notification_model.dart';
+import 'package:test_steps/widgets/shared/app_borders.dart';
 
 class NotificationActivityTile extends StatelessWidget {
   const NotificationActivityTile({
@@ -24,30 +25,32 @@ class NotificationActivityTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final NotificationTileThemeData themeData =
         NotificationTileThemeResolver.resolve(notification.type);
-    final Color tileColor = themeData.backgroundColor(notification.isRead);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       margin: EdgeInsets.only(bottom: 12.h),
       decoration: BoxDecoration(
-        color: tileColor,
-        borderRadius: BorderRadius.circular(18.r),
-        border: Border.all(color: themeData.borderColor),
-        boxShadow: themeData.shadowFor(notification.isRead),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(22.r),
+        border: AppBorders.raised(
+          color: notification.isRead
+              ? AppColors.borderColor
+              : themeData.accent.withValues(alpha: 0.42),
+        ),
       ),
       child: Material(
         color: AppColors.surface.withValues(alpha: 0),
         child: InkWell(
-          borderRadius: BorderRadius.circular(18.r),
+          borderRadius: BorderRadius.circular(22.r),
           onTap: onTap,
           onLongPress: onLongPress,
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 13.h),
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 NotificationIconTile(themeData: themeData),
-                SizedBox(width: 10.w),
+                12.horizontalSpace,
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,9 +63,10 @@ class NotificationActivityTile extends StatelessWidget {
                       SizedBox(height: 5.h),
                       Text(
                         notification.message,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textNavy.withValues(alpha: 0.72),
-                          fontWeight: FontWeight.w500,
+                        style: AppTextStyles.montserrat(
+                          size: 12,
+                          color: AppColors.textSecondary,
+                          weight: FontWeight.w400,
                           height: 1.35,
                         ),
                         maxLines: 2,
@@ -80,9 +84,10 @@ class NotificationActivityTile extends StatelessWidget {
                           const Spacer(),
                           Text(
                             DateFormat('h:mm a').format(notification.createdAt),
-                            style: AppTextStyles.caption.copyWith(
+                            style: AppTextStyles.montserrat(
+                              size: 11,
                               color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w500,
+                              weight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -119,14 +124,24 @@ class NotificationIconTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 38.w,
-      height: 38.w,
+      width: 50.w,
+      height: 50.w,
       decoration: BoxDecoration(
-        color: themeData.accent.withValues(alpha: 0.14),
-        shape: BoxShape.circle,
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColors.borderColor, width: 1.w),
       ),
       alignment: Alignment.center,
-      child: Icon(themeData.icon, color: themeData.accent, size: 19.sp),
+      child: Container(
+        width: 34.w,
+        height: 34.w,
+        decoration: BoxDecoration(
+          color: themeData.accent.withValues(alpha: 0.16),
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: Icon(themeData.icon, color: themeData.accent, size: 18.sp),
+      ),
     );
   }
 }
@@ -150,9 +165,10 @@ class NotificationMetaRowTile extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: AppTextStyles.cardTitle.copyWith(
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w700,
+            style: AppTextStyles.montserrat(
+              size: 14,
+              color: AppColors.textPrimary,
+              weight: FontWeight.w700,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -163,13 +179,14 @@ class NotificationMetaRowTile extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
           decoration: BoxDecoration(
             color: tagColor.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(999.r),
+            borderRadius: BorderRadius.circular(16.r),
           ),
           child: Text(
             tag,
-            style: AppTextStyles.chipLabel.copyWith(
+            style: AppTextStyles.montserrat(
+              size: 11,
               color: tagColor,
-              fontWeight: FontWeight.w700,
+              weight: FontWeight.w700,
             ),
           ),
         ),
@@ -195,31 +212,25 @@ class NotificationActionChipTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(999.r),
+      borderRadius: BorderRadius.circular(18.r),
       onTap: onTap,
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 11.w, vertical: 6.h),
         decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(999.r),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.33),
-              blurRadius: 10.r,
-              offset: Offset(0, 3.h),
-            ),
-          ],
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(18.r),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: AppColors.surface, size: 12.sp),
+            Icon(icon, color: color, size: 12.sp),
             SizedBox(width: 4.w),
             Text(
               label,
-              style: AppTextStyles.chipLabel.copyWith(
-                color: AppColors.surface,
-                fontWeight: FontWeight.w700,
+              style: AppTextStyles.montserrat(
+                size: 11,
+                color: color,
+                weight: FontWeight.w700,
               ),
             ),
           ],

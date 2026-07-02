@@ -1,18 +1,22 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:math' as math;
 
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pedometer/pedometer.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:riverpod/legacy.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 import '../models/map_model.dart';
 import '../models/walk_models.dart';
 import '../services/supabase_service.dart';
-import '../services/badge_service.dart';
 import '../services/notification_service.dart';
 import '../services/game_service.dart';
+import '../services/dashboard_service.dart';
 
 // ---------------------------------------------------------------------------
 // Notifier
@@ -20,17 +24,33 @@ import '../services/game_service.dart';
 
 class MapNotifier extends StateNotifier<MapState> {
   final SupabaseService _service;
-  final BadgeService _badgeService;
   final GameService _gameService;
+  final Ref _ref;
 
   StreamSubscription<Position>? _positionSubscription;
-  StreamSubscription<List<Map<String, dynamic>>>? _liveLocationSubscription;
-  List<String> _friendIds = [];
+  StreamSubscription<StepCount>? _stepSubscription;
+  Timer? _progressSyncTimer;
+  int? _pedometerBaseline;
+  int _pedometerStepOffset = 0;
+  bool _sensorHasCountedSteps = false;
+  bool _isSyncingProgress = false;
+  int _stepsBeforeRun = 0;
+  double _distanceBeforeRun = 0;
+  int _durationBeforeRun = 0;
+  DateTime? _runStartedAt;
+  Duration _pausedDuration = Duration.zero;
+  DateTime? _pauseStartedAt;
+  Position? _lastAcceptedRunPosition;
+  LatLng? _lastTerritoryRefreshLocation;
+  DateTime? _lastTerritoryRefreshAt;
+  bool _territoryRefreshInProgress = false;
+  bool _allTerritoriesLoaded = false;
+  int _lastSyncedRunSteps = 0;
+  final Map<String, Timer> _underAttackTimers = {};
 
   supabase.User? get currentUser => _service.currentUser;
 
-  MapNotifier(this._service, this._badgeService, this._gameService)
-    : super(MapState()) {
+  MapNotifier(this._service, this._gameService, this._ref) : super(MapState()) {
     initialize();
   }
 
@@ -41,26 +61,51 @@ class MapNotifier extends StateNotifier<MapState> {
   Future<void> initialize({bool forceRequest = false}) async {
     state = state.copyWith(isLoading: true, error: null);
 
-    // Check location service
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      await Geolocator.requestPermission();
-    }
+    await _loadAccountMapData().timeout(
+      const Duration(seconds: 8),
+      onTimeout: () {
+        developer.log('[Map] Account map data bootstrap timed out.');
+      },
+    );
 
-    // Check / request permission
+    // Device-level location services. Requesting app permission won't turn the
+    // service back on, so we don't prompt here — just surface a message later.
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+    // Only ever prompt when permission has NOT been granted yet. If the user
+    // already allowed it (whileInUse / always) we never re-ask, so restarting
+    // the app won't keep showing the system dialog.
     var permission = await Geolocator.checkPermission();
-    if (forceRequest || permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
+    final alreadyGranted =
+        permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always;
+
+    if (!alreadyGranted) {
+      if (permission == LocationPermission.denied) {
+        // Not decided yet (or an iOS "Allow Once" grant expired) — ask once.
+        permission = await Geolocator.requestPermission();
+      } else if (forceRequest &&
+          permission == LocationPermission.deniedForever) {
+        // The OS won't show the dialog again; a user-initiated "Enable" tap
+        // sends them to Settings instead.
+        await Geolocator.openAppSettings();
+        permission = await Geolocator.checkPermission();
+      }
     }
 
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
+    final granted =
+        permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always;
+
+    if (!granted) {
       state = state.copyWith(
         isLoading: false,
         permissionGranted: false,
-        error: 'Location permission denied. Map features limited.',
+        error: !serviceEnabled
+            ? 'Turn on location services to use map features.'
+            : 'Location permission denied. Map features limited.',
       );
-      // Even if denied, we can try to load a fallback home base if it exists
+      // Even if denied, we can still fall back to a saved home base if present.
       if (state.homeBase != null) {
         state = state.copyWith(isLoading: false);
       }
@@ -70,36 +115,66 @@ class MapNotifier extends StateNotifier<MapState> {
     state = state.copyWith(permissionGranted: true);
 
     try {
-      // Load attack energy from profile
-      final energy = await _service.getAttackEnergy();
-      state = state.copyWith(currentAttackEnergy: energy);
-
       // Fetch current position with a 10-second timeout
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
       );
 
       state = state.copyWith(
         userLocation: LatLng(position.latitude, position.longitude),
         isLoading: false,
       );
+      await _loadTerritoriesAround(state.userLocation!);
     } catch (e) {
-      print('[Map] Initialization timeout or error: $e');
-
-      // Fallback to London city center if no location available
-      const fallbackLoc = LatLng(51.5074, -0.1278);
+      developer.log('[Map] Initialization timeout or error: $e');
 
       state = state.copyWith(
-        userLocation: state.userLocation ?? state.homeBase ?? fallbackLoc,
         isLoading: false,
-        error: state.userLocation == null
-            ? 'GPS timed out. Using default location.'
-            : null,
+        error: state.userLocation == null ? 'GPS location unavailable.' : null,
       );
+      final fallbackLocation = state.userLocation ?? state.homeBase;
+      if (fallbackLocation != null) {
+        await _loadTerritoriesAround(fallbackLocation);
+      }
     }
 
-    await _startLiveLocationTracking();
+    _startLocationTracking();
+  }
+
+  Future<void> _loadAccountMapData() async {
+    final homeBase = await _service.getHomeBaseLocation().timeout(
+      const Duration(seconds: 5),
+      onTimeout: () => null,
+    );
+    var attackEnergy = state.currentAttackEnergy;
+
+    try {
+      final dashboard = await _service.getStepsDashboardData().timeout(
+        const Duration(seconds: 6),
+      );
+      final profile = dashboard['profile'];
+      if (profile is Map) {
+        attackEnergy =
+            (profile['attack_energy'] as num?)?.round() ?? attackEnergy;
+      }
+    } catch (e) {
+      try {
+        attackEnergy = await _service.getAttackEnergy().timeout(
+          const Duration(seconds: 4),
+        );
+      } catch (_) {
+        attackEnergy = state.currentAttackEnergy;
+      }
+      developer.log('[Map] Dashboard bootstrap failed: $e');
+    }
+
+    state = state.copyWith(
+      homeBase: homeBase,
+      currentAttackEnergy: attackEnergy,
+    );
   }
 
   Future<void> requestPermission() async {
@@ -107,78 +182,184 @@ class MapNotifier extends StateNotifier<MapState> {
   }
 
   // ---------------------------------------------------------------------------
-  // Live location tracking (friends only)
+  // Foreground location tracking
   // ---------------------------------------------------------------------------
 
-  Future<void> _startLiveLocationTracking() async {
-    _friendIds = await _service.getAcceptedInviteUserIds();
-    if (_friendIds.isEmpty) return;
+  void _startLocationTracking() {
+    _positionSubscription?.cancel();
+    _positionSubscription = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 5,
+      ),
+    ).listen(_handleLocationUpdate);
+  }
 
-    _liveLocationSubscription?.cancel();
-    _liveLocationSubscription = _service.getLocationStream().listen((points) {
-      if (points.isEmpty) return;
+  Future<void> startRun() async {
+    final initialRoute = state.userLocation == null
+        ? const <LatLng>[]
+        : <LatLng>[state.userLocation!];
+    state = state.copyWith(
+      isRunActive: true,
+      isRunPaused: false,
+      runRoute: initialRoute,
+      trailPoints: initialRoute,
+      runDistanceKm: 0,
+      runSteps: 0,
+      runClaimedAreaKm2: 0,
+      runClaimedTerritoryIds: const {},
+      runStartedAt: DateTime.now(),
+      clearRunPausedAt: true,
+    );
 
-      final updated = Map<String, LatLng>.from(state.liveUserLocations);
-      bool changed = false;
+    final today = await _service.getTodayActivity();
+    _stepsBeforeRun = _readInt(today['steps']);
+    _distanceBeforeRun = _readDouble(
+      today['distance_km'] ?? today['total_distance_km'],
+    );
+    _durationBeforeRun = _readInt(
+      today['duration_seconds'] ??
+          today['active_seconds'] ??
+          today['walking_seconds'],
+    );
+    _pedometerBaseline = null;
+    _pedometerStepOffset = 0;
+    _sensorHasCountedSteps = false;
+    _runStartedAt = DateTime.now();
+    _pausedDuration = Duration.zero;
+    _pauseStartedAt = null;
+    _lastAcceptedRunPosition = null;
+    _lastSyncedRunSteps = 0;
 
-      for (final point in points) {
-        final uid = point['user_id']?.toString();
-        if (uid == null ||
-            uid == currentUser?.id ||
-            !_friendIds.contains(uid)) {
-          continue;
-        }
-
-        final lat = (point['latitude'] as num).toDouble();
-        final lng = (point['longitude'] as num).toDouble();
-        final loc = LatLng(lat, lng);
-
-        if (updated[uid] != loc) {
-          updated[uid] = loc;
-          changed = true;
-        }
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      final status = await Permission.activityRecognition.request();
+      if (!status.isGranted) {
+        developer.log(
+          '[Map] Activity recognition permission was not granted; '
+          'using validated GPS distance for step estimates.',
+        );
       }
+    }
 
-      if (changed) state = state.copyWith(liveUserLocations: updated);
-    });
+    await _stepSubscription?.cancel();
+    _stepSubscription = Pedometer.stepCountStream.listen(
+      _handleStepCount,
+      onError: _handleStepCountError,
+    );
+  }
+
+  void pauseRun() {
+    if (!state.isRunActive || state.isRunPaused) return;
+    _pauseStartedAt = DateTime.now();
+    state = state.copyWith(isRunPaused: true, runPausedAt: DateTime.now());
+  }
+
+  void resumeRun() {
+    if (!state.isRunActive || !state.isRunPaused) return;
+    final pauseStartedAt = _pauseStartedAt;
+    if (pauseStartedAt != null) {
+      _pausedDuration += DateTime.now().difference(pauseStartedAt);
+    }
+    _pauseStartedAt = null;
+    // Shift the display anchor forward by the pause length so the on-screen
+    // timer excludes paused time.
+    final pausedAt = state.runPausedAt;
+    final shiftedStart = (pausedAt != null && state.runStartedAt != null)
+        ? state.runStartedAt!.add(DateTime.now().difference(pausedAt))
+        : state.runStartedAt;
+    state = state.copyWith(
+      isRunPaused: false,
+      runStartedAt: shiftedStart,
+      clearRunPausedAt: true,
+    );
+  }
+
+  Future<void> finishRun() async {
+    if (!state.isRunActive) return;
+    _progressSyncTimer?.cancel();
+    await _syncRunProgress(force: true);
+    await _stepSubscription?.cancel();
+    _stepSubscription = null;
+    _pedometerBaseline = null;
+    _pedometerStepOffset = 0;
+    _sensorHasCountedSteps = false;
+    _runStartedAt = null;
+    _pauseStartedAt = null;
+    _lastAcceptedRunPosition = null;
+    _pausedDuration = Duration.zero;
+    state = state.copyWith(
+      isRunActive: false,
+      isRunPaused: false,
+      trailPoints: const <LatLng>[],
+      clearRunStartedAt: true,
+      clearRunPausedAt: true,
+    );
+    await loadAllTerritories(force: true);
+    await _refreshDashboardAfterMapActivity();
+  }
+
+  Future<void> persistRunProgress() => _syncRunProgress(force: true);
+
+  void _handleStepCount(StepCount event) {
+    if (!state.isRunActive) return;
+    if (_pedometerBaseline == null) {
+      _pedometerBaseline = event.steps;
+      _pedometerStepOffset = state.runSteps;
+    }
+    if (state.isRunPaused) return;
+
+    final sensorSteps = math.max(0, event.steps - _pedometerBaseline!);
+    if (sensorSteps > 0) _sensorHasCountedSteps = true;
+    final runSteps = math.max(
+      state.runSteps,
+      _pedometerStepOffset + sensorSteps,
+    );
+    if (runSteps == state.runSteps) return;
+    state = state.copyWith(runSteps: runSteps);
+    _scheduleRunProgressSync();
+  }
+
+  void _handleStepCountError(Object error) {
+    developer.log('[Map] Pedometer stream error: $error');
+    _sensorHasCountedSteps = false;
   }
 
   // ---------------------------------------------------------------------------
   // Territory loading
   // ---------------------------------------------------------------------------
 
-  /// Called on camera idle — fetches territories visible in the current viewport.
+  /// Called on camera idle — loads all existing territories so the app
+  /// displays every territory instead of only the nearby ones.
   Future<void> loadTerritoriesForBounds(LatLngBounds bounds) async {
+    await loadAllTerritories();
+  }
+
+  Future<void> loadAllTerritories({bool force = false}) async {
+    if (_allTerritoriesLoaded && !force) return;
     try {
-      final centerLat =
-          (bounds.southwest.latitude + bounds.northeast.latitude) / 2;
-      final centerLng =
-          (bounds.southwest.longitude + bounds.northeast.longitude) / 2;
-      final radius = _boundsRadiusMeters(bounds);
-
-      final fresh = await _service.getNearbyTerritories(
-        centerLat,
-        centerLng,
-        radius: radius,
+      final fresh = await _service.getAllTerritories(
+        lat: state.userLocation?.latitude ?? 0,
+        lng: state.userLocation?.longitude ?? 0,
       );
-
-      // Merge: existing + fresh (fresh wins on conflict)
-      final merged = <String, Territory>{
-        for (final t in state.nearbyTerritories) t.id: t,
-        for (final t in fresh) t.id: t,
-      };
-
-      state = state.copyWith(nearbyTerritories: merged.values.toList());
+      state = state.copyWith(nearbyTerritories: fresh);
+      _allTerritoriesLoaded = true;
     } catch (e) {
-      print('[Map] loadTerritoriesForBounds error: $e');
+      developer.log('[Map] loadAllTerritories error: $e');
     }
+  }
+
+  Future<void> _loadTerritoriesAround(LatLng location) async {
+    await loadAllTerritories();
   }
 
   Future<void> getCurrentLocation() async {
     try {
       state = state.copyWith(isLoading: true, error: null);
       final pos = await Geolocator.getCurrentPosition(
-        timeLimit: const Duration(seconds: 10),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
       );
       state = state.copyWith(
         userLocation: LatLng(pos.latitude, pos.longitude),
@@ -203,6 +384,10 @@ class MapNotifier extends StateNotifier<MapState> {
       return {'success': false, 'error': 'Current location is unavailable.'};
     }
 
+    return setHomeBase(location);
+  }
+
+  Future<Map<String, dynamic>> setHomeBase(LatLng location) async {
     final result = await _gameService
         .setHomeBase(location.latitude, location.longitude)
         .timeout(
@@ -215,6 +400,7 @@ class MapNotifier extends StateNotifier<MapState> {
 
     if (result['success'] == true) {
       state = state.copyWith(homeBase: location, error: null);
+      await _loadTerritoriesAround(location);
     } else {
       state = state.copyWith(error: result['error']?.toString());
     }
@@ -223,129 +409,39 @@ class MapNotifier extends StateNotifier<MapState> {
   }
 
   // ---------------------------------------------------------------------------
-  // Walk session — START
-  // ---------------------------------------------------------------------------
-
-  /// Creates a walking_sessions row and begins streaming GPS points.
-  /// Call from MapScreen "Start Walk" FAB.
-  Future<void> startWalk() async {
-    if (state.isWalking) return;
-
-    state = state.copyWith(isLoading: true, error: null);
-
-    final sessionId = await _service.startWalkingSession();
-    if (sessionId == null) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Failed to start walk session.',
-      );
-      return;
-    }
-
-    state = state.copyWith(
-      isWalking: true,
-      isRunPaused: false,
-      currentSessionId: sessionId,
-      walkStartedAt: DateTime.now(),
-      clearWalkPausedAt: true,
-      activePath: [],
-      sequenceNum: 0,
-      isLoading: false,
-    );
-
-    _positionSubscription = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 5,
-      ),
-    ).listen(_handleLocationUpdate);
-  }
-
-  Future<void> pauseWalk() async {
-    if (!state.isWalking || state.currentSessionId == null) return;
-
-    await _positionSubscription?.cancel();
-    _positionSubscription = null;
-
-    state = state.copyWith(
-      isWalking: false,
-      isRunPaused: true,
-      walkPausedAt: DateTime.now(),
-      clearSpeed: true,
-    );
-  }
-
-  void resumeWalk() {
-    if (!state.isRunPaused || state.currentSessionId == null) return;
-
-    final startedAt = state.walkStartedAt;
-    final pausedAt = state.walkPausedAt;
-    final elapsedBeforePause = startedAt == null || pausedAt == null
-        ? Duration.zero
-        : pausedAt.difference(startedAt);
-
-    state = state.copyWith(
-      isWalking: true,
-      isRunPaused: false,
-      walkStartedAt: DateTime.now().subtract(elapsedBeforePause),
-      clearWalkPausedAt: true,
-    );
-
-    _positionSubscription?.cancel();
-    _positionSubscription = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 5,
-      ),
-    ).listen(_handleLocationUpdate);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Walk session — location updates while walking
+  // Location updates and territory entry
   // ---------------------------------------------------------------------------
 
   // Tracks last territory processed to avoid calling the RPC on every GPS tick
   String? _lastProcessedTerritoryId;
 
   void _handleLocationUpdate(Position position) {
-    if (!state.isWalking || state.currentSessionId == null) return;
-
     final latLng = LatLng(position.latitude, position.longitude);
-    final newPath = List<LatLng>.from(state.activePath)..add(latLng);
-    final newSequence = state.sequenceNum + 1;
     final speedKmh = position.speed * 3.6; // m/s → km/h
 
     state = state.copyWith(
       userLocation: latLng,
-      activePath: newPath,
-      sequenceNum: newSequence,
+      currentSpeedMps: position.speed,
       currentSpeedKmh: speedKmh,
     );
+
+    if (state.isRunActive && !state.isRunPaused) {
+      _appendRunLocation(position, latLng);
+      _appendTrailPoint(position, latLng);
+    }
 
     final user = _service.currentUser;
     if (user == null) return;
 
-    // Record GPS point — complete_walking_session builds the
-    // convex hull polygon from these when the walk ends.
-    _service.recordLocationPoint(
-      LocationPoint(
-        sessionId: state.currentSessionId!,
-        userId: user.id,
-        recordedAt: DateTime.now(),
-        sequenceNum: newSequence,
-        latitude: position.latitude,
-        longitude: position.longitude,
-        speedMps: position.speed,
-        accuracyM: position.accuracy,
-      ),
-    );
-
-    _checkTerritoryStatus(latLng, user.id);
     _checkCrossingNotifications(latLng, user.id);
+    _refreshTerritoriesIfNeeded(latLng);
 
     // ── Territory action: process only when user is inside a real polygon ──
     // Only fires when speed is in valid walk range (2–15 km/h)
-    if (speedKmh >= 2 && speedKmh <= 15) {
+    if (state.isRunActive &&
+        !state.isRunPaused &&
+        speedKmh >= 2 &&
+        speedKmh <= 15) {
       final territory = _territoryAtPoint(latLng);
       if (territory == null) {
         _lastProcessedTerritoryId = null;
@@ -359,14 +455,116 @@ class MapNotifier extends StateNotifier<MapState> {
     }
   }
 
+  void _appendRunLocation(Position position, LatLng location) {
+    if (position.accuracy > 25) return;
+
+    final previousPosition = _lastAcceptedRunPosition;
+    if (previousPosition == null) {
+      _lastAcceptedRunPosition = position;
+      if (state.runRoute.isEmpty) {
+        state = state.copyWith(runRoute: [location]);
+      }
+      return;
+    }
+
+    final distanceMeters = Geolocator.distanceBetween(
+      previousPosition.latitude,
+      previousPosition.longitude,
+      location.latitude,
+      location.longitude,
+    );
+    final elapsedSeconds =
+        position.timestamp
+            .difference(previousPosition.timestamp)
+            .inMilliseconds /
+        1000;
+    if (elapsedSeconds <= 0) return;
+
+    final gpsSpeedKmh = math.max(position.speed, 0) * 3.6;
+    final derivedSpeedKmh = distanceMeters / elapsedSeconds * 3.6;
+    final minimumDistance = math.max(5.0, position.accuracy * 0.6);
+
+    final isReliableWalk =
+        gpsSpeedKmh >= 1.8 &&
+        gpsSpeedKmh <= 15 &&
+        derivedSpeedKmh >= 1.0 &&
+        derivedSpeedKmh <= 18 &&
+        distanceMeters >= minimumDistance &&
+        distanceMeters <= 100;
+    if (!isReliableWalk) {
+      _lastAcceptedRunPosition = position;
+      return;
+    }
+
+    _lastAcceptedRunPosition = position;
+    final runDistanceKm = state.runDistanceKm + distanceMeters / 1000;
+    final estimatedSteps = (runDistanceKm * 1000 / 0.75).floor();
+    final runSteps = _sensorHasCountedSteps
+        ? state.runSteps
+        : math.max(state.runSteps, estimatedSteps);
+
+    state = state.copyWith(
+      runRoute: [...state.runRoute, location],
+      runDistanceKm: runDistanceKm,
+      runSteps: runSteps,
+    );
+    _scheduleRunProgressSync();
+  }
+
+  /// Records a point for the visual walking trail. Unlike [_appendRunLocation]
+  /// this is NOT speed-gated, so it faithfully captures turnarounds and pauses
+  /// (where the walker slows to change direction). Light distance de-duping
+  /// keeps GPS jitter out while preserving every real corner of the path.
+  void _appendTrailPoint(Position position, LatLng location) {
+    if (position.accuracy > 30) return;
+
+    final trail = state.trailPoints;
+    if (trail.isEmpty) {
+      state = state.copyWith(trailPoints: <LatLng>[location]);
+      return;
+    }
+
+    final last = trail.last;
+    final distanceMeters = Geolocator.distanceBetween(
+      last.latitude,
+      last.longitude,
+      location.latitude,
+      location.longitude,
+    );
+    // Ignore near-duplicate jitter, but keep everything else (including the
+    // slow turnaround point that runRoute's speed filter would drop).
+    if (distanceMeters < 3 || distanceMeters > 200) return;
+
+    state = state.copyWith(trailPoints: <LatLng>[...trail, location]);
+  }
+
   Territory? _territoryAtPoint(LatLng point) {
     for (final territory in state.nearbyTerritories) {
       if (!territory.hasPolygon) continue;
-      if (_isPointInPolygon(point, territory.polygonPoints)) {
+      if (_isPointInTerritory(point, territory)) {
         return territory;
       }
     }
     return null;
+  }
+
+  /// Point-in-territory test across ALL parts of a (possibly merged)
+  /// territory, respecting holes: inside the exterior ring of any part and
+  /// not inside one of that part's holes.
+  bool _isPointInTerritory(LatLng point, Territory territory) {
+    for (final part in territory.renderParts) {
+      if (part.isEmpty) continue;
+      if (!_isPointInPolygon(point, part.first)) continue;
+      var inHole = false;
+      for (var i = 1; i < part.length; i++) {
+        if (_isPointInPolygon(point, part[i])) {
+          inHole = true;
+          break;
+        }
+      }
+      if (!inHole) return true;
+    }
+    return false;
   }
 
   /// Processes territory entry: validates conditions then calls attack RPC.
@@ -376,8 +574,6 @@ class MapNotifier extends StateNotifier<MapState> {
     LatLng location,
     double speedKmh,
   ) async {
-    final now = DateTime.now();
-
     // ── APP-SIDE VALIDATION 1: SPEED CHECK ────────────────────────────────
     if (speedKmh < 2.0 || speedKmh > 15.0) {
       state = state.copyWith(
@@ -413,49 +609,18 @@ class MapNotifier extends StateNotifier<MapState> {
       return;
     }
 
-    // ── APP-SIDE VALIDATION 3: PROTECTION CHECK (12h) ─────────────────────
-    if (territory.protectedUntil != null &&
-        territory.protectedUntil!.isAfter(now)) {
-      final hoursRemaining =
-          territory.protectedUntil!.difference(now).inSeconds / 3600.0;
-
-      state = state.copyWith(
-        lastAttackResult: {
-          'action': 'protected',
-          'reason': 'protection_active',
-          'territory_id': territoryId,
-          'hours_remaining': double.parse(hoursRemaining.toStringAsFixed(1)),
-          'message':
-              '🛡️ Protected for ${hoursRemaining.toStringAsFixed(1)} hours',
-        },
-      );
-      return;
-    }
-
-    // ── APP-SIDE VALIDATION 4: SHIELD CHECK (24h absence) ────────────────
-    if (territory.shieldUntil != null && territory.shieldUntil!.isAfter(now)) {
-      final hoursRemaining =
-          territory.shieldUntil!.difference(now).inSeconds / 3600.0;
-
-      state = state.copyWith(
-        lastAttackResult: {
-          'action': 'shielded',
-          'reason': 'absence_shield_active',
-          'territory_id': territoryId,
-          'hours_remaining': double.parse(hoursRemaining.toStringAsFixed(1)),
-          'message':
-              '⚡ Absence shield active for ${hoursRemaining.toStringAsFixed(1)} hours',
-        },
-      );
-      return;
-    }
+    // ── SERVER-SIDE VALIDATION - protection, shield, and cooldown are final.
+    // The server will return a protected/shielded response for walks that
+    // did not change territory ownership or energy.
 
     // ── APP-SIDE VALIDATION 5: CHECK COOLDOWN ────────────────────────────
     // Note: Could check local cache or just let RPC verify
     // For now, we let RPC verify this (security gate)
 
     // ── APP-SIDE VALIDATION 6: ENERGY CHECK ──────────────────────────────
+    debugPrint('🔋 [Attack] Energy check: ${state.currentAttackEnergy} <= 0?');
     if (state.currentAttackEnergy <= 0) {
+      debugPrint('❌ [Attack] NO ENERGY - Attack blocked');
       state = state.copyWith(
         lastAttackResult: {
           'action': 'no_energy',
@@ -468,14 +633,37 @@ class MapNotifier extends StateNotifier<MapState> {
     }
 
     // ── ALL APP-SIDE CHECKS PASSED → CALL RPC ────────────────────────────
+    debugPrint('🚀 [Attack] Calling RPC with:');
+    debugPrint('  Territory: $territoryId');
+    debugPrint('  Speed: $speedKmh km/h');
+    debugPrint('  Location: ${location.latitude}, ${location.longitude}');
+    debugPrint('  Current Energy: ${state.currentAttackEnergy}');
+
     final result = await _service.attackOrClaimTerritory(
       territoryId: territoryId,
       speedKmh: speedKmh,
       lat: location.latitude,
       lng: location.longitude,
+      attackAreaGeoJson: _runRouteAsGeoJson(),
     );
 
+    debugPrint('✅ [Attack] RPC Result: $result');
+
     await _handleAttackResult(result, location);
+  }
+
+  /// Serialises the current walk route as a GeoJSON MultiPoint so the server
+  /// can carve out only the area the attacker covered (convex hull of the
+  /// route) instead of transferring the defender's entire territory.
+  /// Returns null when the route is too short to form an area, in which case
+  /// the server falls back to a full-territory capture.
+  String? _runRouteAsGeoJson() {
+    final route = state.runRoute;
+    if (route.length < 3) return null;
+    final coordinates = route
+        .map((point) => '[${point.longitude},${point.latitude}]')
+        .join(',');
+    return '{"type":"MultiPoint","coordinates":[$coordinates]}';
   }
 
   /// Centralised logic for handling attack/claim results, including
@@ -484,11 +672,30 @@ class MapNotifier extends StateNotifier<MapState> {
     Map<String, dynamic> result,
     LatLng location,
   ) async {
+    final action = result['action'] as String?;
+    if (action == null) return;
+    var territoryId = result['territory_id'] as String?;
+    final claimedComponentId = territoryId;
+
+    if ((action == 'claimed' || action == 'captured') && territoryId != null) {
+      final mergeResult = await _service.mergeTouchingOwnedTerritories(
+        territoryId,
+      );
+      final mergedTerritoryId = mergeResult['territory_id']?.toString();
+      if (mergeResult['success'] == true &&
+          mergedTerritoryId != null &&
+          mergedTerritoryId.isNotEmpty) {
+        territoryId = mergedTerritoryId;
+        result = {...result, 'territory_id': mergedTerritoryId};
+      }
+    }
+
     // Push result into state so the UI (MapView) can react with toasts/animations
     state = state.copyWith(lastAttackResult: result);
 
-    final action = result['action'] as String?;
-    if (action == null) return;
+    if (territoryId != null && (action == 'damaged' || action == 'captured')) {
+      _markTerritoryUnderAttack(territoryId);
+    }
 
     // ── UPDATE ATTACK ENERGY DISPLAY ───────────────────────────────────────
     // Reload attack energy to reflect any deductions from this attack
@@ -501,34 +708,33 @@ class MapNotifier extends StateNotifier<MapState> {
     }
 
     // ── REFRESH TERRITORY DATA AFTER ATTACK ────────────────────────────────
-    final territoryId = result['territory_id'] as String?;
     if (territoryId != null &&
         (action == 'captured' ||
             action == 'damaged' ||
             action == 'reinforced' ||
             action == 'claimed')) {
-      // Reload territories to reflect energy changes
-      await loadTerritoriesForBounds(
-        LatLngBounds(
-          southwest: LatLng(
-            location.latitude - 0.05,
-            location.longitude - 0.05,
-          ),
-          northeast: LatLng(
-            location.latitude + 0.05,
-            location.longitude + 0.05,
-          ),
-        ),
-      );
+      // Reload all territories after an attack so the map reflects ownership
+      // and energy updates everywhere.
+      await loadAllTerritories(force: true);
+    }
+
+    if (action == 'captured' ||
+        action == 'damaged' ||
+        action == 'reinforced' ||
+        action == 'claimed') {
+      unawaited(_refreshDashboardAfterMapActivity(optimisticResult: result));
+    }
+
+    if (action == 'claimed' || action == 'captured') {
+      _recordRunTerritory(claimedComponentId);
+      await _service.checkAndAwardBadges('territory_captured', result);
+    } else if (action == 'reinforced') {
+      await _service.checkAndAwardBadges('territory_reinforced', result);
     }
 
     // ── Notifications ────────────────────────────────────────────────────────
     if (action == 'captured') {
-      // 1. Achievements
-      await _badgeService.checkTerritoryAchievements();
-      await _badgeService.checkRaidAchievements(1);
-
-      // 2. Notify involved parties via FCM
+      // Notify involved parties via FCM
       if (result['previous_owner_id'] != null) {
         final victimUsername =
             result['previous_owner_username'] as String? ?? 'A rival';
@@ -545,11 +751,6 @@ class MapNotifier extends StateNotifier<MapState> {
           myName,
         );
       }
-
-      // First time claim notification
-      if (state.activePath.length <= 1) {
-        await NotificationService.notifyFirstTerritoryClaim();
-      }
     } else if (action == 'damaged') {
       // Notify defender they are being attacked
       final defenderId = result['defender_id']?.toString();
@@ -559,71 +760,144 @@ class MapNotifier extends StateNotifier<MapState> {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Walk session — STOP
-  // ---------------------------------------------------------------------------
+  void _markTerritoryUnderAttack(String territoryId) {
+    _underAttackTimers.remove(territoryId)?.cancel();
+    state = state.copyWith(
+      underAttackTerritoryIds: {...state.underAttackTerritoryIds, territoryId},
+    );
+    _underAttackTimers[territoryId] = Timer(const Duration(seconds: 10), () {
+      final nextIds = {...state.underAttackTerritoryIds}..remove(territoryId);
+      state = state.copyWith(underAttackTerritoryIds: nextIds);
+      _underAttackTimers.remove(territoryId);
+    });
+  }
 
-  /// Stops GPS stream, calls end_walking_session RPC (merges hull),
-  /// then reloads territories on the map.
-  /// Call from MapScreen "Stop Walk" FAB.
-  Future<void> stopWalk() async {
-    if (state.currentSessionId == null) return;
+  Future<void> _refreshDashboardAfterMapActivity({
+    Map<String, dynamic>? optimisticResult,
+  }) {
+    return _ref
+        .read(dashboardProvider.notifier)
+        .refreshAfterMapActivity(optimisticResult: optimisticResult);
+  }
 
-    state = state.copyWith(isLoading: true);
+  void _recordRunTerritory(String? territoryId) {
+    if (!state.isRunActive ||
+        territoryId == null ||
+        state.runClaimedTerritoryIds.contains(territoryId)) {
+      return;
+    }
 
-    await _positionSubscription?.cancel();
-    _positionSubscription = null;
-
-    // end_walking_session is an alias for complete_walking_session on the DB.
-    // It merges the new convex hull into the territories table.
-    final result = await _service.endWalkingSession(state.currentSessionId!);
+    Territory? territory;
+    for (final item in state.nearbyTerritories) {
+      if (item.id == territoryId) {
+        territory = item;
+        break;
+      }
+    }
 
     state = state.copyWith(
-      isWalking: false,
-      isRunPaused: false,
-      clearCurrentSessionId: true,
-      clearWalkStartedAt: true,
-      clearWalkPausedAt: true,
-      isLoading: false,
+      runClaimedTerritoryIds: {...state.runClaimedTerritoryIds, territoryId},
+      runClaimedAreaKm2: state.runClaimedAreaKm2 + _territoryAreaKm2(territory),
     );
+  }
 
-    final success = result['success'] as bool? ?? false;
-
-    if (success) {
-      // Reload the map so the new/expanded territory polygon appears
-      if (state.userLocation != null) {
-        await loadTerritoriesForBounds(
-          LatLngBounds(
-            southwest: LatLng(
-              state.userLocation!.latitude - 0.05,
-              state.userLocation!.longitude - 0.05,
-            ),
-            northeast: LatLng(
-              state.userLocation!.latitude + 0.05,
-              state.userLocation!.longitude + 0.05,
-            ),
-          ),
-        );
+  /// Total area across all parts of a territory, subtracting holes.
+  double _territoryAreaKm2(Territory? territory) {
+    if (territory == null) return 0;
+    var total = 0.0;
+    for (final part in territory.renderParts) {
+      if (part.isEmpty) continue;
+      total += _polygonAreaKm2(part.first);
+      for (var i = 1; i < part.length; i++) {
+        total -= _polygonAreaKm2(part[i]);
       }
-
-      final areaKm2 = ((result['area_m2'] as num?)?.toDouble() ?? 0) / 1e6;
-
-      Fluttertoast.showToast(
-        msg: 'Territory updated! ${areaKm2.toStringAsFixed(3)} km²',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIosWeb: 2,
-        fontSize: 16.0,
-      );
-    } else {
-      Fluttertoast.showToast(
-        msg: result['error']?.toString() ?? 'Walk ended with an error.',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIosWeb: 2,
-        fontSize: 16.0,
-      );
     }
+    return total < 0 ? 0 : total;
+  }
+
+  double _polygonAreaKm2(List<LatLng>? points) {
+    if (points == null || points.length < 3) return 0;
+    const earthRadiusKm = 6371.0088;
+    var area = 0.0;
+    for (var index = 0; index < points.length; index++) {
+      final current = points[index];
+      final next = points[(index + 1) % points.length];
+      area +=
+          (next.longitude - current.longitude) *
+          math.pi /
+          180 *
+          (2 +
+              math.sin(current.latitude * math.pi / 180) +
+              math.sin(next.latitude * math.pi / 180));
+    }
+    return (area * earthRadiusKm * earthRadiusKm / 2).abs();
+  }
+
+  Future<void> _syncRunProgress({bool force = false}) async {
+    if (!state.isRunActive) {
+      return;
+    }
+    if (_isSyncingProgress) {
+      if (!force) return;
+      while (_isSyncingProgress) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+    }
+    if (!state.isRunActive ||
+        (!force && state.runSteps == _lastSyncedRunSteps)) {
+      return;
+    }
+    _isSyncingProgress = true;
+    final runSteps = state.runSteps;
+    final stepsToday = _stepsBeforeRun + runSteps;
+    try {
+      var result = await _service.syncWalkProgress(
+        steps: stepsToday,
+        distanceKm: _distanceBeforeRun + state.runDistanceKm,
+        durationSeconds: _durationBeforeRun + _activeRunDuration().inSeconds,
+      );
+      if (result['success'] != true) {
+        developer.log(
+          '[Map] sync_walk_progress failed; saving step count directly: '
+          '${result['error']}',
+        );
+        result = await _service.syncDailyStepCount(stepsToday);
+      }
+      if (result['success'] == true) {
+        _lastSyncedRunSteps = runSteps;
+      }
+      final energy = result['attack_energy'];
+      if (energy is num) {
+        state = state.copyWith(currentAttackEnergy: energy.round());
+      }
+    } finally {
+      _isSyncingProgress = false;
+    }
+  }
+
+  void _scheduleRunProgressSync() {
+    if (!state.isRunActive || state.runSteps == _lastSyncedRunSteps) return;
+    _progressSyncTimer?.cancel();
+    _progressSyncTimer = Timer(const Duration(seconds: 5), _syncRunProgress);
+  }
+
+  Duration _activeRunDuration() {
+    final startedAt = _runStartedAt;
+    if (startedAt == null) return Duration.zero;
+    final end = state.isRunPaused
+        ? _pauseStartedAt ?? DateTime.now()
+        : DateTime.now();
+    return end.difference(startedAt) - _pausedDuration;
+  }
+
+  int _readInt(Object? value) {
+    if (value is num) return value.round();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  double _readDouble(Object? value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   // ---------------------------------------------------------------------------
@@ -668,7 +942,7 @@ class MapNotifier extends StateNotifier<MapState> {
     try {
       await _service.upsertTerritoryMetadata(updated);
     } catch (e) {
-      print('[Shield] Failed to activate: $e');
+      developer.log('[Shield] Failed to activate: $e');
     }
   }
 
@@ -685,7 +959,7 @@ class MapNotifier extends StateNotifier<MapState> {
     for (final territory in state.nearbyTerritories) {
       if (territory.userId == userId) continue;
       if (!territory.hasPolygon) continue;
-      if (_isPointInPolygon(point, territory.polygonPoints)) {
+      if (_isPointInTerritory(point, territory)) {
         newInsideIds.add(territory.id);
         // Only notify on first entry — not on every GPS update
         if (!currentInsideIds.contains(territory.id)) {
@@ -697,6 +971,38 @@ class MapNotifier extends StateNotifier<MapState> {
     state = state.copyWith(currentlyInsideTerritoryIds: newInsideIds);
   }
 
+  void _refreshTerritoriesIfNeeded(LatLng location) {
+    if (_territoryRefreshInProgress) return;
+
+    const refreshDistanceMeters = 200.0;
+    const refreshInterval = Duration(seconds: 30);
+
+    final lastLocation = _lastTerritoryRefreshLocation;
+    final lastRefreshAt = _lastTerritoryRefreshAt;
+    if (lastLocation != null && lastRefreshAt != null) {
+      final distance = Geolocator.distanceBetween(
+        lastLocation.latitude,
+        lastLocation.longitude,
+        location.latitude,
+        location.longitude,
+      );
+      if (distance < refreshDistanceMeters &&
+          DateTime.now().difference(lastRefreshAt) < refreshInterval) {
+        return;
+      }
+    }
+
+    _lastTerritoryRefreshLocation = location;
+    _lastTerritoryRefreshAt = DateTime.now();
+    _territoryRefreshInProgress = true;
+
+    unawaited(
+      _loadTerritoriesAround(location).whenComplete(() {
+        _territoryRefreshInProgress = false;
+      }),
+    );
+  }
+
   Future<void> _sendCrossingNotification(Territory territory) async {
     try {
       final profile = await _service.getProfile();
@@ -706,21 +1012,7 @@ class MapNotifier extends StateNotifier<MapState> {
         rivalUsername: visitorName,
       );
     } catch (e) {
-      print('[Map] _sendCrossingNotification error: $e');
-    }
-  }
-
-  void _checkTerritoryStatus(LatLng point, String userId) {
-    final ownTerritories = state.nearbyTerritories
-        .where((t) => t.userId == userId && t.hasPolygon)
-        .toList();
-
-    final isInside = ownTerritories.any(
-      (t) => _isPointInPolygon(point, t.polygonPoints),
-    );
-
-    if (!isInside && ownTerritories.isNotEmpty) {
-      // User is outside their own territory — new area will be merged on stopWalk
+      developer.log('[Map] _sendCrossingNotification error: $e');
     }
   }
 
@@ -744,32 +1036,19 @@ class MapNotifier extends StateNotifier<MapState> {
     return inside;
   }
 
-  /// Haversine-based half-diagonal of LatLngBounds → metres.
-  double _boundsRadiusMeters(LatLngBounds bounds) {
-    const double R = 6371000.0;
-    final lat1 = bounds.southwest.latitude * math.pi / 180;
-    final lat2 = bounds.northeast.latitude * math.pi / 180;
-    final lng1 = bounds.southwest.longitude * math.pi / 180;
-    final lng2 = bounds.northeast.longitude * math.pi / 180;
-    final dLat = lat2 - lat1;
-    final dLng = lng2 - lng1;
-    final a =
-        math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(lat1) *
-            math.cos(lat2) *
-            math.sin(dLng / 2) *
-            math.sin(dLng / 2);
-    return 2 * R * math.atan2(math.sqrt(a), math.sqrt(1 - a)) / 2;
-  }
-
   // ---------------------------------------------------------------------------
   // Dispose
   // ---------------------------------------------------------------------------
 
   @override
   void dispose() {
+    for (final timer in _underAttackTimers.values) {
+      timer.cancel();
+    }
+    _underAttackTimers.clear();
+    _progressSyncTimer?.cancel();
     _positionSubscription?.cancel();
-    _liveLocationSubscription?.cancel();
+    _stepSubscription?.cancel();
     super.dispose();
   }
 }
@@ -779,5 +1058,5 @@ class MapNotifier extends StateNotifier<MapState> {
 // ---------------------------------------------------------------------------
 
 final mapProvider = StateNotifierProvider<MapNotifier, MapState>((ref) {
-  return MapNotifier(SupabaseService(), BadgeService(), GameService());
+  return MapNotifier(SupabaseService(), GameService(), ref);
 });

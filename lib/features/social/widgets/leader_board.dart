@@ -42,9 +42,12 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
     if (widget.leaderboard != null) {
       // filter valid entries and parse
       final lb = List<Map<String, dynamic>>.from(widget.leaderboard!);
-      
+
       // Sort based on selected tab
-      lb.sort((a, b) => _getScore(b, _selectedTab).compareTo(_getScore(a, _selectedTab)));
+      lb.sort(
+        (a, b) =>
+            _getScore(b, _selectedTab).compareTo(_getScore(a, _selectedTab)),
+      );
 
       int maxScore = 1;
       if (lb.isNotEmpty) {
@@ -55,15 +58,18 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
       for (int i = 0; i < lb.length; i++) {
         final m = lb[i];
         final score = _getScore(m, _selectedTab);
-        displayUsers.add(LeaderboardUser(
-          rank: i + 1,
-          username: m['username']?.toString() ?? 'User',
-          score: score,
-          progressValue: (score / maxScore).clamp(0.0, 1.0),
-          avatarEmoji: AppEmojis.eagle, // default
-          avatarBgColor: AppColors.avatarNeutral, // default
-          isOnline: true,
-        ));
+        final avatarUrl = m['avatar_url']?.toString().trim();
+        displayUsers.add(
+          LeaderboardUser(
+            rank: i + 1,
+            username: _memberName(m),
+            score: score,
+            progressValue: (score / maxScore).clamp(0.0, 1.0),
+            avatarEmoji: '👤',
+            avatarUrl: avatarUrl?.isNotEmpty == true ? avatarUrl : null,
+            avatarBgColor: AppColors.avatarNeutral,
+          ),
+        );
       }
     }
 
@@ -185,6 +191,7 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
                       SizedBox(width: 6.w),
                       UserAvatar(
                         avatarEmoji: displayUsers[i].avatarEmoji,
+                        imageUrl: displayUsers[i].avatarUrl,
                         bgColor: displayUsers[i].avatarBgColor,
                         isOnline: displayUsers[i].isOnline,
                         badgeEmoji: displayUsers[i].badgeEmoji,
@@ -237,6 +244,19 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
         ],
       ),
     );
+  }
+
+  String _memberName(Map<String, dynamic> member) {
+    for (final value in [
+      member['full_name'],
+      member['display_name'],
+      member['username'],
+      member['name'],
+    ]) {
+      final text = value?.toString().trim();
+      if (text?.isNotEmpty == true) return text!;
+    }
+    return 'Circle member';
   }
 }
 
