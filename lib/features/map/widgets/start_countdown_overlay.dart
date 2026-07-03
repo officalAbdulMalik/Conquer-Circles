@@ -23,24 +23,27 @@ class _StartCountdownOverlayState extends State<StartCountdownOverlay> {
   static const _labels = ['3', '2', '1', 'GO'];
 
   Timer? _timer;
-  int _index = 0;
+
+  /// Countdown step — ValueNotifier so each tick rebuilds only the number.
+  final ValueNotifier<int> _index = ValueNotifier(0);
 
   @override
   void initState() {
     super.initState();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (_index == _labels.length - 1) {
+      if (_index.value == _labels.length - 1) {
         _timer?.cancel();
         widget.onComplete();
         return;
       }
-      if (mounted) setState(() => _index += 1);
+      if (mounted) _index.value += 1;
     });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _index.dispose();
     super.dispose();
   }
 
@@ -53,40 +56,43 @@ class _StartCountdownOverlayState extends State<StartCountdownOverlay> {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                transitionBuilder: (child, animation) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: ScaleTransition(
-                      scale: Tween(begin: 0.82, end: 1.0).animate(animation),
-                      child: child,
-                    ),
-                  );
-                },
-                child: Stack(
-                  key: ValueKey(_labels[_index]),
-                  children: [
-                    Transform.translate(
-                      offset: Offset(-3.w, 14.h),
-                      child: Text(
-                        _labels[_index],
-                        style: _countdownStyle(color: Colors.transparent)
-                            .copyWith(
-                              shadows: const [
-                                Shadow(
-                                  color: Colors.white,
-                                  offset: Offset(0, 1),
-                                ),
-                              ],
-                            ),
+              ValueListenableBuilder<int>(
+                valueListenable: _index,
+                builder: (context, index, _) => AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: ScaleTransition(
+                        scale: Tween(begin: 0.82, end: 1.0).animate(animation),
+                        child: child,
                       ),
-                    ),
-                    Text(
-                      _labels[_index],
-                      style: _countdownStyle(color: Colors.white),
-                    ),
-                  ],
+                    );
+                  },
+                  child: Stack(
+                    key: ValueKey(_labels[index]),
+                    children: [
+                      Transform.translate(
+                        offset: Offset(-3.w, 14.h),
+                        child: Text(
+                          _labels[index],
+                          style: _countdownStyle(color: Colors.transparent)
+                              .copyWith(
+                                shadows: const [
+                                  Shadow(
+                                    color: Colors.white,
+                                    offset: Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                        ),
+                      ),
+                      Text(
+                        _labels[index],
+                        style: _countdownStyle(color: Colors.white),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               Positioned(
@@ -112,7 +118,7 @@ class _StartCountdownOverlayState extends State<StartCountdownOverlay> {
 
   TextStyle _countdownStyle({required Color color}) {
     return AppTextStyles.poppins(
-      size: _labels[_index] == 'GO' ? 112.sp : 170.sp,
+      size: _labels[_index.value] == 'GO' ? 112.sp : 170.sp,
       color: color,
       weight: FontWeight.w800,
       height: 1,

@@ -31,7 +31,10 @@ class _GetStartedScreenState extends ConsumerState<GetStartedScreen> {
 
   late final PageController _pageController;
   Timer? _slideTimer;
-  int _activeSlide = 0;
+
+  /// Active slide index — ValueNotifier so page changes rebuild only the
+  /// pager dots, not the whole hero screen.
+  final ValueNotifier<int> _activeSlide = ValueNotifier(0);
 
   @override
   void initState() {
@@ -40,7 +43,7 @@ class _GetStartedScreenState extends ConsumerState<GetStartedScreen> {
     _slideTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted || !_pageController.hasClients) return;
 
-      final nextSlide = (_activeSlide + 1) % _backgroundImages.length;
+      final nextSlide = (_activeSlide.value + 1) % _backgroundImages.length;
       _pageController.animateToPage(
         nextSlide,
         duration: const Duration(milliseconds: 650),
@@ -111,6 +114,7 @@ class _GetStartedScreenState extends ConsumerState<GetStartedScreen> {
 
   @override
   void dispose() {
+    _activeSlide.dispose();
     _slideTimer?.cancel();
     _pageController.dispose();
     super.dispose();
@@ -133,9 +137,7 @@ class _GetStartedScreenState extends ConsumerState<GetStartedScreen> {
             PageView.builder(
               controller: _pageController,
               itemCount: _backgroundImages.length,
-              onPageChanged: (index) {
-                setState(() => _activeSlide = index);
-              },
+              onPageChanged: (index) => _activeSlide.value = index,
               itemBuilder: (context, index) {
                 return Image.asset(
                   _backgroundImages[index],
@@ -189,9 +191,13 @@ class _GetStartedScreenState extends ConsumerState<GetStartedScreen> {
                             ),
                           ),
                           30.verticalSpace,
-                          _GetStartedPager(
-                            activeIndex: _activeSlide,
-                            itemCount: _backgroundImages.length,
+                          ValueListenableBuilder<int>(
+                            valueListenable: _activeSlide,
+                            builder: (context, activeSlide, _) =>
+                                _GetStartedPager(
+                              activeIndex: activeSlide,
+                              itemCount: _backgroundImages.length,
+                            ),
                           ),
                           20.verticalSpace,
                           PrimaryButton(

@@ -19,7 +19,9 @@ class LeaderboardCard extends StatefulWidget {
 }
 
 class _LeaderboardCardState extends State<LeaderboardCard> {
-  int _selectedTab = 0;
+  /// Selected metric tab — ValueNotifier so switching rebuilds only this
+  /// card's contents (sorting is view formatting, not business logic).
+  final ValueNotifier<int> _selectedTabNotifier = ValueNotifier(0);
 
   final _tabs = [
     ('Tiles', AppEmojis.star),
@@ -27,6 +29,12 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
     ('Raids', AppEmojis.raids),
     ('Energy', AppEmojis.lightning),
   ];
+
+  @override
+  void dispose() {
+    _selectedTabNotifier.dispose();
+    super.dispose();
+  }
 
   int _getScore(Map<String, dynamic> user, int tab) {
     if (tab == 0) return (user['territories'] as num?)?.toInt() ?? 0;
@@ -38,6 +46,13 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<int>(
+      valueListenable: _selectedTabNotifier,
+      builder: (context, selectedTab, _) => _buildCard(context, selectedTab),
+    );
+  }
+
+  Widget _buildCard(BuildContext context, int _selectedTab) {
     List<LeaderboardUser> displayUsers = [];
     if (widget.leaderboard != null) {
       // filter valid entries and parse
@@ -112,9 +127,7 @@ class _LeaderboardCardState extends State<LeaderboardCard> {
                           final (label, icon) = _tabs[i];
                           final active = i == _selectedTab;
                           return GestureDetector(
-                            onTap: () {
-                              setState(() => _selectedTab = i);
-                            },
+                            onTap: () => _selectedTabNotifier.value = i,
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 180),
                               margin: EdgeInsets.only(right: 6.w),

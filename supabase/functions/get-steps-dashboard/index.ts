@@ -136,47 +136,56 @@ serve(async (req) => {
       throw weeklyError;
     }
 
-    // 4. Fetch Badges (enriched with metadata when the relationship exists).
-    const { data: userBadges, error: badgesError } = await supabaseAdmin
+    // 4. Fetch ALL badges from the badges catalog, plus the user's claimed
+    // badges (user_badges table + profiles.badges jsonb column). Every badge
+    // is returned; unclaimed ones have unlocked_at = null so the app can show
+    // a lock icon.
+    const { data: allBadges, error: allBadgesError } = await supabaseAdmin
+      .from('badges')
+      .select('id, number, name, description, category, icon')
+      .order('number', { ascending: true });
+
+    const { data: userBadges, error: userBadgesError } = await supabaseAdmin
       .from('user_badges')
-      .select(`
-        unlocked_at,
-        badge:badges (
-          id,
-          name,
-          description,
-          category,
-          rarity,
-          icon_url
-        )
-      `)
-      .eq('user_id', userId)
-      .order('unlocked_at', { ascending: false });
+      .select('badge_id, unlocked_at')
+      .eq('user_id', userId);
+
+    if (userBadgesError) {
+      console.error('User badges error:', userBadgesError);
+    }
+
+    const unlockedAtById: Record<string, string> = {};
+    for (const ub of (userBadges || []) as any[]) {
+      if (ub.badge_id && !unlockedAtById[ub.badge_id]) {
+        unlockedAtById[ub.badge_id] = ub.unlocked_at;
+      }
+    }
+
+    // profiles.badges jsonb column is the claim record; treat any id in it as unlocked
+    const profileBadgeIds: string[] = Array.isArray(profile?.badges)
+      ? (profile.badges as unknown[]).filter((b): b is string => typeof b === 'string')
+      : [];
+    for (const badgeId of profileBadgeIds) {
+      if (!unlockedAtById[badgeId]) {
+        unlockedAtById[badgeId] = new Date().toISOString();
+      }
+    }
 
     let badges: Record<string, unknown>[] = [];
-    if (badgesError) {
-      console.error('Badges error:', badgesError);
-      const { data: fallbackBadges, error: fallbackBadgesError } = await supabaseAdmin
-        .from('user_badges')
-        .select('*')
-        .eq('user_id', userId)
-        .order('unlocked_at', { ascending: false });
-
-      if (fallbackBadgesError) {
-        console.error('Fallback badges error:', fallbackBadgesError);
-      } else {
-        badges = (fallbackBadges || []).map((ub: any) => ({
-          id: ub.badge_id || ub.id,
-          badge_id: ub.badge_id,
-          unlocked_at: ub.unlocked_at,
-        }));
-      }
+    if (allBadgesError) {
+      console.error('Badges catalog error:', allBadgesError);
+      // Fallback: only the user's claimed badges without catalog metadata
+      badges = Object.entries(unlockedAtById).map(([badgeId, unlockedAt]) => ({
+        id: badgeId,
+        badge_id: badgeId,
+        unlocked_at: unlockedAt,
+      }));
     } else {
-      badges = (userBadges || []).map((ub: any) => ({
-        ...(ub.badge || {}),
-        id: ub.badge?.id || ub.badge_id,
-        badge_id: ub.badge_id,
-        unlocked_at: ub.unlocked_at,
+      badges = (allBadges || []).map((badge: any) => ({
+        ...badge,
+        badge_id: badge.id,
+        icon_url: badge.icon,
+        unlocked_at: unlockedAtById[badge.id] ?? null,
       }));
     }
 

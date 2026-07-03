@@ -35,7 +35,15 @@ class SeasonRecapView extends ConsumerStatefulWidget {
 }
 
 class _SeasonRecapViewState extends ConsumerState<SeasonRecapView> {
-  bool isAllTime = true;
+  /// Stats scope toggle — ValueNotifier so switching rebuilds only the
+  /// Season Stats card.
+  final ValueNotifier<bool> _isAllTime = ValueNotifier(true);
+
+  @override
+  void dispose() {
+    _isAllTime.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +74,6 @@ class _SeasonRecapViewState extends ConsumerState<SeasonRecapView> {
             recap: recap,
             seasonName: widget.seasonName,
           );
-          final statSet = isAllTime ? uiData.allTimeStats : uiData.seasonStats;
 
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -205,36 +212,43 @@ class _SeasonRecapViewState extends ConsumerState<SeasonRecapView> {
                         ),
                       ),
                       10.verticalSpace,
-                      SeasonRecapSectionCard(
-                        title: 'Season Stats',
-                        trailing: SeasonRecapScopeSwitcher(
-                          initialAllTime: isAllTime,
-                          onChanged: (value) =>
-                              setState(() => isAllTime = value),
-                        ),
-                        child: GridView.builder(
-                          padding: EdgeInsets.zero,
-                          itemCount: statSet.length,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                mainAxisSpacing: 8.h,
-                                crossAxisSpacing: 8.w,
-                                childAspectRatio: 2.05,
-                              ),
-                          itemBuilder: (context, index) {
-                            final stat = statSet[index];
-                            return SeasonRecapStatTile(
-                              icon: stat.icon,
-                              title: stat.title,
-                              value: stat.value,
-                              backgroundColor: stat.backgroundColor,
-                              valueColor: stat.valueColor,
-                            );
-                          },
-                        ),
+                      ValueListenableBuilder<bool>(
+                        valueListenable: _isAllTime,
+                        builder: (context, isAllTime, _) {
+                          final statSet = isAllTime
+                              ? uiData.allTimeStats
+                              : uiData.seasonStats;
+                          return SeasonRecapSectionCard(
+                            title: 'Season Stats',
+                            trailing: SeasonRecapScopeSwitcher(
+                              initialAllTime: isAllTime,
+                              onChanged: (value) => _isAllTime.value = value,
+                            ),
+                            child: GridView.builder(
+                              padding: EdgeInsets.zero,
+                              itemCount: statSet.length,
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    mainAxisSpacing: 8.h,
+                                    crossAxisSpacing: 8.w,
+                                    childAspectRatio: 2.05,
+                                  ),
+                              itemBuilder: (context, index) {
+                                final stat = statSet[index];
+                                return SeasonRecapStatTile(
+                                  icon: stat.icon,
+                                  title: stat.title,
+                                  value: stat.value,
+                                  backgroundColor: stat.backgroundColor,
+                                  valueColor: stat.valueColor,
+                                );
+                              },
+                            ),
+                          );
+                        },
                       ),
                       10.verticalSpace,
                       Container(

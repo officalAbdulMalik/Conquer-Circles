@@ -19,12 +19,21 @@ class SeasonRecapScopeSwitcher extends StatefulWidget {
 }
 
 class _SeasonRecapScopeSwitcherState extends State<SeasonRecapScopeSwitcher> {
-  late bool isAllTime;
+  /// Toggle state — ValueNotifier so switching scope rebuilds only the pills.
+  late final ValueNotifier<bool> _isAllTime = ValueNotifier(
+    widget.initialAllTime,
+  );
 
   @override
-  void initState() {
-    super.initState();
-    isAllTime = widget.initialAllTime;
+  void dispose() {
+    _isAllTime.dispose();
+    super.dispose();
+  }
+
+  void _select(bool allTime) {
+    if (_isAllTime.value == allTime) return;
+    _isAllTime.value = allTime;
+    widget.onChanged(allTime);
   }
 
   @override
@@ -35,58 +44,58 @@ class _SeasonRecapScopeSwitcherState extends State<SeasonRecapScopeSwitcher> {
         color: AppColors.background,
         borderRadius: BorderRadius.circular(999.r),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          GestureDetector(
-            onTap: () {
-              if (!isAllTime) {
-                setState(() => isAllTime = true);
-                widget.onChanged(true);
-              }
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-              decoration: BoxDecoration(
-                color: isAllTime ? AppColors.brandPurple : Colors.transparent,
-                borderRadius: BorderRadius.circular(999.r),
-              ),
-              child: Text(
-                'All Time',
-                style: AppTextStyles.inter(
-                  size: 11,
-                  color: isAllTime ? AppColors.surface : AppColors.textSecondary,
-                  weight: FontWeight.w600,
-                ),
-              ),
+      child: ValueListenableBuilder<bool>(
+        valueListenable: _isAllTime,
+        builder: (context, isAllTime, _) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _ScopePill(
+              label: 'All Time',
+              selected: isAllTime,
+              onTap: () => _select(true),
             ),
-          ),
-          GestureDetector(
-            onTap: () {
-              if (isAllTime) {
-                setState(() => isAllTime = false);
-                widget.onChanged(false);
-              }
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-              decoration: BoxDecoration(
-                color: !isAllTime ? AppColors.brandPurple : Colors.transparent,
-                borderRadius: BorderRadius.circular(999.r),
-              ),
-              child: Text(
-                'Season',
-                style: AppTextStyles.inter(
-                  size: 11,
-                  color: !isAllTime ? AppColors.surface : AppColors.textSecondary,
-                  weight: FontWeight.w600,
-                ),
-              ),
+            _ScopePill(
+              label: 'Season',
+              selected: !isAllTime,
+              onTap: () => _select(false),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScopePill extends StatelessWidget {
+  const _ScopePill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.brandPurple : Colors.transparent,
+          borderRadius: BorderRadius.circular(999.r),
+        ),
+        child: Text(
+          label,
+          style: AppTextStyles.inter(
+            size: 11,
+            color: selected ? AppColors.surface : AppColors.textSecondary,
+            weight: FontWeight.w600,
           ),
-        ],
+        ),
       ),
     );
   }

@@ -25,7 +25,15 @@ class PlayerEnergyScreen extends StatefulWidget {
 }
 
 class _PlayerEnergyScreenState extends State<PlayerEnergyScreen> {
-  int _selectedTab = 1;
+  /// Selected tab — ValueNotifier so switching rebuilds only the tab bar
+  /// and grid, never the header/energy card.
+  final ValueNotifier<int> _selectedTab = ValueNotifier(1);
+
+  @override
+  void dispose() {
+    _selectedTab.dispose();
+    super.dispose();
+  }
 
   static const _packages = [
     _EnergyPackage(energy: 10, price: 'Rs 100', icons: 1),
@@ -96,16 +104,24 @@ class _PlayerEnergyScreenState extends State<PlayerEnergyScreen> {
                         22.verticalSpace,
                         _AvailableEnergyCard(energy: widget.energy),
                         26.verticalSpace,
-                        _EnergyTabBar(
-                          selectedIndex: _selectedTab,
-                          onChanged: (index) =>
-                              setState(() => _selectedTab = index),
+                        ValueListenableBuilder<int>(
+                          valueListenable: _selectedTab,
+                          builder: (context, selectedTab, _) => Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _EnergyTabBar(
+                                selectedIndex: selectedTab,
+                                onChanged: (index) =>
+                                    _selectedTab.value = index,
+                              ),
+                              24.verticalSpace,
+                              if (selectedTab == 0)
+                                _EnergyMarketplaceGrid(packages: _packages)
+                              else
+                                _PacksGrid(packs: _packs),
+                            ],
+                          ),
                         ),
-                        24.verticalSpace,
-                        if (_selectedTab == 0)
-                          _EnergyMarketplaceGrid(packages: _packages)
-                        else
-                          _PacksGrid(packs: _packs),
                       ],
                     ),
                   ),

@@ -37,14 +37,17 @@ class RunSessionSummaryPanel extends StatefulWidget {
 
 class _RunSessionSummaryPanelState extends State<RunSessionSummaryPanel> {
   Timer? _ticker;
-  DateTime _now = DateTime.now();
+
+  /// Clock tick — ValueNotifier so each second rebuilds only the two
+  /// time-derived metrics, not the whole panel.
+  final ValueNotifier<DateTime> _now = ValueNotifier(DateTime.now());
 
   @override
   void initState() {
     super.initState();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted && !widget.isPaused) {
-        setState(() => _now = DateTime.now());
+        _now.value = DateTime.now();
       }
     });
   }
@@ -52,14 +55,17 @@ class _RunSessionSummaryPanelState extends State<RunSessionSummaryPanel> {
   @override
   void dispose() {
     _ticker?.cancel();
+    _now.dispose();
     super.dispose();
+  }
+
+  Duration _elapsedAt(DateTime now) {
+    final end = widget.isPaused ? widget.pausedAt ?? now : now;
+    return end.difference(widget.startedAt);
   }
 
   @override
   Widget build(BuildContext context) {
-    final end = widget.isPaused ? widget.pausedAt ?? _now : _now;
-    final elapsed = end.difference(widget.startedAt);
-
     return DraggableScrollableSheet(
       initialChildSize: widget.isPaused ? 0.36 : 0.34,
       minChildSize: widget.isPaused ? 0.34 : 0.32,
@@ -128,19 +134,25 @@ class _RunSessionSummaryPanelState extends State<RunSessionSummaryPanel> {
                             ),
                           ),
                           Expanded(
-                            child: _Metric(
-                              value: _formatDuration(elapsed),
-                              label: 'Duration',
+                            child: ValueListenableBuilder<DateTime>(
+                              valueListenable: _now,
+                              builder: (context, now, _) => _Metric(
+                                value: _formatDuration(_elapsedAt(now)),
+                                label: 'Duration',
+                              ),
                             ),
                           ),
                           Expanded(
-                            child: _Metric(
-                              value: _formatPace(
-                                elapsed,
-                                widget.distanceKm,
-                                widget.steps,
+                            child: ValueListenableBuilder<DateTime>(
+                              valueListenable: _now,
+                              builder: (context, now, _) => _Metric(
+                                value: _formatPace(
+                                  _elapsedAt(now),
+                                  widget.distanceKm,
+                                  widget.steps,
+                                ),
+                                label: 'Average Pace',
                               ),
-                              label: 'Average Pace',
                             ),
                           ),
                         ],

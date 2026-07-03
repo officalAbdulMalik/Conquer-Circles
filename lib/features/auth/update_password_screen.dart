@@ -22,8 +22,10 @@ class _UpdatePasswordScreenState extends ConsumerState<UpdatePasswordScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  bool _passwordObscured = true;
-  bool _confirmPasswordObscured = true;
+
+  // Visibility toggles: ValueNotifiers so only each input rebuilds.
+  final ValueNotifier<bool> _passwordObscured = ValueNotifier(true);
+  final ValueNotifier<bool> _confirmPasswordObscured = ValueNotifier(true);
 
   Future<void> _updatePassword() async {
     if (!_formKey.currentState!.validate()) return;
@@ -110,57 +112,56 @@ class _UpdatePasswordScreenState extends ConsumerState<UpdatePasswordScreen> {
                       ),
                     ),
                     34.verticalSpace,
-                    AppTextInput(
-                      controller: _passwordController,
-                      hintText: 'New password',
-                      obscureText: _passwordObscured,
-                      textInputAction: TextInputAction.next,
-                      validator: AppValidators.validatePassword,
-                      borderRadius: 20,
-                      fillColor: AppColors.surface,
-                      contentPadding: EdgeInsets.only(left: 16.w),
-                      suffixIcon: IconButton(
-                        onPressed: () {
-                          setState(
-                            () => _passwordObscured = !_passwordObscured,
-                          );
-                        },
-                        icon: Icon(
-                          _passwordObscured
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
-                          color: AppColors.textPrimary,
-                          size: 18.sp,
+                    ValueListenableBuilder<bool>(
+                      valueListenable: _passwordObscured,
+                      builder: (context, obscured, _) => AppTextInput(
+                        controller: _passwordController,
+                        hintText: 'New password',
+                        obscureText: obscured,
+                        textInputAction: TextInputAction.next,
+                        validator: AppValidators.validatePassword,
+                        borderRadius: 20,
+                        fillColor: AppColors.surface,
+                        contentPadding: EdgeInsets.only(left: 16.w),
+                        suffixIcon: IconButton(
+                          onPressed: () =>
+                              _passwordObscured.value = !obscured,
+                          icon: Icon(
+                            obscured
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            color: AppColors.textPrimary,
+                            size: 18.sp,
+                          ),
                         ),
                       ),
                     ),
                     18.verticalSpace,
-                    AppTextInput(
-                      controller: _confirmPasswordController,
-                      hintText: 'Confirm password',
-                      obscureText: _confirmPasswordObscured,
-                      textInputAction: TextInputAction.done,
-                      validator: (value) =>
-                          AppValidators.validateConfirmPassword(
-                            value,
-                            _passwordController.text,
+                    ValueListenableBuilder<bool>(
+                      valueListenable: _confirmPasswordObscured,
+                      builder: (context, obscured, _) => AppTextInput(
+                        controller: _confirmPasswordController,
+                        hintText: 'Confirm password',
+                        obscureText: obscured,
+                        textInputAction: TextInputAction.done,
+                        validator: (value) =>
+                            AppValidators.validateConfirmPassword(
+                              value,
+                              _passwordController.text,
+                            ),
+                        borderRadius: 20,
+                        fillColor: AppColors.surface,
+                        contentPadding: EdgeInsets.only(left: 16.w),
+                        suffixIcon: IconButton(
+                          onPressed: () =>
+                              _confirmPasswordObscured.value = !obscured,
+                          icon: Icon(
+                            obscured
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                            color: AppColors.textPrimary,
+                            size: 18.sp,
                           ),
-                      borderRadius: 20,
-                      fillColor: AppColors.surface,
-                      contentPadding: EdgeInsets.only(left: 16.w),
-                      suffixIcon: IconButton(
-                        onPressed: () {
-                          setState(
-                            () => _confirmPasswordObscured =
-                                !_confirmPasswordObscured,
-                          );
-                        },
-                        icon: Icon(
-                          _confirmPasswordObscured
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
-                          color: AppColors.textPrimary,
-                          size: 18.sp,
                         ),
                       ),
                     ),
@@ -188,6 +189,8 @@ class _UpdatePasswordScreenState extends ConsumerState<UpdatePasswordScreen> {
   void dispose() {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _passwordObscured.dispose();
+    _confirmPasswordObscured.dispose();
     super.dispose();
   }
 }

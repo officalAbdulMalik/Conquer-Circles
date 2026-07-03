@@ -278,6 +278,9 @@ class MapNotifier extends StateNotifier<MapState> {
     if (!state.isRunActive) return;
     _progressSyncTimer?.cancel();
     await _syncRunProgress(force: true);
+    // Steps are now persisted — let the add-badge function check step badges
+    // (Step Rookie, Daily Grinder, Marathon Walker, Consistency Hero, ...).
+    unawaited(_service.checkAndAwardBadges('steps_synced'));
     await _stepSubscription?.cancel();
     _stepSubscription = null;
     _pedometerBaseline = null;

@@ -23,7 +23,8 @@ class AllCirclesPage extends ConsumerStatefulWidget {
 }
 
 class _AllCirclesPageState extends ConsumerState<AllCirclesPage> {
-  int _selectedTab = 0;
+  /// Selected filter tab — ValueNotifier instead of setState.
+  final ValueNotifier<int> _selectedTabNotifier = ValueNotifier(0);
 
   final _tabs = const [
     ('All', null),
@@ -38,6 +39,12 @@ class _AllCirclesPageState extends ConsumerState<AllCirclesPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(circlesProvider.notifier).refreshAllCircles();
     });
+  }
+
+  @override
+  void dispose() {
+    _selectedTabNotifier.dispose();
+    super.dispose();
   }
 
   CircleCardTileData _circleUiData(CircleModel circle, int index) {
@@ -75,14 +82,14 @@ class _AllCirclesPageState extends ConsumerState<AllCirclesPage> {
     );
   }
 
-  List<CircleModel> _filteredCircles(List<CircleModel> circles) {
-    if (_selectedTab == 1) {
+  List<CircleModel> _filteredCircles(List<CircleModel> circles, int tab) {
+    if (tab == 1) {
       return circles.where((circle) => circle.isMember).toList();
     }
-    if (_selectedTab == 2) {
+    if (tab == 2) {
       return circles.where((circle) => circle.createdByMe).toList();
     }
-    if (_selectedTab == 3) {
+    if (tab == 3) {
       return circles.where((circle) => circle.isPrivate).toList();
     }
     return List<CircleModel>.from(circles);
@@ -90,10 +97,17 @@ class _AllCirclesPageState extends ConsumerState<AllCirclesPage> {
 
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<int>(
+      valueListenable: _selectedTabNotifier,
+      builder: (context, selectedTab, _) => _buildPage(context, selectedTab),
+    );
+  }
+
+  Widget _buildPage(BuildContext context, int _selectedTab) {
     final circlesState = ref.watch(circlesProvider);
     final allCircles = circlesState.allCircles;
     final visibleCircles = allCircles;
-    final filtered = _filteredCircles(visibleCircles);
+    final filtered = _filteredCircles(visibleCircles, _selectedTab);
     final joinedCount = visibleCircles
         .where((circle) => circle.isMember)
         .length;
@@ -155,7 +169,7 @@ class _AllCirclesPageState extends ConsumerState<AllCirclesPage> {
                           label: _tabs[index].$1,
                           count: index == 0 ? null : tabCounts[index],
                           selected: _selectedTab == index,
-                          onTap: () => setState(() => _selectedTab = index),
+                          onTap: () => _selectedTabNotifier.value = index,
                         ),
                       );
                     }),

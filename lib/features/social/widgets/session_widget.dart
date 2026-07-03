@@ -29,20 +29,23 @@ class SeasonCountdownCard extends StatefulWidget {
 }
 
 class _SeasonCountdownCardState extends State<SeasonCountdownCard> {
-  late Duration _remaining;
+  /// Countdown value — ValueNotifier so each tick rebuilds only the unit
+  /// boxes row, not the whole card.
+  late final ValueNotifier<Duration> _remaining = ValueNotifier(
+    _calcRemaining(),
+  );
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _remaining = _calcRemaining();
     _startTimer();
   }
 
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
-      setState(() => _remaining = _calcRemaining());
+      _remaining.value = _calcRemaining();
     });
   }
 
@@ -59,16 +62,12 @@ class _SeasonCountdownCardState extends State<SeasonCountdownCard> {
   @override
   void dispose() {
     _timer?.cancel();
+    _remaining.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final d = _remaining.inDays;
-    final h = _remaining.inHours.remainder(24);
-    final m = _remaining.inMinutes.remainder(60);
-    final s = _remaining.inSeconds.remainder(60);
-
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: widget.onTap,
@@ -117,16 +116,28 @@ class _SeasonCountdownCardState extends State<SeasonCountdownCard> {
             SizedBox(height: 12.h),
 
             // ── Countdown Units ───────────────────────────────────────────────
-            Row(
-              children: [
-                _UnitBox(value: d, label: 'Days'),
-                SizedBox(width: 8.w),
-                _UnitBox(value: h, label: 'Hours'),
-                SizedBox(width: 8.w),
-                _UnitBox(value: m, label: 'Min'),
-                SizedBox(width: 8.w),
-                _UnitBox(value: s, label: 'Sec'),
-              ],
+            ValueListenableBuilder<Duration>(
+              valueListenable: _remaining,
+              builder: (context, remaining, _) => Row(
+                children: [
+                  _UnitBox(value: remaining.inDays, label: 'Days'),
+                  SizedBox(width: 8.w),
+                  _UnitBox(
+                    value: remaining.inHours.remainder(24),
+                    label: 'Hours',
+                  ),
+                  SizedBox(width: 8.w),
+                  _UnitBox(
+                    value: remaining.inMinutes.remainder(60),
+                    label: 'Min',
+                  ),
+                  SizedBox(width: 8.w),
+                  _UnitBox(
+                    value: remaining.inSeconds.remainder(60),
+                    label: 'Sec',
+                  ),
+                ],
+              ),
             ),
 
             SizedBox(height: 16.h),

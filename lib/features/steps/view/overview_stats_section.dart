@@ -491,18 +491,34 @@ class _DistanceBarChart extends StatefulWidget {
 }
 
 class _DistanceBarChartState extends State<_DistanceBarChart> {
-  int? _selectedIndex;
+  /// Selected bar (tooltip) — ValueNotifier so hover/tap rebuilds only the
+  /// chart, without a setState pass over the whole stats section.
+  final ValueNotifier<int?> _selectedIndexNotifier = ValueNotifier(null);
 
   @override
   void didUpdateWidget(covariant _DistanceBarChart oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_selectedIndex != null && _selectedIndex! >= widget.points.length) {
-      _selectedIndex = null;
+    final selected = _selectedIndexNotifier.value;
+    if (selected != null && selected >= widget.points.length) {
+      _selectedIndexNotifier.value = null;
     }
   }
 
   @override
+  void dispose() {
+    _selectedIndexNotifier.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<int?>(
+      valueListenable: _selectedIndexNotifier,
+      builder: (context, selected, _) => _buildChart(context, selected),
+    );
+  }
+
+  Widget _buildChart(BuildContext context, int? _selectedIndex) {
     final points = widget.points;
     final maxDistance = points.fold<double>(
       0,
@@ -512,7 +528,7 @@ class _DistanceBarChartState extends State<_DistanceBarChart> {
         ? List<double>.filled(points.length, 0)
         : points.map((point) => point.distanceKm / maxDistance).toList();
     final selectedIndex =
-        _selectedIndex != null && _selectedIndex! < points.length
+        _selectedIndex != null && _selectedIndex < points.length
         ? _selectedIndex
         : null;
     final selectedPoint = selectedIndex == null ? null : points[selectedIndex];
@@ -649,19 +665,16 @@ class _DistanceBarChartState extends State<_DistanceBarChart> {
   }
 
   void _select(int index) {
-    if (_selectedIndex == index) return;
-    setState(() => _selectedIndex = index);
+    _selectedIndexNotifier.value = index;
   }
 
   void _clearSelection() {
-    if (_selectedIndex == null) return;
-    setState(() => _selectedIndex = null);
+    _selectedIndexNotifier.value = null;
   }
 
   void _toggleSelection(int index) {
-    setState(() {
-      _selectedIndex = _selectedIndex == index ? null : index;
-    });
+    _selectedIndexNotifier.value =
+        _selectedIndexNotifier.value == index ? null : index;
   }
 
   String _formatDuration(int seconds) {

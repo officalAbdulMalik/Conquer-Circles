@@ -7,7 +7,8 @@ import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/models/notification_model.dart';
 import 'package:test_steps/providers/notifications_provider.dart';
-import 'package:test_steps/services/notification_service.dart';
+import 'package:test_steps/services/notification_service.dart'
+    show NotificationTapEvent;
 import 'package:test_steps/widgets/notifications/notification_activity_tile.dart';
 import 'package:test_steps/widgets/notifications/notification_day_header_tile.dart';
 import 'package:test_steps/widgets/notifications/notification_filter_mode.dart';

@@ -27,5 +27,11 @@ class WearableService {
     if (result['success'] != true) {
       throw Exception(result['error']?.toString() ?? 'Step sync failed');
     }
+    // Steps persisted — check whether any step badges should be claimed.
+    try {
+      await _supabaseService.checkAndAwardBadges('steps_synced');
+    } catch (_) {
+      // Badge check failures must not break the step sync itself.
+    }
   }
 }

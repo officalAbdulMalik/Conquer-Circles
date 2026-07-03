@@ -26,8 +26,6 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
   static const Color _activeBackground = Color(0xFFDBEAFE);
   static const Color _inactiveColor = Color(0xFF030712);
 
-  late int _selectedIndex;
-
   final List<_NavItem> _navItems = const [
     _NavItem(label: 'Home', iconAsset: 'assets/icons/home.png'),
     _NavItem(label: 'Map', iconAsset: 'assets/icons/map.png'),
@@ -36,14 +34,19 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     _NavItem(label: 'Profile', iconAsset: 'assets/icons/profile.png'),
   ];
 
+  /// Selected tab — pure view state, ValueNotifier instead of setState.
+  late final ValueNotifier<int> _selectedTab = ValueNotifier(
+    widget.initialIndex.clamp(0, _navItems.length - 1).toInt(),
+  );
+
   @override
-  void initState() {
-    super.initState();
-    _selectedIndex = widget.initialIndex.clamp(0, _navItems.length - 1).toInt();
+  void dispose() {
+    _selectedTab.dispose();
+    super.dispose();
   }
 
   void _onItemTapped(int index) {
-    setState(() => _selectedIndex = index);
+    _selectedTab.value = index;
   }
 
   @override
@@ -57,6 +60,18 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
       const ProfileScreen(),
     ];
 
+    return ValueListenableBuilder<int>(
+      valueListenable: _selectedTab,
+      builder: (context, selectedIndex, _) =>
+          _buildScaffold(context, screens, selectedIndex),
+    );
+  }
+
+  Widget _buildScaffold(
+    BuildContext context,
+    List<Widget> screens,
+    int _selectedIndex,
+  ) {
     return Scaffold(
       appBar:
           (_selectedIndex == 0 ||

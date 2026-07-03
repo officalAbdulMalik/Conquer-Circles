@@ -24,19 +24,20 @@ class _CreateCircleOnboardingViewState
     extends ConsumerState<CreateCircleOnboardingView> {
   final TextEditingController _circleNameController = TextEditingController();
 
-  bool _showIconPicker = false;
-  bool _isPrivate = false;
-  late String _selectedIconId;
-
-  @override
-  initState() {
-    super.initState();
-    _selectedIconId = ref.read(circlesProvider.notifier).circleImages.first;
-  }
+  // Form draft state — ValueNotifiers so each control rebuilds only its own
+  // subtree; the create call itself lives in circlesProvider.
+  final ValueNotifier<bool> _showIconPicker = ValueNotifier(false);
+  final ValueNotifier<bool> _isPrivate = ValueNotifier(false);
+  late final ValueNotifier<String> _selectedIconId = ValueNotifier(
+    ref.read(circlesProvider.notifier).circleImages.first,
+  );
 
   @override
   void dispose() {
     _circleNameController.dispose();
+    _showIconPicker.dispose();
+    _isPrivate.dispose();
+    _selectedIconId.dispose();
     super.dispose();
   }
 
@@ -53,8 +54,8 @@ class _CreateCircleOnboardingViewState
         .read(circlesProvider.notifier)
         .createCircle(
           name: circleName,
-          isPrivate: _isPrivate,
-          iconUrl: _selectedIconId,
+          isPrivate: _isPrivate.value,
+          iconUrl: _selectedIconId.value,
         );
     final success = response['success'] == true;
 
@@ -135,69 +136,80 @@ class _CreateCircleOnboardingViewState
                     ],
                   ),
                   32.verticalSpace,
-                  InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: () =>
-                        setState(() => _showIconPicker = !_showIconPicker),
-                    child: Container(
-                      width: 90.w,
-                      height: 90.w,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFDDEBFF),
-                        shape: BoxShape.circle,
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Center(
-                        child: SizedBox.square(
-                          dimension: 34.sp,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(6.r),
-                            child: Image.network(
-                              _selectedIconId,
-                              width: 34.sp,
-                              height: 34.sp,
-                              fit: BoxFit.cover,
-                              alignment: Alignment.center,
-                              errorBuilder: (_, __, ___) => Icon(
-                                Icons.image_not_supported_outlined,
-                                size: 24.sp,
-                                color: AppColors.textSecondary,
+                  ListenableBuilder(
+                    listenable: Listenable.merge(
+                      [_showIconPicker, _selectedIconId],
+                    ),
+                    builder: (context, _) => Column(
+                      children: [
+                        InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () =>
+                              _showIconPicker.value = !_showIconPicker.value,
+                          child: Container(
+                            width: 90.w,
+                            height: 90.w,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFDDEBFF),
+                              shape: BoxShape.circle,
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: Center(
+                              child: SizedBox.square(
+                                dimension: 34.sp,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(6.r),
+                                  child: Image.network(
+                                    _selectedIconId.value,
+                                    width: 34.sp,
+                                    height: 34.sp,
+                                    fit: BoxFit.cover,
+                                    alignment: Alignment.center,
+                                    errorBuilder: (_, __, ___) => Icon(
+                                      Icons.image_not_supported_outlined,
+                                      size: 24.sp,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                  12.verticalSpace,
-                  InkWell(
-                    borderRadius: BorderRadius.circular(14.r),
-                    onTap: () =>
-                        setState(() => _showIconPicker = !_showIconPicker),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 8.w,
-                        vertical: 4.h,
-                      ),
-                      child: Text(
-                        'Choose Icon',
-                        style: AppTextStyles.montserrat(
-                          size: 12.sp,
-                          color: AppColors.blueColor,
-                          weight: FontWeight.w800,
+                        12.verticalSpace,
+                        InkWell(
+                          borderRadius: BorderRadius.circular(14.r),
+                          onTap: () =>
+                              _showIconPicker.value = !_showIconPicker.value,
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 8.w,
+                              vertical: 4.h,
+                            ),
+                            child: Text(
+                              'Choose Icon',
+                              style: AppTextStyles.montserrat(
+                                size: 12.sp,
+                                color: AppColors.blueColor,
+                                weight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                        if (_showIconPicker.value) ...[
+                          14.verticalSpace,
+                          CircleIconPicker(
+                            options: ref
+                                .read(circlesProvider.notifier)
+                                .circleImages,
+                            selectedId: _selectedIconId.value,
+                            onSelected: (option) =>
+                                _selectedIconId.value = option,
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  if (_showIconPicker) ...[
-                    14.verticalSpace,
-                    CircleIconPicker(
-                      options: ref.read(circlesProvider.notifier).circleImages,
-                      selectedId: _selectedIconId,
-                      onSelected: (option) =>
-                          setState(() => _selectedIconId = option),
-                    ),
-                  ],
                   20.verticalSpace,
                   AppTextInput(
                     controller: _circleNameController,
@@ -225,12 +237,14 @@ class _CreateCircleOnboardingViewState
                     ),
                   ),
                   20.verticalSpace,
-                  DashboardSegmentedTabBar(
-                    labels: const ['Public', 'Private'],
-                    selectedIndex: _isPrivate ? 1 : 0,
-                    onChanged: (index) {
-                      setState(() => _isPrivate = index == 1);
-                    },
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _isPrivate,
+                    builder: (context, isPrivate, _) =>
+                        DashboardSegmentedTabBar(
+                      labels: const ['Public', 'Private'],
+                      selectedIndex: isPrivate ? 1 : 0,
+                      onChanged: (index) => _isPrivate.value = index == 1,
+                    ),
                   ),
                   const Spacer(),
                   PrimaryButton(

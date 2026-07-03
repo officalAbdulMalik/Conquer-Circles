@@ -13,7 +13,14 @@ class FaqsScreen extends StatefulWidget {
 }
 
 class _FaqsScreenState extends State<FaqsScreen> {
-  int _expandedIndex = 0;
+  /// Expanded FAQ index — ValueNotifier so taps rebuild only the card.
+  final ValueNotifier<int> _expandedIndex = ValueNotifier(0);
+
+  @override
+  void dispose() {
+    _expandedIndex.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,14 +71,16 @@ class _FaqsScreenState extends State<FaqsScreen> {
                     ),
                   ),
                   16.verticalSpace,
-                  _FaqsCard(
-                    items: _faqItems,
-                    expandedIndex: _expandedIndex,
-                    onChanged: (index) {
-                      setState(() {
-                        _expandedIndex = _expandedIndex == index ? -1 : index;
-                      });
-                    },
+                  ValueListenableBuilder<int>(
+                    valueListenable: _expandedIndex,
+                    builder: (context, expandedIndex, _) => _FaqsCard(
+                      items: _faqItems,
+                      expandedIndex: expandedIndex,
+                      onChanged: (index) {
+                        _expandedIndex.value =
+                            expandedIndex == index ? -1 : index;
+                      },
+                    ),
                   ),
                 ],
               ),

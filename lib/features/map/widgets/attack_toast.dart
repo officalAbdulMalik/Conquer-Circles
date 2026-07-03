@@ -161,8 +161,10 @@ class _AttackToastOverlayState extends State<AttackToastOverlay>
   late Animation<double> _fadeAnim;
   Timer? _hideTimer;
 
-  AttackToastVariant? _currentVariant;
-  String? _currentMessage;
+  /// Current toast content — ValueNotifier so showing a toast rebuilds only
+  /// this overlay's card, never the parent tree.
+  final ValueNotifier<(AttackToastVariant, String)?> _current =
+      ValueNotifier(null);
 
   @override
   void initState() {
@@ -191,10 +193,7 @@ class _AttackToastOverlayState extends State<AttackToastOverlay>
     final message = widget.controller.message;
 
     if (variant != null && message != null) {
-      setState(() {
-        _currentVariant = variant;
-        _currentMessage = message;
-      });
+      _current.value = (variant, message);
       _hideTimer?.cancel();
       _animController.forward(from: 0).then((_) {
         _hideTimer = Timer(const Duration(milliseconds: 3500), () {
@@ -213,22 +212,29 @@ class _AttackToastOverlayState extends State<AttackToastOverlay>
     _hideTimer?.cancel();
     widget.controller.removeListener(_onControllerUpdate);
     _animController.dispose();
+    _current.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_currentVariant == null) return const SizedBox.shrink();
+    return ValueListenableBuilder<(AttackToastVariant, String)?>(
+      valueListenable: _current,
+      builder: (context, current, _) {
+        if (current == null) return const SizedBox.shrink();
+        return _buildToast(current.$1, current.$2);
+      },
+    );
+  }
 
-    final variant = _currentVariant!;
-
+  Widget _buildToast(AttackToastVariant variant, String message) {
     if (variant == AttackToastVariant.cooldown) {
       return SlideTransition(
         position: _slideAnim,
         child: FadeTransition(
           opacity: _fadeAnim,
           child: _CooldownToastCard(
-            message: _currentMessage ?? '29 minutes remaining',
+            message: message,
             onClose: _dismiss,
           ),
         ),
@@ -263,7 +269,7 @@ class _AttackToastOverlayState extends State<AttackToastOverlay>
                 const SizedBox(width: 10),
                 Flexible(
                   child: Text(
-                    _currentMessage ?? '',
+                    message,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 13,
