@@ -9,6 +9,7 @@ import 'package:test_steps/features/profile/widgets/premium_banner_card.dart';
 import 'package:test_steps/features/profile/widgets/profile_menu_group.dart';
 import 'package:test_steps/features/profile/widgets/profile_menu_row.dart';
 import 'package:test_steps/features/settings/widgets/settings_bottom_sheet.dart';
+import 'package:test_steps/features/subscription/view/plan_purchase_view.dart';
 import 'package:test_steps/models/badge_model.dart';
 import 'package:test_steps/providers/map_provider.dart';
 import 'package:test_steps/providers/profile_provider.dart';
@@ -117,7 +118,11 @@ class ProfileScreen extends ConsumerWidget {
                   icon: 'assets/icons/card.png',
                   title: 'Plan & Purchase',
                   subtitle: 'Manage subscription',
-                  onTap: () {},
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const PlanPurchaseView(),
+                    ),
+                  ),
                 ),
                 ProfileMenuRow(
                   icon: 'assets/icons/setting.png',
