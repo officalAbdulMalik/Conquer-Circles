@@ -9,6 +9,8 @@ import 'package:test_steps/providers/auth_provider.dart';
 import 'package:test_steps/screens/main_navigation.dart';
 import 'package:test_steps/widgets/shared/app_text_input.dart';
 import 'package:test_steps/widgets/shared/primary_button.dart';
+import 'package:test_steps/widgets/shared/app_background_image.dart';
+import 'package:test_steps/widgets/shared/app_screen_header.dart';
 
 class UpdatePasswordScreen extends ConsumerStatefulWidget {
   const UpdatePasswordScreen({super.key});
@@ -69,17 +71,9 @@ class _UpdatePasswordScreenState extends ConsumerState<UpdatePasswordScreen> {
     final authState = ref.watch(authProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
       body: Stack(
         children: [
-          IgnorePointer(
-            child: Image.asset(
-              'assets/images/back.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: 260.h,
-              color: AppColors.surface.withValues(alpha: 0.7),
-            ),
+          AppBackgroundImage(height: 260.h, color: AppColors.surface.withValues(alpha: 0.7),
           ),
           SafeArea(
             child: Form(
@@ -90,16 +84,8 @@ class _UpdatePasswordScreenState extends ConsumerState<UpdatePasswordScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    118.verticalSpace,
-                    Text(
-                      'Update Password',
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.montserrat(
-                        size: 24.sp,
-                        color: AppColors.textPrimary,
-                        weight: FontWeight.w800,
-                      ),
-                    ),
+                    12.verticalSpace,
+                    const AppScreenHeader(title: 'Update Password'),
                     12.verticalSpace,
                     Text(
                       'Choose a new password for your account.',
@@ -111,7 +97,7 @@ class _UpdatePasswordScreenState extends ConsumerState<UpdatePasswordScreen> {
                         height: 1.45,
                       ),
                     ),
-                    34.verticalSpace,
+                    24.verticalSpace,
                     ValueListenableBuilder<bool>(
                       valueListenable: _passwordObscured,
                       builder: (context, obscured, _) => AppTextInput(

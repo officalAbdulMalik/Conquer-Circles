@@ -99,7 +99,7 @@ class BadgesTabSection extends StatelessWidget {
             crossAxisCount: 2,
             crossAxisSpacing: 12.w,
             mainAxisSpacing: 12.h,
-            childAspectRatio: 1.2,
+            childAspectRatio: 1.05,
           ),
           itemBuilder: (context, index) {
             final badge = visibleBadges[index];
@@ -158,7 +158,7 @@ class BadgeGridCard extends StatelessWidget {
             8.verticalSpace,
             Text(
               badge.subtitle,
-
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: AppTextStyles.montserrat(
                 size: 12.sp,

@@ -9,6 +9,7 @@ import 'package:test_steps/services/dashboard_service.dart';
 import 'package:test_steps/widgets/shared/app_borders.dart';
 import 'package:test_steps/widgets/shared/app_circular_back_button.dart';
 import 'package:test_steps/widgets/shared/primary_button.dart';
+import 'package:test_steps/widgets/shared/app_background_image.dart';
 
 class WearableSyncScreen extends ConsumerStatefulWidget {
   const WearableSyncScreen({super.key, required this.currentSteps});
@@ -49,17 +50,9 @@ class _WearableSyncScreenState extends ConsumerState<WearableSyncScreen> {
     );
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
       body: Stack(
         children: [
-          IgnorePointer(
-            child: Image.asset(
-              'assets/images/back.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: 260.h,
-              color: AppColors.surface.withValues(alpha: 0.72),
-            ),
+          AppBackgroundImage(height: 260.h, color: AppColors.surface.withValues(alpha: 0.72),
           ),
           SafeArea(
             child: Column(

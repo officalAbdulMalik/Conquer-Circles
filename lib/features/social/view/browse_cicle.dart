@@ -14,6 +14,7 @@ import 'package:test_steps/providers/circles_provider.dart';
 import 'package:test_steps/screens/notifications_screen.dart';
 import 'package:test_steps/widgets/shared/dashboard_screen_header.dart';
 import 'package:test_steps/widgets/shared/dashboard_tab_button.dart';
+import 'package:test_steps/widgets/shared/app_background_image.dart';
 
 class AllCirclesPage extends ConsumerStatefulWidget {
   const AllCirclesPage({super.key});
@@ -125,16 +126,9 @@ class _AllCirclesPageState extends ConsumerState<AllCirclesPage> {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFD),
       body: Stack(
         children: [
-          IgnorePointer(
-            child: Image.asset(
-              'assets/images/back.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-            ),
-          ),
+          AppBackgroundImage(),
           SafeArea(
             bottom: false,
             child: ListView(

@@ -8,6 +8,7 @@ import 'package:test_steps/providers/auth_provider.dart';
 import 'package:test_steps/widgets/shared/app_circular_back_button.dart';
 import 'package:test_steps/widgets/shared/app_text_input.dart';
 import 'package:test_steps/widgets/shared/primary_button.dart';
+import 'package:test_steps/widgets/shared/app_background_image.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -55,17 +56,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     final authState = ref.watch(authProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
       body: Stack(
         children: [
-          IgnorePointer(
-            child: Image.asset(
-              'assets/images/back.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: 260.h,
-              color: AppColors.surface.withValues(alpha: 0.7),
-            ),
+          AppBackgroundImage(height: 260.h, color: AppColors.surface.withValues(alpha: 0.7),
           ),
           SafeArea(
             child: Form(

@@ -174,6 +174,16 @@ class EditProfileNotifier extends StateNotifier<EditProfileState> {
     state = state.copyWith(selectedGender: gender);
   }
 
+  /// Records the birthday chosen via the date picker. The view owns the
+  /// birthday/age text display; the notifier only needs the date for saving.
+  void setBirthDate(DateTime date) {
+    _selectedBirthDate = date;
+  }
+
+  /// Age (in whole years) derived from a chosen birth date — used by the view
+  /// to keep the age field in sync when the birthday changes.
+  int ageForBirthDate(DateTime date) => _ageFromBirthDate(date);
+
   void setAvatar(Uint8List bytes, String extension) {
     state = state.copyWith(
       selectedAvatarBytes: bytes,
@@ -343,7 +353,7 @@ class EditProfileNotifier extends StateNotifier<EditProfileState> {
   String _formatHeight(String value) {
     final number = _readNumber(value);
     if (number == null) return '';
-    return '${_trimNumber(number)} inches';
+    return '${_trimNumber(number)} cm';
   }
 
   String _formatGoal(String value) {

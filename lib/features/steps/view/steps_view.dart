@@ -31,6 +31,7 @@ import 'package:test_steps/widgets/shared/app_borders.dart';
 import 'package:test_steps/widgets/shared/custom_app_dialog.dart';
 import 'package:test_steps/widgets/shared/dashboard_screen_header.dart';
 import 'package:test_steps/widgets/shared/dashboard_tab_button.dart';
+import 'package:test_steps/widgets/shared/app_background_image.dart';
 
 class StepsView extends ConsumerStatefulWidget {
   const StepsView({super.key});
@@ -134,16 +135,9 @@ class _StepsViewState extends ConsumerState<StepsView> {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFD),
       body: Stack(
         children: [
-          IgnorePointer(
-            child: Image.asset(
-              'assets/images/back.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-            ),
-          ),
+          AppBackgroundImage(),
           SafeArea(
             bottom: false,
             child: SingleChildScrollView(

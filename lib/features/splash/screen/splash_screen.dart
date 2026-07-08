@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:test_steps/screens/get_started_screen.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import 'package:test_steps/widgets/shared/app_background_image.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -37,13 +38,7 @@ class _SplashScreenState extends State<SplashScreen> {
         backgroundColor: AppColors.splashBlue,
         body: Stack(
           children: [
-            IgnorePointer(
-              child: Image.asset(
-                'assets/images/back.png',
-                fit: BoxFit.cover,
-                height: 281.h,
-                color: const Color(0xff4C6FFF),
-              ),
+            AppBackgroundImage(height: 281.h, color: const Color(0xff4C6FFF),
             ),
 
             Column(

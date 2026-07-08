@@ -5,6 +5,7 @@ import '../services/supabase_service.dart';
 import '../services/game_service.dart';
 
 import '../models/profile_data_model.dart';
+import 'settings_provider.dart';
 
 class ProfileState {
   final ProfileDataModel? profileData;
@@ -14,6 +15,7 @@ class ProfileState {
   final String currentWeightGoal;
   final int currentStepGoal;
   final bool isGoalsLoading;
+  final bool isDeletingAccount;
 
   ProfileState({
     this.profileData,
@@ -23,6 +25,7 @@ class ProfileState {
     this.currentWeightGoal = 'Lose Weight',
     this.currentStepGoal = 5000,
     this.isGoalsLoading = false,
+    this.isDeletingAccount = false,
   });
 
   ProfileState copyWith({
@@ -33,6 +36,7 @@ class ProfileState {
     String? currentWeightGoal,
     int? currentStepGoal,
     bool? isGoalsLoading,
+    bool? isDeletingAccount,
   }) {
     return ProfileState(
       profileData: profileData ?? this.profileData,
@@ -42,6 +46,7 @@ class ProfileState {
       currentWeightGoal: currentWeightGoal ?? this.currentWeightGoal,
       currentStepGoal: currentStepGoal ?? this.currentStepGoal,
       isGoalsLoading: isGoalsLoading ?? this.isGoalsLoading,
+      isDeletingAccount: isDeletingAccount ?? this.isDeletingAccount,
     );
   }
 }
@@ -49,10 +54,11 @@ class ProfileState {
 
 
 class ProfileNotifier extends StateNotifier<ProfileState> {
+  final Ref ref;
   final SupabaseService supabaseService;
   final GameService gameService;
 
-  ProfileNotifier(this.supabaseService, this.gameService)
+  ProfileNotifier(this.ref, this.supabaseService, this.gameService)
     : super(ProfileState()) {
     refreshProfile();
   }
@@ -62,6 +68,10 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     try {
       final profileData = await supabaseService.getProfileData();
       final trustStatus = await gameService.getTrustStatus();
+
+      // Hydrate settingsProvider with settings from profile
+      ref.read(settingsProvider.notifier).initializeFromProfile(profileData.profile);
+
       state = state.copyWith(
         profileData: profileData,
         trustStatus: trustStatus,
@@ -108,6 +118,32 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       print('[ProfileNotifier.logout] Error: $e');
       // Even if error, clear local state to ensure clean slate
       state = ProfileState();
+    }
+  }
+
+  /// Permanently deletes the current account, then clears the local session so
+  /// the app returns to the auth gate.
+  ///
+  /// The server removes the auth user and all cascaded data immediately, so the
+  /// account can no longer be signed into. Throws on failure so the UI can
+  /// surface an error without logging the user out.
+  Future<void> deleteAccount() async {
+    state = state.copyWith(isDeletingAccount: true, error: null);
+    try {
+      await supabaseService.requestAccountDeletion();
+    } catch (e) {
+      debugPrint('[ProfileNotifier.deleteAccount] $e');
+      state = state.copyWith(isDeletingAccount: false, error: e.toString());
+      rethrow;
+    }
+
+    // Account is gone server-side; drop the local session (local scope, since
+    // the server token is now invalid) to route back to the auth gate.
+    state = ProfileState();
+    try {
+      await supabaseService.signOutLocal();
+    } catch (e) {
+      debugPrint('[ProfileNotifier.deleteAccount] local sign-out: $e');
     }
   }
 
@@ -165,10 +201,12 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
   }
 }
 
+
+
 final profileProvider = StateNotifierProvider<ProfileNotifier, ProfileState>((
   ref,
 ) {
-  return ProfileNotifier(SupabaseService(), GameService());
+  return ProfileNotifier(ref, SupabaseService(), GameService());
 });
 
 final userProfileProvider = FutureProvider<ProfileDataModel?>((ref) async {

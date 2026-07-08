@@ -261,6 +261,7 @@ class AuthNotifier extends StateNotifier<AppAuthState> {
     required String name,
     required String email,
     required String password,
+    String? referralCode,
   }) async {
     state = state.copyWith(isEmailAuthLoading: true);
     try {
@@ -268,6 +269,7 @@ class AuthNotifier extends StateNotifier<AppAuthState> {
         name: name,
         email: email,
         password: password,
+        referralCode: referralCode,
       );
       if (response.session == null || response.user == null) {
         return const AuthActionResult.needsVerification();

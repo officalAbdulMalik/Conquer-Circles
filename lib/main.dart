@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,14 +9,13 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:test_steps/core/theme/app_theme.dart';
 import 'package:test_steps/features/auth/gender_selection_screen.dart';
 import 'package:test_steps/features/auth/update_password_screen.dart';
+import 'package:test_steps/features/subscription/view/onboarding_paywall_screen.dart';
 import 'package:test_steps/services/supabase_service.dart';
+import 'package:test_steps/services/subscription_service.dart';
 import 'screens/main_navigation.dart';
 import 'screens/splash_screen.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import 'services/notification_service.dart';
-
-// RevenueCat is currently disabled.
-// import 'package:purchases_flutter/purchases_flutter.dart';
-// import 'dart:io';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,8 +29,8 @@ Future<void> main() async {
     ),
   );
 
-  // RevenueCat is currently disabled.
-  // await initializeRevenueCat();
+  await initializeRevenueCat();
+  _bindRevenueCatToAuth();
   try {
     await NotificationService.initialize();
   } catch (e) {
@@ -41,19 +42,47 @@ Future<void> main() async {
   runApp(ProviderScope(child: MyApp()));
 }
 
-// Future<void> initializeRevenueCat() async {
-//   // Platform-specific API keys
-//   String apiKey;
-//   if (Platform.isIOS) {
-//     apiKey = 'test_YDZGDEqNkGYZabKuUVVljSMBBVC';
-//   } else if (Platform.isAndroid) {
-//     apiKey = 'test_YDZGDEqNkGYZabKuUVVljSMBBVC';
-//   } else {
-//     throw UnsupportedError('Platform not supported');
-//   }
-//
-//   await Purchases.configure(PurchasesConfiguration(apiKey));
-// }
+Future<void> initializeRevenueCat() async {
+  // Platform-specific API keys
+  String apiKey;
+  if (Platform.isIOS) {
+    apiKey = 'appl_aZwriMjRvqqBNqHLKJvwlmnVGMw';
+  } else if (Platform.isAndroid) {
+    apiKey = 'test_YDZGDEqNkGYZabKuUVVljSMBBVC';
+  } else {
+    throw UnsupportedError('Platform not supported');
+  }
+
+  await Purchases.configure(PurchasesConfiguration(apiKey));
+}
+
+/// Keeps RevenueCat's identity in lock-step with Supabase auth: log the user
+/// into RevenueCat on sign-in (so entitlements follow their account) and out on
+/// sign-out. Entitlement changes are mirrored to `profiles.is_premium` by
+/// SubscriptionService's customer-info listener.
+void _bindRevenueCatToAuth() {
+  final subscriptions = SubscriptionService()..init();
+  final auth = Supabase.instance.client.auth;
+
+  final currentUserId = auth.currentSession?.user.id;
+  if (currentUserId != null) {
+    subscriptions.login(currentUserId);
+  }
+
+  auth.onAuthStateChange.listen((data) {
+    switch (data.event) {
+      case AuthChangeEvent.signedIn:
+        final id = data.session?.user.id;
+        if (id != null) subscriptions.login(id);
+        break;
+      case AuthChangeEvent.signedOut:
+        subscriptions.logout();
+        break;
+      default:
+        break;
+    }
+  });
+}
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -133,7 +162,7 @@ class _MyAppState extends State<MyApp> {
 
                 final profile = profileSnapshot.data;
                 if (_service.isProfileOnboardingComplete(profile)) {
-                  return const MainNavigation();
+                  return const OnboardingPaywallScreen();
                 }
 
                 return const GenderSelectionScreen();

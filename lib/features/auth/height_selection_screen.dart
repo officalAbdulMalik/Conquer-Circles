@@ -10,6 +10,7 @@ import 'package:test_steps/widgets/shared/app_circular_back_button.dart';
 import 'package:test_steps/widgets/shared/dashboard_segmented_tab_bar.dart';
 import 'package:test_steps/widgets/shared/primary_button.dart';
 import 'package:test_steps/widgets/shared/scrollable_measure_selector.dart';
+import 'package:test_steps/widgets/shared/app_background_image.dart';
 
 class HeightSelectionScreen extends ConsumerWidget {
   const HeightSelectionScreen({super.key});
@@ -26,17 +27,9 @@ class HeightSelectionScreen extends ConsumerWidget {
     final authNotifier = ref.read(authProvider.notifier);
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
       body: Stack(
         children: [
-          IgnorePointer(
-            child: Image.asset(
-              'assets/images/back.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: 260.h,
-              color: AppColors.surface.withValues(alpha: 0.7),
-            ),
+          AppBackgroundImage(height: 260.h, color: AppColors.surface.withValues(alpha: 0.7),
           ),
           SafeArea(
             child: Padding(

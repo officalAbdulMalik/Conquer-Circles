@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/widgets/notifications/notifications_content_tile.dart';
+import 'package:test_steps/widgets/shared/app_background_image.dart';
 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
@@ -9,16 +10,9 @@ class NotificationsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
       body: Stack(
         children: [
-          IgnorePointer(
-            child: Image.asset(
-              'assets/images/back.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-            ),
-          ),
+          AppBackgroundImage(),
           const SafeArea(bottom: false, child: NotificationsContentTile()),
         ],
       ),

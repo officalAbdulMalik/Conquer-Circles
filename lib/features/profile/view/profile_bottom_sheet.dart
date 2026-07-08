@@ -6,9 +6,11 @@ import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/auth/goals_selection_screen.dart';
 import 'package:test_steps/features/profile/view/edit_profile_view.dart';
 import 'package:test_steps/features/profile/widgets/premium_banner_card.dart';
+import 'package:test_steps/features/profile/view/referral_code_screen.dart';
 import 'package:test_steps/features/profile/widgets/profile_menu_group.dart';
 import 'package:test_steps/features/profile/widgets/profile_menu_row.dart';
-import 'package:test_steps/features/settings/widgets/settings_bottom_sheet.dart';
+import 'package:test_steps/features/settings/view/settings_view.dart';
+import 'package:test_steps/features/settings/view/location_settings_screen.dart';
 import 'package:test_steps/features/subscription/view/plan_purchase_view.dart';
 import 'package:test_steps/models/badge_model.dart';
 import 'package:test_steps/providers/map_provider.dart';
@@ -16,6 +18,7 @@ import 'package:test_steps/providers/profile_provider.dart';
 import 'package:test_steps/services/dashboard_service.dart';
 import 'package:test_steps/services/supabase_service.dart';
 import 'package:test_steps/widgets/shared/app_borders.dart';
+import 'package:test_steps/widgets/shared/app_background_image.dart';
 
 Future<void> showProfileBottomSheet(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -62,132 +65,151 @@ class ProfileScreen extends ConsumerWidget {
     final locationAllowed = ref.watch(mapProvider).permissionGranted;
 
     return ColoredBox(
-      color: Colors.white,
-      child: SafeArea(
-        bottom: false,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
-          ),
-          padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 32.h),
-          children: [
-            _ProfileHeaderSection(
-              avatarUrl: avatarUrl,
-              username: username,
-              email: email,
+      color: AppColors.scaffoldBackground,
+      child: Stack(
+        children: [
+          AppBackgroundImage(),
+          ListView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
             ),
-            24.verticalSpace,
-            PremiumBannerCard(onTap: () {}),
-            28.verticalSpace,
-            _SectionLabel(label: 'Profile'),
-            12.verticalSpace,
-            ProfileMenuGroup(
-              children: [
-                ProfileMenuRow(
-                  icon: 'assets/icons/edit.png',
-                  title: 'Edit Profile',
-                  subtitle: 'Change and update your profile',
-                  onTap: () async {
-                    await Navigator.of(context).push(
+            padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 32.h),
+            children: [
+              30.verticalSpace,
+              _ProfileHeaderSection(
+                avatarUrl: avatarUrl,
+                username: username,
+                email: email,
+              ),
+              24.verticalSpace,
+              PremiumBannerCard(onTap: () {}),
+              28.verticalSpace,
+              _SectionLabel(label: 'Profile'),
+              12.verticalSpace,
+              ProfileMenuGroup(
+                children: [
+                  ProfileMenuRow(
+                    icon: 'assets/icons/edit.png',
+                    title: 'Edit Profile',
+                    subtitle: 'Change and update your profile',
+                    onTap: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const EditProfileView(),
+                        ),
+                      );
+                      ref.invalidate(userProfileProvider);
+                      await ref
+                          .read(profileProvider.notifier)
+                          .refreshProfile();
+                    },
+                  ),
+                  ProfileMenuRow(
+                    icon: 'assets/icons/goal.png',
+                    title: 'Goals',
+                    subtitle: 'Adjust your goals',
+                    onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => const EditProfileView(),
+                        builder: (_) =>
+                            const GoalsSelectionScreen(isEditMode: true),
                       ),
-                    );
-                    ref.invalidate(userProfileProvider);
-                    await ref.read(profileProvider.notifier).refreshProfile();
-                  },
-                ),
-                ProfileMenuRow(
-                  icon: 'assets/icons/goal.png',
-                  title: 'Goals',
-                  subtitle: 'Adjust your goals',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          const GoalsSelectionScreen(isEditMode: true),
                     ),
                   ),
-                ),
-                ProfileMenuRow(
-                  icon: 'assets/icons/share.png',
-                  title: 'Referral',
-                  subtitle: 'Share and manage your referral',
-                  onTap: () {},
-                ),
-                ProfileMenuRow(
-                  icon: 'assets/icons/card.png',
-                  title: 'Plan & Purchase',
-                  subtitle: 'Manage subscription',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const PlanPurchaseView(),
+                  ProfileMenuRow(
+                    icon: 'assets/icons/share.png',
+                    title: 'Referral',
+                    subtitle: 'Share and manage your referral',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ReferralCodeScreen(),
+                      ),
                     ),
                   ),
-                ),
-                ProfileMenuRow(
-                  icon: 'assets/icons/setting.png',
-                  title: 'Accounts',
-                  subtitle: 'System settings',
-                  onTap: () => showSettingsBottomSheet(context),
-                ),
-              ],
-            ),
-            24.verticalSpace,
-            _SectionLabel(label: 'Preference'),
-            12.verticalSpace,
-            ProfileMenuGroup(
-              children: [
-                ProfileMenuRow(
-                  icon: 'assets/icons/notification2.png',
-                  title: 'Notification',
-                  subtitle: "We'll keep you updated on progress",
-                  trailing: Switch(
-                    value: notificationsEnabled,
-                    onChanged: profileState.isLoading
-                        ? null
-                        : (value) => ref
-                              .read(profileProvider.notifier)
-                              .toggleNotifications(value),
-                    activeThumbColor: Colors.white,
-                    activeTrackColor: const Color(0xFF22C9A5),
-                    inactiveThumbColor: Colors.white,
-                    inactiveTrackColor: AppColors.textLight,
-                    trackOutlineColor:
-                        const WidgetStatePropertyAll(Colors.transparent),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ProfileMenuRow(
+                    icon: 'assets/icons/card.png',
+                    title: 'Plan & Purchase',
+                    subtitle: 'Manage subscription',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const PlanPurchaseView(),
+                      ),
+                    ),
                   ),
-                ),
-                ProfileMenuRow(
-                  icon: 'assets/icons/location.png',
-                  title: 'Location Service',
-                  subtitle: locationAllowed ? 'Allowed' : 'Not allowed',
-                  trailing: const SizedBox.shrink(),
-                ),
-                ProfileMenuRow(
-                  icon: 'assets/icons/document.png',
-                  title: 'Privacy Policy',
-                  subtitle: 'Privacy policy',
-                  onTap: () {},
-                ),
-              ],
-            ),
-            24.verticalSpace,
-            _SectionLabel(label: 'Account'),
-            12.verticalSpace,
-            ProfileMenuGroup(
-              children: [
-                ProfileMenuRow(
-                  icon: 'assets/icons/logout.png',
-                  title: 'Sign Out',
-                  subtitle: 'Logout of app',
-                  titleColor: AppColors.error,
-                  trailing: const SizedBox.shrink(),
-                  onTap: () => _confirmSignOut(context, ref),
-                ),
-              ],
-            ),
-          ],
-        ),
+                  ProfileMenuRow(
+                    icon: 'assets/icons/setting.png',
+                    title: 'Accounts',
+                    subtitle: 'System settings',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SettingsView()),
+                    ),
+                  ),
+                ],
+              ),
+              24.verticalSpace,
+              _SectionLabel(label: 'Preference'),
+              12.verticalSpace,
+              ProfileMenuGroup(
+                children: [
+                  ProfileMenuRow(
+                    icon: 'assets/icons/notification2.png',
+                    title: 'Notification',
+                    subtitle: "We'll keep you updated on progress",
+                    trailing: Switch(
+                      value: notificationsEnabled,
+                      onChanged: profileState.isLoading
+                          ? null
+                          : (value) => ref
+                                .read(profileProvider.notifier)
+                                .toggleNotifications(value),
+                      activeThumbColor: Colors.white,
+                      activeTrackColor: const Color(0xFF22C9A5),
+                      inactiveThumbColor: Colors.white,
+                      inactiveTrackColor: AppColors.textLight,
+                      trackOutlineColor: const WidgetStatePropertyAll(
+                        Colors.transparent,
+                      ),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                  ProfileMenuRow(
+                    icon: 'assets/icons/location.png',
+                    title: 'Location Service',
+                    subtitle: locationAllowed ? 'Allowed' : 'Not allowed',
+                    trailing: const SizedBox.shrink(),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const LocationSettingsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  ProfileMenuRow(
+                    icon: 'assets/icons/document.png',
+                    title: 'Privacy Policy',
+                    subtitle: 'Privacy policy',
+                    onTap: () {},
+                  ),
+                ],
+              ),
+              24.verticalSpace,
+              _SectionLabel(label: 'Account'),
+              12.verticalSpace,
+              ProfileMenuGroup(
+                children: [
+                  ProfileMenuRow(
+                    icon: 'assets/icons/logout.png',
+                    title: 'Sign Out',
+                    subtitle: 'Logout of app',
+                    titleColor: AppColors.error,
+                    trailing: const SizedBox.shrink(),
+                    onTap: () => _confirmSignOut(context, ref),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -292,10 +314,7 @@ Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
         ),
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: Text(
-            'Sign Out',
-            style: TextStyle(color: AppColors.error),
-          ),
+          child: Text('Sign Out', style: TextStyle(color: AppColors.error)),
         ),
       ],
     ),
@@ -338,7 +357,9 @@ class ProfileContent extends ConsumerWidget {
               ),
               _HeaderButton(
                 icon: Icons.settings_outlined,
-                onTap: () => showSettingsBottomSheet(context),
+                onTap: () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const SettingsView())),
               ),
               if (showCloseButton) ...[
                 8.horizontalSpace,

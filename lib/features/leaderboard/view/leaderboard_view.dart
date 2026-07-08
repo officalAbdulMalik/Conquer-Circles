@@ -13,6 +13,7 @@ import 'package:test_steps/screens/notifications_screen.dart';
 import 'package:test_steps/services/dashboard_service.dart';
 import 'package:test_steps/widgets/shared/app_borders.dart';
 import 'package:test_steps/widgets/shared/dashboard_screen_header.dart';
+import 'package:test_steps/widgets/shared/app_background_image.dart';
 
 class LeaderboardView extends ConsumerWidget {
   const LeaderboardView({super.key});
@@ -28,16 +29,9 @@ class LeaderboardView extends ConsumerWidget {
     final participants = leaderboard.participants;
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
       body: Stack(
         children: [
-          IgnorePointer(
-            child: Image.asset(
-              'assets/images/back.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-            ),
-          ),
+          AppBackgroundImage(),
           SafeArea(
             bottom: false,
             child: RefreshIndicator(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -6,8 +7,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:test_steps/features/leaderboard/models/leaderboard_participant.dart';
 import 'package:test_steps/services/auth/apple_auth_service.dart';
 import 'package:test_steps/services/auth/google_auth_service.dart';
+import '../models/energy_ledger_entry.dart';
 import '../models/invite_model.dart';
 import '../models/notification_model.dart';
+import '../models/referral_summary.dart';
 import '../models/profile_data_model.dart';
 import '../models/walk_models.dart';
 import '../models/dashboard_model.dart';
@@ -34,11 +37,14 @@ class SupabaseService {
     required String email,
     required String password,
     String? name,
+    String? referralCode,
   }) => _client.auth.signUp(
     email: email,
     password: password,
     data: {
       if (name != null && name.trim().isNotEmpty) 'full_name': name.trim(),
+      if (referralCode != null && referralCode.trim().isNotEmpty)
+        'referral_code': referralCode.trim().toUpperCase(),
     },
   );
 
@@ -65,6 +71,11 @@ class SupabaseService {
   }
 
   Future<void> signOut() => _client.auth.signOut();
+
+  /// Clears only the local session (no server call). Used after account
+  /// deletion, where the server-side user/token no longer exists.
+  Future<void> signOutLocal() =>
+      _client.auth.signOut(scope: SignOutScope.local);
 
   Future<void> signInWithGoogle() async {
     await _googleAuthService.signIn(oauthCallbackUrl: oauthCallbackUrl);
@@ -160,28 +171,38 @@ class SupabaseService {
     final objectPath = '${user.id}/$fileName';
     final contentType = _mimeTypeForExtension(ext);
 
-    print(_client.auth.currentSession?.accessToken);
+    try {
+      await _client.storage
+          .from('avatars')
+          .uploadBinary(
+            objectPath,
+            bytes,
+            fileOptions: FileOptions(upsert: true, contentType: contentType),
+          );
+      // Best-effort: remove the user's previous avatars so the folder doesn't
+      // accumulate orphaned files. Never let cleanup failures affect the upload.
+      unawaited(_removeOldAvatars(user.id, keep: fileName));
+      return _client.storage.from('avatars').getPublicUrl(objectPath);
+    } catch (e) {
+      _log('uploadProfileAvatar', e);
+      throw Exception('Failed to upload avatar: $e');
+    }
+  }
 
-
-print(user.id);
-
-    Object? lastError;
-      try {
-        await _client.storage
-            .from('avatars')
-            .uploadBinary(
-              objectPath,
-              bytes,
-              fileOptions: FileOptions(upsert: true, contentType: contentType),
-            );
-        return _client.storage.from('avatars').getPublicUrl(objectPath);
-      } catch (e) {
-        lastError = e;
-
-        print('[SupabaseService.uploadProfileAvatar] Failed to upload to "avatars" bucket: $e');
+  /// Deletes every file in the user's avatar folder except [keep].
+  Future<void> _removeOldAvatars(String userId, {required String keep}) async {
+    try {
+      final existing = await _client.storage.from('avatars').list(path: userId);
+      final stale = existing
+          .where((f) => f.name != keep)
+          .map((f) => '$userId/${f.name}')
+          .toList();
+      if (stale.isNotEmpty) {
+        await _client.storage.from('avatars').remove(stale);
       }
-  
-    throw Exception('Failed to upload avatar: $lastError');
+    } catch (e) {
+      _log('_removeOldAvatars', e);
+    }
   }
 
   String _mimeTypeForExtension(String ext) {
@@ -408,6 +429,68 @@ print(user.id);
     }
   }
 
+  /// Returns the signed-in user's energy usage history (newest first).
+  ///
+  /// [before] enables keyset pagination: pass the [EnergyLedgerEntry.createdAt]
+  /// of the last row you already have to fetch the next page.
+  Future<List<EnergyLedgerEntry>> getEnergyHistory({
+    int limit = 50,
+    DateTime? before,
+  }) async {
+    final user = currentUser;
+    if (user == null) return [];
+    try {
+      final rows = await _client.rpc(
+        'get_energy_history',
+        params: {
+          'p_limit': limit,
+          'p_before': before?.toUtc().toIso8601String(),
+        },
+      );
+      if (rows is! List) return [];
+      return rows
+          .whereType<Map>()
+          .map((e) => EnergyLedgerEntry.fromMap(Map<String, dynamic>.from(e)))
+          .toList();
+    } catch (e) {
+      _log('getEnergyHistory', e);
+      rethrow;
+    }
+  }
+
+  /// Returns the signed-in user's referral code, total energy earned, and
+  /// history of successful referrals.
+  Future<ReferralSummary> getReferralSummary() async {
+    final user = currentUser;
+    if (user == null) return ReferralSummary.empty;
+    try {
+      final result = await _client.rpc('get_referral_summary');
+      if (result is Map) {
+        return ReferralSummary.fromMap(Map<String, dynamic>.from(result));
+      }
+      return ReferralSummary.empty;
+    } catch (e) {
+      _log('getReferralSummary', e);
+      rethrow;
+    }
+  }
+
+  /// Applies a referral code to the current account (for users who did not
+  /// enter one at signup). Returns the RPC result map: `{success, error?}`.
+  Future<Map<String, dynamic>> redeemReferralCode(String code) async {
+    try {
+      final result = await _client.rpc(
+        'redeem_referral_code',
+        params: {'p_code': code.trim()},
+      );
+      if (result is Map) return Map<String, dynamic>.from(result);
+      return {'success': false, 'error': 'Unexpected response'};
+    } catch (e) {
+      _log('redeemReferralCode', e);
+      rethrow;
+    }
+  }
+
   Future<LatLng?> getHomeBaseLocation() async {
     final user = currentUser;
     if (user == null) return null;
@@ -471,6 +554,72 @@ print(user.id);
     }
   }
 
+  /// Grants energy for a completed store purchase (idempotent by transaction
+  /// id) and returns the new energy balance, or null on failure. [fallbackAmount]
+  /// is used for products not yet mapped server-side (testing).
+  Future<int?> grantPurchasedEnergy({
+    required String productId,
+    required String transactionId,
+    int? fallbackAmount,
+  }) async {
+    final user = currentUser;
+    if (user == null) return null;
+    try {
+      final result = await _client.rpc('grant_purchased_energy', params: {
+        'p_product_id': productId,
+        'p_transaction_id': transactionId,
+        'p_amount': fallbackAmount,
+      });
+      return (result as num?)?.toInt();
+    } catch (e) {
+      _log('grantPurchasedEnergy', e);
+      return null;
+    }
+  }
+
+  /// Mirrors the RevenueCat pro entitlement into the `is_premium` flag.
+  /// Called by SubscriptionService whenever entitlements change.
+  Future<void> setPremium(bool isPremium) async {
+    final user = currentUser;
+    if (user == null) return;
+    try {
+      await _client.from('profiles').update({
+        'is_premium': isPremium,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', user.id);
+    } catch (e) {
+      _log('setPremium', e);
+    }
+  }
+
+  Future<void> updateAppSettings({
+    String? theme,
+    String? units,
+    bool? dailyAlerts,
+    bool? reminders,
+  }) async {
+    final user = currentUser;
+    if (user == null) throw Exception('Not signed in');
+    try {
+      final updates = <String, dynamic>{
+        if (theme != null) 'theme': theme,
+        if (units != null) 'units': units,
+        if (dailyAlerts != null) 'daily_alerts': dailyAlerts,
+        if (reminders != null) 'reminders': reminders,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      };
+      if (updates.length > 1) {
+        await _client
+            .from('profiles')
+            .update(updates)
+            .eq('id', user.id);
+      }
+    } catch (e) {
+      _log('updateAppSettings', e);
+      rethrow;
+    }
+  }
+
   Future<void> updateGoals({
     required String weightGoal,
     required int dailyStepsGoal,
@@ -486,6 +635,33 @@ print(user.id);
       }).eq('id', user.id);
     } catch (e) {
       _log('updateGoals', e);
+      rethrow;
+    }
+  }
+
+  /// Permanently deletes the signed-in user's account.
+  ///
+  /// Removes the auth user and all cascaded data immediately and irreversibly.
+  /// The caller is expected to sign the user out afterwards.
+  Future<void> requestAccountDeletion() async {
+    final user = currentUser;
+    if (user == null) throw Exception('Not signed in');
+    try {
+      await _client.rpc('request_account_deletion');
+    } catch (e) {
+      _log('requestAccountDeletion', e);
+      rethrow;
+    }
+  }
+
+  /// Cancels a pending account deletion, reactivating the account.
+  Future<void> cancelAccountDeletion() async {
+    final user = currentUser;
+    if (user == null) throw Exception('Not signed in');
+    try {
+      await _client.rpc('cancel_account_deletion');
+    } catch (e) {
+      _log('cancelAccountDeletion', e);
       rethrow;
     }
   }

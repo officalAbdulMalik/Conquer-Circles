@@ -18,7 +18,7 @@ class AppColors {
   static const Color lightBlueColor = Color(0xFFEFF7FF);
   static const Color blueContiner = Color(0xFFDBEAFE);
   static const Color borderColor = Color(0xffE5E7EB);
-  static const Color scaffoldBackground = Color(0xFFF8FAFD);
+  static const Color scaffoldBackground = Color(0xFFF8FAFC);
   static const Color segmentTrack = Color(0xFFF9FAFB);
   static const Color currentUserChip = Color(0xFFC9F7EC);
 

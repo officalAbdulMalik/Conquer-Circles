@@ -12,6 +12,7 @@ import 'package:test_steps/widgets/shared/app_circular_back_button.dart';
 import 'package:test_steps/widgets/shared/app_text_input.dart';
 import 'package:test_steps/widgets/shared/primary_button.dart';
 import 'package:test_steps/widgets/shared/social_auth_button.dart';
+import 'package:test_steps/widgets/shared/app_background_image.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -24,6 +25,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _referralController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   Future<void> _signup() async {
@@ -35,6 +37,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           name: _nameController.text.trim(),
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
+          referralCode: _referralController.text.trim(),
         );
     if (!mounted) return;
 
@@ -100,17 +103,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final authState = ref.watch(authProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
       body: Stack(
         children: [
-          IgnorePointer(
-            child: Image.asset(
-              'assets/images/back.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: 260.h,
-              color: AppColors.surface.withValues(alpha: 0.7),
-            ),
+          AppBackgroundImage(height: 260.h, color: AppColors.surface.withValues(alpha: 0.7),
           ),
           SafeArea(
             child: Form(
@@ -181,6 +176,16 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                           size: 18.sp,
                         ),
                       ),
+                    ),
+                    18.verticalSpace,
+                    AppTextInput(
+                      controller: _referralController,
+                      hintText: 'Referral code (optional)',
+                      textInputAction: TextInputAction.done,
+                      textCapitalization: TextCapitalization.characters,
+                      borderRadius: 20,
+                      fillColor: AppColors.surface,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16.w),
                     ),
                     28.verticalSpace,
                     Row(
@@ -263,6 +268,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _referralController.dispose();
     super.dispose();
   }
 }

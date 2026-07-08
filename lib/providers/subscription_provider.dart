@@ -1,9 +1,31 @@
+import 'dart:async';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import '../models/invite_model.dart';
 import '../services/supabase_service.dart';
 import '../services/subscription_service.dart';
 
 enum SubscriptionTier { free, premium }
+
+/// Subscription packages for the upgrade paywall (excludes energy consumables).
+final subscriptionPackagesProvider =
+    FutureProvider.autoDispose<List<Package>>((ref) async {
+  return SubscriptionService().getSubscriptionPackages();
+});
+
+/// Consumable energy packs for the buy-energy Marketplace (excludes subs).
+final energyPackagesProvider =
+    FutureProvider.autoDispose<List<Package>>((ref) async {
+  return SubscriptionService().getEnergyPackages();
+});
+
+/// Debug-only summary of the RevenueCat offerings/packages, used to diagnose an
+/// empty marketplace.
+final offeringsDebugProvider = FutureProvider.autoDispose<String>((ref) async {
+  return SubscriptionService().offeringsDebugSummary();
+});
 
 class SubscriptionState {
   final bool isPremium;
@@ -49,19 +71,34 @@ class SubscriptionState {
 }
 
 class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
+  final SubscriptionService _subscriptions = SubscriptionService();
   final SupabaseService _supabaseService;
+  StreamSubscription<bool>? _proSub;
 
   SubscriptionNotifier(this._supabaseService) : super(SubscriptionState()) {
+    // React live to purchases, cancellations, and expiries.
+    _proSub = _subscriptions.proStream.listen((pro) {
+      state = state.copyWith(isPremium: pro);
+    });
     refresh();
+  }
+
+  @override
+  void dispose() {
+    _proSub?.cancel();
+    super.dispose();
   }
 
   Future<void> refresh() async {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final data = await _supabaseService.getProfile();
+      // RevenueCat is the source of truth; re-check and sync the flag, then
+      // OR it with the persisted profile value.
+      final rcPro = await _subscriptions.refreshProStatus();
 
       state = state.copyWith(
-        isPremium: data?['is_premium'] ?? false,
+        isPremium: (data?['is_premium'] ?? false) || rcPro,
         hasSeasonPass: data?['has_season_pass'] ?? false,
         profile: data != null ? UserProfile.fromJson(data) : null,
         isLoading: false,
@@ -71,18 +108,16 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
     }
   }
 
-  Future<bool> purchasePackage(Object package) async {
+  Future<bool> purchasePackage(Package package) async {
     state = state.copyWith(isLoading: true, error: null);
-    final success = await SubscriptionService().purchasePackage(package);
+    // The pro-stream listener flips isPremium; this just manages the spinner.
+    final success = await _subscriptions.purchasePackage(package);
     state = state.copyWith(isLoading: false);
     return success;
   }
 
-  Future<void> restorePurchases() async {
-    final success = await SubscriptionService().restorePurchases();
-    if (success) {
-      await refresh();
-    }
+  Future<bool> restorePurchases() async {
+    return _subscriptions.restorePurchases();
   }
 }
 

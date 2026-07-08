@@ -15,6 +15,7 @@ import 'package:test_steps/widgets/shared/primary_button.dart';
 import 'package:test_steps/widgets/shared/social_auth_button.dart';
 
 import 'signup_screen.dart';
+import 'package:test_steps/widgets/shared/app_background_image.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -123,17 +124,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final authState = ref.watch(authProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
       body: Stack(
         children: [
-          IgnorePointer(
-            child: Image.asset(
-              'assets/images/back.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: 260.h,
-              color: AppColors.surface.withValues(alpha: 0.7),
-            ),
+          AppBackgroundImage(height: 260.h, color: AppColors.surface.withValues(alpha: 0.7),
           ),
           SafeArea(
             child: Form(

@@ -34,6 +34,8 @@ class SeasonRecapStatTile extends StatelessWidget {
           5.verticalSpace,
           Text(
             title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: AppTextStyles.inter(
               size: 10,
               color: AppColors.textSecondary,
@@ -43,6 +45,8 @@ class SeasonRecapStatTile extends StatelessWidget {
           4.verticalSpace,
           Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: AppTextStyles.poppins(
               size: 15,
               color: valueColor,

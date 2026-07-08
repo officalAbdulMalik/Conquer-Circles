@@ -51,6 +51,10 @@ class ProfileInfo {
   final int dailyStreak;
   final bool notificationsEnabled;
   final DateTime? createdAt;
+  final String theme;
+  final String units;
+  final bool dailyAlerts;
+  final bool reminders;
 
   ProfileInfo({
     required this.username,
@@ -60,6 +64,10 @@ class ProfileInfo {
     required this.dailyStreak,
     required this.notificationsEnabled,
     this.createdAt,
+    required this.theme,
+    required this.units,
+    required this.dailyAlerts,
+    required this.reminders,
   });
 
   factory ProfileInfo.fromJson(Map<String, dynamic> json) {
@@ -73,6 +81,10 @@ class ProfileInfo {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : null,
+      theme: json['theme'] as String? ?? 'Light',
+      units: json['units'] as String? ?? 'Metric',
+      dailyAlerts: json['daily_alerts'] as bool? ?? true,
+      reminders: json['reminders'] as bool? ?? false,
     );
   }
 
@@ -84,6 +96,10 @@ class ProfileInfo {
     int? dailyStreak,
     bool? notificationsEnabled,
     DateTime? createdAt,
+    String? theme,
+    String? units,
+    bool? dailyAlerts,
+    bool? reminders,
   }) {
     return ProfileInfo(
       username: username ?? this.username,
@@ -93,6 +109,10 @@ class ProfileInfo {
       dailyStreak: dailyStreak ?? this.dailyStreak,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       createdAt: createdAt ?? this.createdAt,
+      theme: theme ?? this.theme,
+      units: units ?? this.units,
+      dailyAlerts: dailyAlerts ?? this.dailyAlerts,
+      reminders: reminders ?? this.reminders,
     );
   }
 }

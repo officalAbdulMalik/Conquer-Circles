@@ -11,6 +11,7 @@ import 'package:test_steps/widgets/shared/app_text_input.dart';
 import 'package:test_steps/widgets/shared/custom_app_dialog.dart';
 import 'package:test_steps/widgets/shared/dashboard_segmented_tab_bar.dart';
 import 'package:test_steps/widgets/shared/primary_button.dart';
+import 'package:test_steps/widgets/shared/app_background_image.dart';
 
 class CreateCircleOnboardingView extends ConsumerStatefulWidget {
   const CreateCircleOnboardingView({super.key});
@@ -85,16 +86,9 @@ class _CreateCircleOnboardingViewState
     final circlesState = ref.watch(circlesProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFD),
       body: Stack(
         children: [
-          IgnorePointer(
-            child: Image.asset(
-              'assets/images/back.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-            ),
-          ),
+          AppBackgroundImage(),
           SafeArea(
             child: Padding(
               padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 26.h),

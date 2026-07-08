@@ -1,16 +1,23 @@
 import 'dart:math' as math;
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/steps/widgets/pack_info_dailog.dart';
+import 'package:test_steps/providers/subscription_provider.dart';
+import 'package:test_steps/services/dashboard_service.dart';
+import 'package:test_steps/services/subscription_service.dart';
+import 'package:test_steps/services/supabase_service.dart';
 import 'package:test_steps/widgets/shared/app_borders.dart';
 import 'package:test_steps/widgets/shared/app_circular_back_button.dart';
 import 'package:test_steps/widgets/shared/custom_app_dialog.dart';
 import 'package:test_steps/widgets/shared/primary_button.dart';
+import 'package:test_steps/widgets/shared/app_background_image.dart';
 
-class PlayerEnergyScreen extends StatefulWidget {
+class PlayerEnergyScreen extends ConsumerStatefulWidget {
   const PlayerEnergyScreen({
     super.key,
     required this.energy,
@@ -21,13 +28,29 @@ class PlayerEnergyScreen extends StatefulWidget {
   final bool showBackButton;
 
   @override
-  State<PlayerEnergyScreen> createState() => _PlayerEnergyScreenState();
+  ConsumerState<PlayerEnergyScreen> createState() => _PlayerEnergyScreenState();
 }
 
-class _PlayerEnergyScreenState extends State<PlayerEnergyScreen> {
+class _PlayerEnergyScreenState extends ConsumerState<PlayerEnergyScreen> {
   /// Selected tab — ValueNotifier so switching rebuilds only the tab bar
   /// and grid, never the header/energy card.
   final ValueNotifier<int> _selectedTab = ValueNotifier(1);
+
+  /// Instant local override applied right after a purchase, before the
+  /// dashboard round-trip completes. Otherwise the card reads the live backend
+  /// value from the dashboard.
+  int? _energyOverride;
+  bool _buying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pull the real balance from the backend on open (the passed-in value can
+    // be stale/0 if the caller opened before its energy loaded).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(dashboardProvider.notifier).reloadAttackEnergy();
+    });
+  }
 
   @override
   void dispose() {
@@ -35,14 +58,130 @@ class _PlayerEnergyScreenState extends State<PlayerEnergyScreen> {
     super.dispose();
   }
 
-  static const _packages = [
-    _EnergyPackage(energy: 10, price: 'Rs 100', icons: 1),
-    _EnergyPackage(energy: 50, price: 'Rs 280', icons: 2),
-    _EnergyPackage(energy: 100, price: 'Rs 550', icons: 3),
-    _EnergyPackage(energy: 200, price: 'Rs 1,100', icons: 4),
-    _EnergyPackage(energy: 300, price: 'Rs 1,600', icons: 6),
-    _EnergyPackage(energy: 400, price: 'Rs 2,100', icons: 6),
-  ];
+  /// Energy amount for display, parsed from the package/product identifier
+  /// (e.g. `energy_10` → 10).
+  int _energyAmount(Package p) {
+    final match = RegExp(r'(\d+)').firstMatch(p.identifier) ??
+        RegExp(r'(\d+)').firstMatch(p.storeProduct.identifier);
+    return match != null ? int.parse(match.group(1)!) : 0;
+  }
+
+  /// Buys an energy pack, grants the energy on the backend (idempotent), and
+  /// updates the balance on screen immediately.
+  Future<void> _buyEnergy(_EnergyPackage pkg) async {
+    final rc = pkg.rcPackage;
+    if (rc == null || _buying) return;
+    setState(() => _buying = true);
+
+    final txId = await SubscriptionService().purchaseEnergy(rc);
+    if (!mounted) return;
+    if (txId == null) {
+      setState(() => _buying = false);
+      _snack('Purchase cancelled or failed.');
+      return;
+    }
+
+    // Grant on the backend (fallback amount for products not yet mapped).
+    final newBalance = await SupabaseService().grantPurchasedEnergy(
+      productId: rc.storeProduct.identifier,
+      transactionId: txId,
+      fallbackAmount: pkg.energy > 0 ? pkg.energy : 10,
+    );
+    if (!mounted) return;
+    setState(() => _buying = false);
+
+    if (newBalance != null) {
+      setState(() => _energyOverride = newBalance);
+      // Refresh the dashboard so energy is up to date across the app; once it
+      // reports the new value the override and backend agree.
+      ref.read(dashboardProvider.notifier).reloadAttackEnergy();
+      _snack('Energy added! New balance: $newBalance');
+    } else {
+      _snack('Purchase succeeded but the energy grant failed. It will sync soon.');
+    }
+  }
+
+  void _snack(String message) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Widget _buildMarketplace(AsyncValue<List<Package>> energyAsync) {
+    return energyAsync.when(
+      loading: () => Padding(
+        padding: EdgeInsets.symmetric(vertical: 40.h),
+        child: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, __) => _marketMessage('Could not load energy packs.'),
+      data: (rcPackages) {
+        if (rcPackages.isEmpty) {
+          return _marketMessage(
+            'No energy packs available right now.',
+            showDiagnostics: true,
+          );
+        }
+        final packages = <_EnergyPackage>[
+          for (var i = 0; i < rcPackages.length; i++)
+            _EnergyPackage(
+              energy: _energyAmount(rcPackages[i]),
+              price: rcPackages[i].storeProduct.priceString,
+              icons: (i % 6) + 1,
+              rcPackage: rcPackages[i],
+            ),
+        ];
+        return _EnergyMarketplaceGrid(packages: packages, onBuy: _buyEnergy);
+      },
+    );
+  }
+
+  Widget _marketMessage(String message, {bool showDiagnostics = false}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 32.h, horizontal: 8.w),
+      child: Column(
+        children: [
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.montserrat(
+              size: 13.sp,
+              color: AppColors.textSecondary,
+              weight: FontWeight.w500,
+            ),
+          ),
+          8.verticalSpace,
+          TextButton.icon(
+            onPressed: () {
+              ref.invalidate(energyPackagesProvider);
+              ref.invalidate(offeringsDebugProvider);
+            },
+            icon: Icon(Icons.refresh_rounded, size: 16.r),
+            label: Text(
+              'Try again',
+              style: AppTextStyles.montserrat(
+                size: 13.sp,
+                color: AppColors.blueColor,
+                weight: FontWeight.w600,
+              ),
+            ),
+          ),
+          if (showDiagnostics && kDebugMode) ...[
+            10.verticalSpace,
+            Text(
+              ref.watch(offeringsDebugProvider).value ??
+                  'Loading RevenueCat diagnostics…',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.montserrat(
+                size: 11.sp,
+                color: AppColors.error,
+                weight: FontWeight.w400,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 
   static const _packs = [
     _ShopPack(name: '+1 Additional Circle', energyCost: 250),
@@ -55,18 +194,14 @@ class _PlayerEnergyScreenState extends State<PlayerEnergyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final energyAsync = ref.watch(energyPackagesProvider);
+    final backendEnergy =
+        ref.watch(dashboardProvider.select((s) => s.attackEnergy));
+    final energy = _energyOverride ?? backendEnergy;
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
       body: Stack(
         children: [
-          IgnorePointer(
-            child: Image.asset(
-              'assets/images/back.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: 260.h,
-              color: AppColors.surface.withValues(alpha: 0.7),
-            ),
+          AppBackgroundImage(height: 260.h, color: AppColors.surface.withValues(alpha: 0.7),
           ),
           SafeArea(
             bottom: false,
@@ -102,7 +237,7 @@ class _PlayerEnergyScreenState extends State<PlayerEnergyScreen> {
                           ),
                         ),
                         22.verticalSpace,
-                        _AvailableEnergyCard(energy: widget.energy),
+                        _AvailableEnergyCard(energy: energy),
                         26.verticalSpace,
                         ValueListenableBuilder<int>(
                           valueListenable: _selectedTab,
@@ -116,7 +251,7 @@ class _PlayerEnergyScreenState extends State<PlayerEnergyScreen> {
                               ),
                               24.verticalSpace,
                               if (selectedTab == 0)
-                                _EnergyMarketplaceGrid(packages: _packages)
+                                _buildMarketplace(energyAsync)
                               else
                                 _PacksGrid(packs: _packs),
                             ],
@@ -252,9 +387,10 @@ class _EnergyTabBar extends StatelessWidget {
 // ─── Marketplace ─────────────────────────────────────────────────────────────
 
 class _EnergyMarketplaceGrid extends StatelessWidget {
-  const _EnergyMarketplaceGrid({required this.packages});
+  const _EnergyMarketplaceGrid({required this.packages, required this.onBuy});
 
   final List<_EnergyPackage> packages;
+  final ValueChanged<_EnergyPackage> onBuy;
 
   @override
   Widget build(BuildContext context) {
@@ -267,19 +403,20 @@ class _EnergyMarketplaceGrid extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 18.w,
         mainAxisSpacing: 16.h,
-        mainAxisExtent: 130.h,
+        mainAxisExtent: 148.h,
       ),
       itemBuilder: (context, index) {
-        return _EnergyPackageCard(package: packages[index]);
+        return _EnergyPackageCard(package: packages[index], onBuy: onBuy);
       },
     );
   }
 }
 
 class _EnergyPackageCard extends StatelessWidget {
-  const _EnergyPackageCard({required this.package});
+  const _EnergyPackageCard({required this.package, required this.onBuy});
 
   final _EnergyPackage package;
+  final ValueChanged<_EnergyPackage> onBuy;
 
   @override
   Widget build(BuildContext context) {
@@ -325,7 +462,7 @@ class _EnergyPackageCard extends StatelessWidget {
                   child: PrimaryButton(
                     verticalPadding: 6.h,
                     label: package.price,
-                    onTap: () {},
+                    onTap: () => onBuy(package),
                     textStyle: AppTextStyles.montserrat(
                       size: 14.sp,
                       color: AppColors.surface,
@@ -387,7 +524,7 @@ class _PacksGrid extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 10.w,
         mainAxisSpacing: 10.h,
-        mainAxisExtent: 220.h,
+        mainAxisExtent: 236.h,
       ),
       itemBuilder: (context, index) {
         return _PackCard(pack: packs[index]);
@@ -604,11 +741,15 @@ class _EnergyPackage {
     required this.energy,
     required this.price,
     required this.icons,
+    this.rcPackage,
   });
 
   final int energy;
   final String price;
   final int icons;
+
+  /// The underlying RevenueCat package used to run the purchase.
+  final Package? rcPackage;
 }
 
 class _ShopPack {

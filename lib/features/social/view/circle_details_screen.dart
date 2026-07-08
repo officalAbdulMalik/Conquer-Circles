@@ -15,6 +15,7 @@ import 'package:test_steps/features/social/widgets/circle_leaderboard_list.dart'
 import 'package:test_steps/features/social/widgets/circle_message_button.dart';
 import 'package:test_steps/features/social/widgets/circle_metrics_row.dart';
 import 'package:test_steps/providers/circles_provider.dart';
+import 'package:test_steps/widgets/shared/app_background_image.dart';
 
 class CirclesDetailsScreen extends ConsumerWidget {
   const CirclesDetailsScreen({super.key, this.circleId});
@@ -45,16 +46,9 @@ class CirclesDetailsScreen extends ConsumerWidget {
               .toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFD),
       body: Stack(
         children: [
-          IgnorePointer(
-            child: Image.asset(
-              'assets/images/back.png',
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-          ),
+          AppBackgroundImage(),
           SafeArea(
             bottom: false,
             child: ListView(

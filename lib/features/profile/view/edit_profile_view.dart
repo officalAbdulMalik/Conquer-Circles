@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -11,6 +12,7 @@ import 'package:test_steps/widgets/shared/app_circular_back_button.dart';
 import 'package:test_steps/widgets/shared/app_text_input.dart';
 import 'package:test_steps/widgets/shared/dashboard_segmented_tab_bar.dart';
 import 'package:test_steps/widgets/shared/primary_button.dart';
+import 'package:test_steps/widgets/shared/app_background_image.dart';
 
 class EditProfileView extends ConsumerStatefulWidget {
   const EditProfileView({super.key});
@@ -144,6 +146,127 @@ class _EditProfileViewState extends ConsumerState<EditProfileView> {
         );
   }
 
+  int _numericValue(String text, {required int fallback}) {
+    final match = RegExp(r'\d+').stringMatch(text);
+    return int.tryParse(match ?? '') ?? fallback;
+  }
+
+  Future<void> _pickBirthday() async {
+    final notifier = ref.read(editProfileProvider.notifier);
+    final current = ref.read(editProfileProvider).form?.birthDate;
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current ?? DateTime(now.year - 18, now.month, now.day),
+      firstDate: DateTime(1900),
+      lastDate: now,
+    );
+    if (picked == null || !mounted) return;
+    notifier.setBirthDate(picked);
+    final mm = picked.month.toString().padLeft(2, '0');
+    final dd = picked.day.toString().padLeft(2, '0');
+    _birthdayController.text = '${picked.year}-$mm-$dd';
+    _ageController.text = '${notifier.ageForBirthDate(picked)}y';
+  }
+
+  Future<void> _pickHeight() async {
+    final value = await _showNumberPicker(
+      title: 'Height',
+      unit: 'cm',
+      min: 120,
+      max: 220,
+      initial: _numericValue(_heightController.text, fallback: 170),
+    );
+    if (value != null) _heightController.text = '$value cm';
+  }
+
+  Future<void> _pickWeight() async {
+    final value = await _showNumberPicker(
+      title: 'Weight',
+      unit: 'kg',
+      min: 30,
+      max: 250,
+      initial: _numericValue(_weightController.text, fallback: 70),
+    );
+    if (value != null) _weightController.text = '$value kg';
+  }
+
+  Future<int?> _showNumberPicker({
+    required String title,
+    required String unit,
+    required int min,
+    required int max,
+    required int initial,
+  }) {
+    var selected = initial.clamp(min, max).toInt();
+    return showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18.r)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: SizedBox(
+            height: 300.h,
+            child: Column(
+              children: [
+                Padding(
+                  padding: EdgeInsets.fromLTRB(16.w, 12.h, 8.w, 4.h),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        title,
+                        style: AppTextStyles.montserrat(
+                          size: 16.sp,
+                          weight: FontWeight.w700,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.of(sheetContext).pop(selected),
+                        child: Text(
+                          'Done',
+                          style: AppTextStyles.montserrat(
+                            size: 15.sp,
+                            weight: FontWeight.w700,
+                            color: AppColors.blueColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: CupertinoPicker(
+                    scrollController: FixedExtentScrollController(
+                      initialItem: selected - min,
+                    ),
+                    itemExtent: 40,
+                    onSelectedItemChanged: (index) => selected = min + index,
+                    children: [
+                      for (var v = min; v <= max; v++)
+                        Center(
+                          child: Text(
+                            '$v $unit',
+                            style: AppTextStyles.montserrat(
+                              size: 18.sp,
+                              weight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final profileState = ref.watch(editProfileProvider);
@@ -164,17 +287,9 @@ class _EditProfileViewState extends ConsumerState<EditProfileView> {
     });
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
       body: Stack(
         children: [
-          IgnorePointer(
-            child: Image.asset(
-              'assets/images/back.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: 250.h,
-              color: AppColors.surface.withValues(alpha: 0.72),
-            ),
+           AppBackgroundImage(height: 250.sp, color: AppColors.surface.withValues(alpha: 0.72),
           ),
           SafeArea(
             child: profileState.isLoading
@@ -224,17 +339,33 @@ class _EditProfileViewState extends ConsumerState<EditProfileView> {
                           height: 49,
                         ),
                         18.verticalSpace,
+                        AppTextInput(
+                          controller: _birthdayController,
+                          hintText: 'Birthday',
+                          readOnly: true,
+                          height: 49,
+                          onTap: _pickBirthday,
+                          suffixIcon: Icon(
+                            Icons.calendar_today_outlined,
+                            size: 18.sp,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        18.verticalSpace,
                         Row(
                           children: [
                             Expanded(
                               child: AppTextInput(
                                 controller: _weightController,
                                 hintText: 'Weight',
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
+                                readOnly: true,
+                                onTap: _pickWeight,
                                 height: 49,
+                                suffixIcon: Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  size: 20.sp,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                             ),
                             18.horizontalSpace,
@@ -242,11 +373,14 @@ class _EditProfileViewState extends ConsumerState<EditProfileView> {
                               child: AppTextInput(
                                 controller: _heightController,
                                 hintText: 'Height',
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
+                                readOnly: true,
+                                onTap: _pickHeight,
                                 height: 49,
+                                suffixIcon: Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  size: 20.sp,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                             ),
                           ],

@@ -5,10 +5,11 @@ import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/profile/view/edit_profile_view.dart';
 import 'package:test_steps/features/settings/view/faqs_screen.dart';
+import 'package:test_steps/features/settings/view/location_settings_screen.dart';
+import 'package:test_steps/features/settings/widgets/delete_account_dialog.dart';
 import 'package:test_steps/providers/map_provider.dart';
 import 'package:test_steps/providers/profile_provider.dart';
 import 'package:test_steps/widgets/shared/app_borders.dart';
-import 'package:test_steps/widgets/shared/custom_app_dialog.dart';
 
 Future<void> showSettingsBottomSheet(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -145,10 +146,12 @@ class SettingsBottomSheet extends ConsumerWidget {
                         icon: Icons.location_on_outlined,
                         title: 'Location Service',
                         subtitle: locationAllowed ? 'Allowed' : 'Not allowed',
-                        onTap: () async {
-                          await ref
-                              .read(mapProvider.notifier)
-                              .initialize(forceRequest: true);
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const LocationSettingsScreen(),
+                            ),
+                          );
                         },
                       ),
                       _SettingsTile(
@@ -173,7 +176,7 @@ class SettingsBottomSheet extends ConsumerWidget {
                         icon: Icons.delete_outline_rounded,
                         title: 'Delete',
                         subtitle: 'All your data will be permanently removed',
-                        onTap: () => _showDeleteAccountDialog(context),
+                        onTap: () => showDeleteAccountFlow(context, ref),
                       ),
                       _SettingsTile(
                         icon: Icons.logout_rounded,
@@ -326,186 +329,6 @@ Future<void> _showInfoDialog(
       ],
     ),
   );
-}
-
-Future<void> _showDeleteAccountDialog(BuildContext context) async {
-  final requested = await showCustomAppDialog<bool>(
-    context: context,
-    barrierDismissible: true,
-    dialog: const _DeleteAccountDialog(),
-  );
-
-  if (requested != true || !context.mounted) return;
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Delete account request submitted.')),
-  );
-}
-
-class _DeleteAccountDialog extends StatelessWidget {
-  const _DeleteAccountDialog();
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      insetPadding: EdgeInsets.symmetric(horizontal: 16.w),
-      backgroundColor: Colors.transparent,
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.fromLTRB(22.w, 22.h, 22.w, 24.h),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(24.r),
-          border: Border.all(color: AppColors.borderColor),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.textPrimary.withValues(alpha: 0.14),
-              blurRadius: 26.r,
-              offset: Offset(0, 12.h),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              top: -8.h,
-              right: -8.w,
-              child: IconButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                icon: Icon(
-                  Icons.close_rounded,
-                  color: AppColors.textPrimary,
-                  size: 28.sp,
-                ),
-              ),
-            ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 64.r,
-                  height: 64.r,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFFFF6B7F), Color(0xFFD72F46)],
-                    ),
-                    borderRadius: BorderRadius.circular(10.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFD72F46).withValues(alpha: 0.22),
-                        blurRadius: 14.r,
-                        offset: Offset(0, 7.h),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.delete_rounded,
-                    color: AppColors.surface,
-                    size: 34.sp,
-                  ),
-                ),
-                18.verticalSpace,
-                Text(
-                  'Delete Your Account',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.montserrat(
-                    size: 21.sp,
-                    color: AppColors.textPrimary,
-                    weight: FontWeight.w800,
-                  ),
-                ),
-                14.verticalSpace,
-                Text(
-                  'This will remove your account permanently, you’re request will be processed within 7 days. We’ll notify you once it’s complete',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.montserrat(
-                    size: 16.sp,
-                    height: 1.42,
-                    color: AppColors.textSecondary,
-                    weight: FontWeight.w500,
-                  ),
-                ),
-                24.verticalSpace,
-                Row(
-                  children: [
-                    Expanded(
-                      child: _DeleteDialogButton(
-                        label: 'Cancel',
-                        foregroundColor: AppColors.blueColor,
-                        borderColor: AppColors.blueColor,
-                        backgroundColor: AppColors.surface,
-                        onTap: () => Navigator.of(context).pop(false),
-                      ),
-                    ),
-                    14.horizontalSpace,
-                    Expanded(
-                      child: _DeleteDialogButton(
-                        label: 'Delete Account',
-                        foregroundColor: AppColors.surface,
-                        backgroundColor: const Color(0xFFF5484E),
-                        onTap: () => Navigator.of(context).pop(true),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DeleteDialogButton extends StatelessWidget {
-  const _DeleteDialogButton({
-    required this.label,
-    required this.foregroundColor,
-    required this.backgroundColor,
-    required this.onTap,
-    this.borderColor,
-  });
-
-  final String label;
-  final Color foregroundColor;
-  final Color backgroundColor;
-  final Color? borderColor;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 51.h,
-      child: Material(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(25.5.r),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(25.5.r),
-          child: Container(
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(25.5.r),
-              border: borderColor == null
-                  ? null
-                  : Border.all(color: borderColor!, width: 1.6.w),
-            ),
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.montserrat(
-                size: 14.sp,
-                color: foregroundColor,
-                weight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {

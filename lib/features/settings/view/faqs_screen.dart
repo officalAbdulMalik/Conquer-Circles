@@ -3,7 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/widgets/shared/app_borders.dart';
-import 'package:test_steps/widgets/shared/app_circular_back_button.dart';
+import 'package:test_steps/widgets/shared/app_screen_header.dart';
+import 'package:test_steps/widgets/shared/app_background_image.dart';
 
 class FaqsScreen extends StatefulWidget {
   const FaqsScreen({super.key});
@@ -25,17 +26,9 @@ class _FaqsScreenState extends State<FaqsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
       body: Stack(
         children: [
-          IgnorePointer(
-            child: Image.asset(
-              'assets/images/back.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: 250.h,
-              color: AppColors.surface.withValues(alpha: 0.72),
-            ),
+          AppBackgroundImage(height: 250.h, color: AppColors.surface.withValues(alpha: 0.72),
           ),
           SafeArea(
             child: SingleChildScrollView(
@@ -44,32 +37,7 @@ class _FaqsScreenState extends State<FaqsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SizedBox(
-                    height: 76.h,
-                    child: Stack(
-                      children: [
-                        const Positioned(
-                          top: 0,
-                          left: 0,
-                          child: AppCircularBackButton(),
-                        ),
-                        Positioned(
-                          top: 9.h,
-                          left: 48.w,
-                          right: 48.w,
-                          child: Text(
-                            'Faqs',
-                            textAlign: TextAlign.center,
-                            style: AppTextStyles.montserrat(
-                              size: 20.sp,
-                              color: AppColors.textPrimary,
-                              weight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  const AppScreenHeader(title: 'Faqs'),
                   16.verticalSpace,
                   ValueListenableBuilder<int>(
                     valueListenable: _expandedIndex,
@@ -77,8 +45,9 @@ class _FaqsScreenState extends State<FaqsScreen> {
                       items: _faqItems,
                       expandedIndex: expandedIndex,
                       onChanged: (index) {
-                        _expandedIndex.value =
-                            expandedIndex == index ? -1 : index;
+                        _expandedIndex.value = expandedIndex == index
+                            ? -1
+                            : index;
                       },
                     ),
                   ),
@@ -169,10 +138,10 @@ class _FaqTile extends StatelessWidget {
                   child: Text(
                     item.question,
                     style: AppTextStyles.montserrat(
-                      size: 14.5.sp,
+                      size: 14.sp,
                       color: AppColors.textPrimary,
-                      weight: FontWeight.w800,
-                      height: 1.28,
+                      weight: FontWeight.w600,
+                     
                     ),
                   ),
                 ),
@@ -197,8 +166,8 @@ class _FaqTile extends StatelessWidget {
                   style: AppTextStyles.montserrat(
                     size: 12.5.sp,
                     color: AppColors.textSecondary,
-                    weight: FontWeight.w500,
-                    height: 1.24,
+                    weight: FontWeight.w400,
+                  
                   ),
                 ),
               ),

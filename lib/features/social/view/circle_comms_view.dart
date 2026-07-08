@@ -9,6 +9,7 @@ import 'package:test_steps/providers/circle_messages_provider.dart';
 import 'package:test_steps/widgets/shared/app_avatar_stack.dart';
 import 'package:test_steps/widgets/shared/app_borders.dart';
 import 'package:test_steps/widgets/shared/app_text_input.dart';
+import 'package:test_steps/widgets/shared/app_background_image.dart';
 
 class CircleCommsView extends ConsumerStatefulWidget {
   const CircleCommsView({
@@ -48,16 +49,9 @@ class _CircleCommsViewState extends ConsumerState<CircleCommsView> {
         .toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFD),
       body: Stack(
         children: [
-          IgnorePointer(
-            child: Image.asset(
-              'assets/images/back.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-            ),
-          ),
+          AppBackgroundImage(),
           SafeArea(
             bottom: false,
             child: Column(
