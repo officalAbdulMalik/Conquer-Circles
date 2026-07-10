@@ -86,7 +86,6 @@ class SettingsView extends ConsumerWidget {
                           icon: 'assets/icons/trash.png',
                           title: 'Delete',
                           subtitle: 'All your data will be permanently removed',
-                          titleColor: const Color(0xFFEF4444),
                           onTap: () => showDeleteAccountFlow(context, ref),
                         ),
                       ],

@@ -65,8 +65,6 @@ class _EnergyContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _BalanceCard(balance: data.balance),
-        20.verticalSpace,
         if (data.isEmpty)
           const _EnergyEmpty()
         else
@@ -75,9 +73,11 @@ class _EnergyContent extends StatelessWidget {
               padding: EdgeInsets.only(bottom: 12.h),
               child: EnergyUsageTile(
                 title: entry.description,
-                subtitle: _formatWhen(entry.createdAt),
+                description: _subtitleForType(entry.type),
+                date: _formatWhenWithToday(entry.createdAt),
                 amount: entry.amountLabel,
                 amountColor: energyAmountColor(entry),
+                type: entry.type,
               ),
             );
           }),
@@ -86,77 +86,6 @@ class _EnergyContent extends StatelessWidget {
   }
 }
 
-class _BalanceCard extends StatelessWidget {
-  const _BalanceCard({required this.balance});
-
-  final int balance;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
-      decoration: BoxDecoration(
-        color: AppColors.blueColor,
-        borderRadius: BorderRadius.circular(20.r),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.blueColor.withValues(alpha: 0.22),
-            blurRadius: 20.r,
-            offset: Offset(0, 10.h),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46.w,
-            height: 46.w,
-            decoration: BoxDecoration(
-              color: AppColors.surface.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Center(
-              child: Image.asset(
-                'assets/icons/power.png',
-                width: 24.w,
-                height: 24.w,
-                color: AppColors.surface,
-                errorBuilder: (_, __, ___) =>
-                    Icon(Icons.bolt_rounded, color: AppColors.surface, size: 24.w),
-              ),
-            ),
-          ),
-          14.horizontalSpace,
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Attack Energy',
-                  style: AppTextStyles.montserrat(
-                    size: 13.sp,
-                    weight: FontWeight.w500,
-                    color: AppColors.surface.withValues(alpha: 0.88),
-                  ),
-                ),
-                4.verticalSpace,
-                Text(
-                  '$balance',
-                  style: AppTextStyles.montserrat(
-                    size: 26.sp,
-                    weight: FontWeight.w800,
-                    color: AppColors.surface,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _EnergyLoading extends StatelessWidget {
   const _EnergyLoading();
@@ -250,20 +179,44 @@ class _EnergyError extends StatelessWidget {
   }
 }
 
-String _formatWhen(DateTime when) {
+String _formatWhenWithToday(DateTime when) {
   final now = DateTime.now();
-  final diff = now.difference(when);
-  if (diff.inMinutes < 1) return 'Just now';
-  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-  if (diff.inHours < 24) return '${diff.inHours}h ago';
-  if (diff.inDays < 7) return '${diff.inDays}d ago';
+  final today = DateTime(now.year, now.month, now.day);
+  final date = DateTime(when.year, when.month, when.day);
+  
+  final h = when.hour % 12 == 0 ? 12 : when.hour % 12;
+  final m = when.minute.toString().padLeft(2, '0');
+  final ampm = when.hour < 12 ? 'AM' : 'PM';
+  final timeStr = '$h:$m $ampm';
+
+  if (date == today) {
+    return 'Today · $timeStr';
+  }
+  
+  final yesterday = today.subtract(const Duration(days: 1));
+  if (date == yesterday) {
+    return 'Yesterday · $timeStr';
+  }
 
   const months = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
   ];
-  final h = when.hour % 12 == 0 ? 12 : when.hour % 12;
-  final m = when.minute.toString().padLeft(2, '0');
-  final ampm = when.hour < 12 ? 'AM' : 'PM';
-  return '${months[when.month - 1]} ${when.day} · $h:$m $ampm';
+  return '${months[when.month - 1]} ${when.day} · $timeStr';
+}
+
+String _subtitleForType(String type) {
+  switch (type) {
+    case 'steps':
+      return 'Convert steps to energy';
+    case 'step_milestone':
+      return 'Bonus for reaching milestone';
+    case 'territory_battle':
+    case 'territory_assault':
+      return 'Attack on nearby rival territory';
+    case 'purchase':
+      return 'Energy store purchase';
+    default:
+      return 'Energy ledger adjustment';
+  }
 }

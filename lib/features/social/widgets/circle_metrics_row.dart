@@ -345,7 +345,7 @@ class CircleMetricsRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(20.r),
               child: Container(
                 height: 148.h,
-                padding: EdgeInsets.all(12.w),
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20.r),
@@ -355,19 +355,19 @@ class CircleMetricsRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: EdgeInsets.all(10.w),
+                      padding: EdgeInsets.all(8.w),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18.r),
                         border: Border.all(color: AppColors.borderColor),
                       ),
                       child: Image.asset(
                         metrics[index].icon,
-                        height: 37.sp,
-                        width: 37.sp,
+                        height: 32.sp,
+                        width: 32.sp,
                         fit: BoxFit.cover,
                       ),
                     ),
-                    8.verticalSpace,
+                    6.verticalSpace,
                     Text(
                       metrics[index].label,
                       maxLines: 1,
@@ -378,7 +378,7 @@ class CircleMetricsRow extends StatelessWidget {
                         weight: FontWeight.w400,
                       ),
                     ),
-                    8.verticalSpace,
+                    6.verticalSpace,
                     Text(
                       metrics[index].value,
                       maxLines: 1,

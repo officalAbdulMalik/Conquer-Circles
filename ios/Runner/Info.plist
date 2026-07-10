@@ -57,6 +57,10 @@
 	<string>We use your camera so you can take a profile picture.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>We may save your selected profile image.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

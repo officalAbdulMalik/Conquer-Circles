@@ -7,8 +7,8 @@ import 'package:test_steps/features/leaderboard/models/leaderboard_participant.d
 import 'package:test_steps/features/leaderboard/widgets/leaderboard_participant_tile.dart';
 import 'package:test_steps/features/leaderboard/widgets/leaderboard_podium_card.dart';
 import 'package:test_steps/features/leaderboard/widgets/leaderboard_scope_switcher.dart';
-import 'package:test_steps/features/profile/view/profile_bottom_sheet.dart';
 import 'package:test_steps/providers/leaderboard_provider.dart';
+import 'package:test_steps/providers/main_nav_provider.dart';
 import 'package:test_steps/screens/notifications_screen.dart';
 import 'package:test_steps/services/dashboard_service.dart';
 import 'package:test_steps/widgets/shared/app_borders.dart';
@@ -53,7 +53,8 @@ class LeaderboardView extends ConsumerWidget {
                       );
                     },
                     onProfileTap: () {
-                      showProfileBottomSheet(context);
+                      ref.read(mainNavTabIndexProvider.notifier).state =
+                          kProfileTabIndex;
                     },
                   ),
                   18.verticalSpace,

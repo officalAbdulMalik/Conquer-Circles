@@ -90,7 +90,7 @@ class _CreateCircleOnboardingViewState
         children: [
           AppBackgroundImage(),
           SafeArea(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 26.h),
               child: Column(
                 children: [
@@ -131,9 +131,10 @@ class _CreateCircleOnboardingViewState
                   ),
                   32.verticalSpace,
                   ListenableBuilder(
-                    listenable: Listenable.merge(
-                      [_showIconPicker, _selectedIconId],
-                    ),
+                    listenable: Listenable.merge([
+                      _showIconPicker,
+                      _selectedIconId,
+                    ]),
                     builder: (context, _) => Column(
                       children: [
                         InkWell(
@@ -235,23 +236,26 @@ class _CreateCircleOnboardingViewState
                     valueListenable: _isPrivate,
                     builder: (context, isPrivate, _) =>
                         DashboardSegmentedTabBar(
-                      labels: const ['Public', 'Private'],
-                      selectedIndex: isPrivate ? 1 : 0,
-                      onChanged: (index) => _isPrivate.value = index == 1,
-                    ),
-                  ),
-                  const Spacer(),
-                  PrimaryButton(
-                    label: circlesState.isCreating
-                        ? 'Creating...'
-                        : 'Create Circle',
-                    onTap: circlesState.isCreating ? null : _createCircle,
+                          labels: const ['Public', 'Private'],
+                          selectedIndex: isPrivate ? 1 : 0,
+                          onChanged: (index) => _isPrivate.value = index == 1,
+                        ),
                   ),
                 ],
               ),
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        child: SizedBox(
+          height: 50.sp,
+          child: PrimaryButton(
+            label: circlesState.isCreating ? 'Creating...' : 'Create Circle',
+            onTap: circlesState.isCreating ? null : _createCircle,
+          ),
+        ),
       ),
     );
   }

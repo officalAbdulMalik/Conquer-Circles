@@ -6,12 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:test_steps/core/theme/app_theme.dart';
 import 'package:test_steps/features/auth/gender_selection_screen.dart';
 import 'package:test_steps/features/auth/update_password_screen.dart';
-import 'package:test_steps/features/subscription/view/onboarding_paywall_screen.dart';
 import 'package:test_steps/services/supabase_service.dart';
 import 'package:test_steps/services/subscription_service.dart';
+import 'package:test_steps/widgets/shared/app_loading_screen.dart';
 import 'screens/main_navigation.dart';
 import 'screens/splash_screen.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
@@ -19,6 +20,7 @@ import 'services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: '.env');
   await Firebase.initializeApp();
   await Supabase.initialize(
     url: 'https://dpvelnjzovjhxgpjvtay.supabase.co',
@@ -29,8 +31,12 @@ Future<void> main() async {
     ),
   );
 
-  await initializeRevenueCat();
-  _bindRevenueCatToAuth();
+  // TEMP: RevenueCat disabled on Android for APK test builds — re-enable
+  // once Android products/API key are set up in RevenueCat.
+  if (!Platform.isAndroid) {
+    await initializeRevenueCat();
+    _bindRevenueCatToAuth();
+  }
   try {
     await NotificationService.initialize();
   } catch (e) {
@@ -140,9 +146,7 @@ class _MyAppState extends State<MyApp> {
 
           if (snapshot.connectionState == ConnectionState.waiting &&
               session == null) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
+            return const AppLoadingScreen();
           }
 
           if (snapshot.data?.event == AuthChangeEvent.passwordRecovery) {
@@ -155,14 +159,12 @@ class _MyAppState extends State<MyApp> {
               builder: (context, profileSnapshot) {
                 if (profileSnapshot.connectionState ==
                     ConnectionState.waiting) {
-                  return const Scaffold(
-                    body: Center(child: CircularProgressIndicator()),
-                  );
+                  return const AppLoadingScreen();
                 }
 
                 final profile = profileSnapshot.data;
                 if (_service.isProfileOnboardingComplete(profile)) {
-                  return const OnboardingPaywallScreen();
+                  return const MainNavigation();
                 }
 
                 return const GenderSelectionScreen();

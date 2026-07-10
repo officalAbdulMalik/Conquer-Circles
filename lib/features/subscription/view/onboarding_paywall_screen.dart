@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show PlatformException;
@@ -28,7 +31,19 @@ class _OnboardingPaywallScreenState
   String? _selectedId; // null = default (recommended package)
   bool _purchasing = false;
 
-  void _enterApp() {
+  Future<void> _enterApp() async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const _FinishingProfileDialog(),
+    );
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const _OnboardingSuccessDialog(),
+    );
+    if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const MainNavigation()),
       (route) => false,
@@ -317,6 +332,204 @@ String? _periodFromIso(String? iso) {
   if (months == 1) return '/mo';
   if (weeks == 1 || days == 7) return '/wk';
   return null;
+}
+
+class _FinishingProfileDialog extends StatelessWidget {
+  const _FinishingProfileDialog();
+
+  static const _ringSize = 130.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: EdgeInsets.symmetric(horizontal: 28.w),
+      backgroundColor: Colors.transparent,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 28.h),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24.r),
+          border: AppBorders.raised(),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: _ringSize.r,
+              height: _ringSize.r,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 1800),
+                curve: Curves.easeOut,
+                onEnd: () {
+                  if (context.mounted && Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  }
+                },
+                builder: (context, value, _) => Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CustomPaint(
+                      size: Size(_ringSize.r, _ringSize.r),
+                      painter: _ProfileRingPainter(progress: value),
+                    ),
+                    Text(
+                      '${(value * 100).round()}%',
+                      style: AppTextStyles.montserrat(
+                        size: 22.sp,
+                        color: AppColors.textPrimary,
+                        weight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            20.verticalSpace,
+            Text(
+              'Finishing Up Your Profile',
+              style: AppTextStyles.montserrat(
+                size: 15.sp,
+                color: AppColors.textPrimary,
+                weight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileRingPainter extends CustomPainter {
+  _ProfileRingPainter({required this.progress});
+
+  /// 0.0-1.0 fraction of the ring to fill.
+  final double progress;
+
+  static const _strokeWidth = 14.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = (size.width - _strokeWidth) / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    canvas.drawArc(
+      rect,
+      0,
+      2 * math.pi,
+      false,
+      Paint()
+        ..color = AppColors.bgProgress
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = _strokeWidth
+        ..strokeCap = StrokeCap.round,
+    );
+
+    if (progress <= 0) return;
+
+    final sweepAngle = 2 * math.pi * progress;
+    final gradientPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..shader = SweepGradient(
+        startAngle: 0,
+        endAngle: sweepAngle,
+        colors: const [AppColors.blueColor, Color(0xFF93C5FD)],
+        transform: const GradientRotation(-math.pi / 2),
+      ).createShader(rect);
+
+    canvas.drawArc(rect, -math.pi / 2, sweepAngle, false, gradientPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ProfileRingPainter oldDelegate) =>
+      oldDelegate.progress != progress;
+}
+
+class _OnboardingSuccessDialog extends StatefulWidget {
+  const _OnboardingSuccessDialog();
+
+  @override
+  State<_OnboardingSuccessDialog> createState() =>
+      _OnboardingSuccessDialogState();
+}
+
+class _OnboardingSuccessDialogState extends State<_OnboardingSuccessDialog> {
+  Timer? _dismissTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _dismissTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) Navigator.of(context).pop();
+    });
+  }
+
+  @override
+  void dispose() {
+    _dismissTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: EdgeInsets.symmetric(horizontal: 28.w),
+      backgroundColor: Colors.transparent,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 24.h),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24.r),
+          border: AppBorders.raised(),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 55.w,
+              height: 55.w,
+              decoration: const BoxDecoration(
+                color: Color(0xFF24C2AD),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.check_rounded,
+                color: Colors.white,
+                size: 40.sp,
+              ),
+            ),
+            16.verticalSpace,
+            Text(
+              'Success',
+              style: AppTextStyles.montserrat(
+                size: 20.sp,
+                color: AppColors.textPrimary,
+                weight: FontWeight.w800,
+              ),
+            ),
+            10.verticalSpace,
+            Text(
+              "Your profile has been successfully created, you'll soon "
+              "redirect to home screen.",
+              textAlign: TextAlign.center,
+              style: AppTextStyles.montserrat(
+                size: 14.sp,
+                color: AppColors.textSecondary,
+                weight: FontWeight.w500,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _CloseButton extends StatelessWidget {

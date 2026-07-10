@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:test_steps/features/profile/view/profile_bottom_sheet.dart';
+import 'package:test_steps/providers/main_nav_provider.dart';
 import 'package:test_steps/screens/notifications_screen.dart';
 import 'package:test_steps/widgets/shared/app_bar_icon_tile.dart';
 
-class MapTopControls extends StatelessWidget {
+class MapTopControls extends ConsumerWidget {
   const MapTopControls({
     super.key,
     required this.onBack,
@@ -15,7 +16,7 @@ class MapTopControls extends StatelessWidget {
   final VoidCallback onLocate;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Stack(
       children: [
         Positioned(
@@ -43,7 +44,8 @@ class MapTopControls extends StatelessWidget {
           right: 16.sp,
           child: DashboardIconButton(
             icon: 'assets/icons/profile.png',
-            onTap: () => showProfileBottomSheet(context),
+            onTap: () => ref.read(mainNavTabIndexProvider.notifier).state =
+                kProfileTabIndex,
           ),
         ),
         Positioned(

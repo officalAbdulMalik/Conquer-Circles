@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/social/models/circle_detail_models.dart';
@@ -35,10 +36,12 @@ class CircleActivityList extends StatelessWidget {
                           width: 1,
                         ),
                       ),
-                      child: Icon(
-                        Icons.emoji_events_rounded,
-                        color: AppColors.blueColor,
-                        size: 30.sp,
+                      child: Center(
+                        child: SvgPicture.asset(
+                          'assets/icons/dashboard_trophy_icon.svg',
+                          width: 37.8.w,
+                          height: 37.8.h,
+                        ),
                       ),
                     ),
                     14.horizontalSpace,

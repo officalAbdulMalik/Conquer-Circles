@@ -11,7 +11,6 @@ import 'package:test_steps/features/steps/view/objective_tab_section.dart';
 import 'package:test_steps/features/steps/view/player_energy_screen.dart';
 import 'package:test_steps/features/steps/view/wearable_sync_screen.dart';
 import 'package:test_steps/features/map/view/map_view.dart';
-import 'package:test_steps/features/profile/view/profile_bottom_sheet.dart';
 import 'package:test_steps/features/steps/view/overview_stats_section.dart';
 import 'package:test_steps/features/steps/widgets/badge_detail_dialog.dart';
 import 'package:test_steps/features/steps/widgets/badge_shimmer_grid.dart';
@@ -23,6 +22,7 @@ import 'package:test_steps/models/dashboard_model.dart';
 import 'package:test_steps/providers/ai_provider.dart';
 import 'package:test_steps/providers/badge_provider.dart';
 import 'package:test_steps/providers/circles_provider.dart';
+import 'package:test_steps/providers/main_nav_provider.dart';
 import 'package:test_steps/providers/stats_range_provider.dart';
 import 'package:test_steps/providers/wearable_provider.dart';
 import 'package:test_steps/screens/notifications_screen.dart';
@@ -161,7 +161,8 @@ class _StepsViewState extends ConsumerState<StepsView> {
                       );
                     },
                     onProfileTap: () {
-                      showProfileBottomSheet(context);
+                      ref.read(mainNavTabIndexProvider.notifier).state =
+                          kProfileTabIndex;
                     },
                   ),
                   if (dashboardState.error != null) ...[

@@ -54,122 +54,120 @@ class CancelSubscriptionDialog extends StatelessWidget {
       backgroundColor: Colors.transparent,
       insetPadding: EdgeInsets.symmetric(horizontal: 24.w),
       child: Container(
-        padding: EdgeInsets.all(24.r),
+        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 30.h),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(28.r),
         ),
-        child: Stack(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Close Button at top-right
-            Positioned(
-              top: 0,
-              right: 0,
-              child: GestureDetector(
-                onTap: () => Navigator.of(context).pop(false),
-                child: Icon(
-                  Icons.close_rounded,
-                  color: AppColors.textNavy,
-                  size: 24.r,
+            // Red minus warning circle with premium shadow
+            Container(
+              width: 56.r,
+              height: 56.r,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF43F5E), // Rose red
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFF43F5E).withOpacity(0.25),
+                    blurRadius: 16.r,
+                    offset: Offset(0, 8.h),
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: Container(
+                width: 24.w,
+                height: 5.h,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(2.5.r),
                 ),
               ),
             ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
+            20.verticalSpace,
+            Text(
+              'Confirm Cancellation',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.montserrat(
+                size: 22.sp,
+                weight: FontWeight.w800,
+                color: const Color(0xFF0F172A), // Slate 900
+              ),
+            ),
+            14.verticalSpace,
+            Text(
+              "Are you sure you want to cancel your subscription? You'll lose access to premium features at the end of your current billing period.",
+              textAlign: TextAlign.center,
+              style: AppTextStyles.montserrat(
+                size: 14.sp,
+                weight: FontWeight.w500,
+                color: const Color(0xFF64748B), // Slate 500
+                height: 1.5,
+              ),
+            ),
+            24.verticalSpace,
+            Row(
               children: [
-                16.verticalSpace,
-                // Red minus warning circle
-                Container(
-                  width: 56.r,
-                  height: 56.r,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFEF4444),
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: Container(
-                    width: 24.w,
-                    height: 5.h,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(2.5.r),
-                    ),
-                  ),
-                ),
-                16.verticalSpace,
-                Text(
-                  'Confirm Cancellation',
-                  style: AppTextStyles.montserrat(
-                    size: 20,
-                    weight: FontWeight.w800,
-                    color: AppColors.textNavy,
-                  ),
-                ),
-                12.verticalSpace,
-                Text(
-                  "Are you sure you want to cancel your subscription? You'll lose access to premium features at the end of your current billing period.",
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.montserrat(
-                    size: 14,
-                    weight: FontWeight.w500,
-                    color: AppColors.textSecondary,
-                    height: 1.4,
-                  ),
-                ),
-                24.verticalSpace,
-                Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: 48.h,
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.of(context).pop(false),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                              color: AppColors.blueColor,
-                              width: 1.5.w,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24.r),
-                            ),
-                          ),
-                          child: Text(
-                            'Stay',
-                            style: AppTextStyles.montserrat(
-                              size: 15,
-                              weight: FontWeight.w600,
-                              color: AppColors.blueColor,
-                            ),
+                Expanded(
+                  child: SizedBox(
+                    height: 50.h,
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(horizontal: 8.w),
+                        side: BorderSide(
+                          color: AppColors.blueColor,
+                          width: 1.5.w,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25.r),
+                        ),
+                      ),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Stay',
+                          style: AppTextStyles.montserrat(
+                            size: 15.sp,
+                            weight: FontWeight.w600,
+                            color: AppColors.blueColor,
                           ),
                         ),
                       ),
                     ),
-                    12.horizontalSpace,
-                    Expanded(
-                      child: SizedBox(
-                        height: 48.h,
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.of(context).pop(true),
-                          style: ElevatedButton.styleFrom(
-                            elevation: 0,
-                            backgroundColor: AppColors.blueColor,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24.r),
-                            ),
-                          ),
-                          child: Text(
-                            'Yes, Confirm',
-                            style: AppTextStyles.montserrat(
-                              size: 15,
-                              weight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
+                  ),
+                ),
+                12.horizontalSpace,
+                Expanded(
+                  child: SizedBox(
+                    height: 50.h,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        elevation: 0,
+                        padding: EdgeInsets.symmetric(horizontal: 8.w),
+                        backgroundColor: AppColors.blueColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25.r),
+                        ),
+                      ),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Yes, Confirm',
+                          style: AppTextStyles.montserrat(
+                            size: 15.sp,
+                            weight: FontWeight.w600,
+                            color: Colors.white,
                           ),
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -198,7 +196,14 @@ class CurrentPlanCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: AppColors.lightBlueColor,
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFBFDBFE),
+            Color(0xFFDBEAFE),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(24.r),
         border: Border.all(
           color: AppColors.blueColor.withValues(alpha: 0.15),
@@ -210,10 +215,9 @@ class CurrentPlanCard extends StatelessWidget {
         child: Stack(
           children: [
             Positioned.fill(
-              child: CustomPaint(
-                painter: PlanRadialLinesPainter(
-                  lineColor: AppColors.blueColor.withValues(alpha: 0.08),
-                ),
+              child: Image.asset(
+                'assets/images/plan_radial_lines.png',
+                fit: BoxFit.cover,
               ),
             ),
             Padding(

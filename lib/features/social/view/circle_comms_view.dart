@@ -5,7 +5,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/features/social/models/circle_detail_models.dart';
+import 'package:test_steps/features/social/widgets/circle_chat_options_sheet.dart';
 import 'package:test_steps/providers/circle_messages_provider.dart';
+import 'package:test_steps/providers/circles_provider.dart';
 import 'package:test_steps/widgets/shared/app_avatar_stack.dart';
 import 'package:test_steps/widgets/shared/app_borders.dart';
 import 'package:test_steps/widgets/shared/app_text_input.dart';
@@ -17,11 +19,13 @@ class CircleCommsView extends ConsumerStatefulWidget {
     required this.circleId,
     required this.circleName,
     required this.members,
+    this.isCreator = false,
   });
 
   final String circleId;
   final String circleName;
   final List<CircleLeaderboardMember> members;
+  final bool isCreator;
 
   @override
   ConsumerState<CircleCommsView> createState() => _CircleCommsViewState();
@@ -64,7 +68,7 @@ class _CircleCommsViewState extends ConsumerState<CircleCommsView> {
                         : widget.circleName,
                     members: widget.members,
                     onBack: () => Navigator.maybePop(context),
-                    onMenuTap: () {},
+                    onMenuTap: _showChatOptions,
                   ),
                 ),
                 22.verticalSpace,
@@ -141,6 +145,44 @@ class _CircleCommsViewState extends ConsumerState<CircleCommsView> {
       isMe: isMe,
       isEdited: row['edited_at'] != null,
     );
+  }
+
+  Future<void> _showChatOptions() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => CircleChatOptionsSheet(
+        onBlockChat: () => Navigator.pop(sheetContext),
+        onLeaveCircle: () {
+          Navigator.pop(sheetContext);
+          _confirmLeaveCircle();
+        },
+      ),
+    );
+  }
+
+  Future<void> _confirmLeaveCircle() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) =>
+          _LeaveCircleDialog(circleName: widget.circleName),
+    );
+    if (confirmed != true || !mounted) return;
+
+    await ref.read(circlesProvider.notifier).leaveCircle(widget.circleId);
+    if (!mounted) return;
+
+    final error = ref.read(circlesProvider).error;
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
+
+    final navigator = Navigator.of(context);
+    navigator.pop();
+    if (navigator.canPop()) navigator.pop();
   }
 
   Future<void> _showMessageActions(_CircleChatMessage message) async {
@@ -457,6 +499,146 @@ class _EditMessageDialogState extends State<_EditMessageDialog> {
   }
 }
 
+class _LeaveCircleDialog extends StatelessWidget {
+  const _LeaveCircleDialog({required this.circleName});
+
+  final String circleName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: EdgeInsets.symmetric(horizontal: 20.w),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.fromLTRB(22.w, 18.h, 22.w, 22.h),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(26.r),
+          border: AppBorders.raised(),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Align(
+              alignment: Alignment.centerRight,
+              child: InkWell(
+                onTap: () => Navigator.of(context).pop(false),
+                borderRadius: BorderRadius.circular(20.r),
+                child: Padding(
+                  padding: EdgeInsets.all(2.w),
+                  child: Icon(
+                    Icons.close_rounded,
+                    size: 25.sp,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+            Transform.translate(
+              offset: Offset(0, -8.h),
+              child: Container(
+                width: 54.w,
+                height: 54.w,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEE3F5C),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFF35970), width: 2.w),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFB91F3B),
+                      offset: Offset(0, 3.h),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.logout_rounded,
+                  size: 28.sp,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            Text(
+              'Leave Circle',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.montserrat(
+                size: 19.sp,
+                color: AppColors.textPrimary,
+                weight: FontWeight.w700,
+              ),
+            ),
+            14.verticalSpace,
+            Text(
+              'Are you sure you want to leave\n$circleName?',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.montserrat(
+                size: 15.sp,
+                color: AppColors.textSecondary,
+                weight: FontWeight.w500,
+                height: 1.45,
+              ),
+            ),
+            20.verticalSpace,
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 52.h,
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.blueColor,
+                        side: BorderSide(color: AppColors.blueColor, width: 2.w),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28.r),
+                        ),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        style: AppTextStyles.montserrat(
+                          size: 14.sp,
+                          color: AppColors.blueColor,
+                          weight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                14.horizontalSpace,
+                Expanded(
+                  child: SizedBox(
+                    height: 52.h,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        elevation: 0,
+                        backgroundColor: const Color(0xFFEE3F5C),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28.r),
+                        ),
+                      ),
+                      child: Text(
+                        'Leave',
+                        style: AppTextStyles.montserrat(
+                          size: 14.sp,
+                          color: Colors.white,
+                          weight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _MessageActionsSheet extends StatelessWidget {
   const _MessageActionsSheet();
 
@@ -628,7 +810,7 @@ class _ChatComposer extends StatelessWidget {
                 borderRadius: 20,
                 border: AppBorders.raised(),
                 suffixIcon: Icon(
-                  Icons.image_outlined,
+                  Icons.attach_file_rounded,
                   color: AppColors.textPrimary,
                   size: 24.sp,
                 ),

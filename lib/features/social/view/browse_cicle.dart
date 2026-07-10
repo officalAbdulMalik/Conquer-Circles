@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:test_steps/features/profile/view/profile_bottom_sheet.dart';
 import 'package:test_steps/features/social/models/circle_models.dart';
 import 'package:test_steps/features/social/view/create_circle_onboarding_view.dart';
 import 'package:test_steps/features/social/view/circle_details_screen.dart';
@@ -11,7 +10,9 @@ import 'package:test_steps/features/social/widgets/create_circle_button.dart';
 import 'package:test_steps/features/social/widgets/empty_circle_state.dart';
 import 'package:test_steps/features/social/widgets/request_sent_dialog.dart';
 import 'package:test_steps/providers/circles_provider.dart';
+import 'package:test_steps/providers/main_nav_provider.dart';
 import 'package:test_steps/screens/notifications_screen.dart';
+import 'package:test_steps/services/dashboard_service.dart';
 import 'package:test_steps/widgets/shared/dashboard_screen_header.dart';
 import 'package:test_steps/widgets/shared/dashboard_tab_button.dart';
 import 'package:test_steps/widgets/shared/app_background_image.dart';
@@ -106,6 +107,7 @@ class _AllCirclesPageState extends ConsumerState<AllCirclesPage> {
 
   Widget _buildPage(BuildContext context, int _selectedTab) {
     final circlesState = ref.watch(circlesProvider);
+    final dashboardState = ref.watch(dashboardProvider);
     final allCircles = circlesState.allCircles;
     final visibleCircles = allCircles;
     final filtered = _filteredCircles(visibleCircles, _selectedTab);
@@ -137,7 +139,7 @@ class _AllCirclesPageState extends ConsumerState<AllCirclesPage> {
               children: [
                 DashboardScreenHeader(
                   title: 'Circles',
-                  energy: 69,
+                  energy: dashboardState.attackEnergy,
                   onNotificationsTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
@@ -146,7 +148,8 @@ class _AllCirclesPageState extends ConsumerState<AllCirclesPage> {
                     );
                   },
                   onProfileTap: () {
-                    showProfileBottomSheet(context);
+                    ref.read(mainNavTabIndexProvider.notifier).state =
+                        kProfileTabIndex;
                   },
                 ),
                 26.verticalSpace,

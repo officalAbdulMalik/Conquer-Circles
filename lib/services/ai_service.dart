@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:test_steps/models/dashboard_model.dart';
 
@@ -21,8 +22,7 @@ class AiObjective {
 }
 
 class AiService {
-  // Replace with your actual OpenAI API key
-  static const String _apiKey = 'REPLACE_WITH_OPENAI_API_KEY';
+  static String get _apiKey => dotenv.env['OPENAI_API_KEY'] ?? '';
   static const String _endpoint =
       'https://api.openai.com/v1/chat/completions';
   static const String _model = 'gpt-4o-mini';

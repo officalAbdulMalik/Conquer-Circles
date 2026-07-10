@@ -200,6 +200,7 @@ class CirclesNotifier extends StateNotifier<CirclesState> {
       }
 
       await refreshCircles(showLoader: false);
+      await refreshAllCircles(showLoader: false);
 
       final inviteCode = response['invite_code']?.toString();
       final visibility = isPrivate ? 'private' : 'public';
@@ -306,6 +307,34 @@ class CirclesNotifier extends StateNotifier<CirclesState> {
         state = state.copyWith(
           isLoading: false,
           error: 'Failed to leave circle',
+          infoMessage: null,
+        );
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+        infoMessage: null,
+      );
+    }
+  }
+
+  Future<void> deleteCircle(String circleId) async {
+    state = state.copyWith(isLoading: true, error: null, infoMessage: null);
+    try {
+      final success = await _gameService.deleteCircle(circleId);
+      if (success) {
+        await refreshCircles(showLoader: false);
+        await refreshAllCircles(showLoader: false);
+        state = state.copyWith(
+          isLoading: false,
+          error: null,
+          infoMessage: 'Circle deleted successfully.',
+        );
+      } else {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Failed to delete circle',
           infoMessage: null,
         );
       }

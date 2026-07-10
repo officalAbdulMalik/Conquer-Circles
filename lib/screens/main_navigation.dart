@@ -9,6 +9,7 @@ import 'package:test_steps/features/social/view/browse_cicle.dart';
 import 'package:test_steps/features/steps/view/player_energy_screen.dart';
 import 'package:test_steps/features/steps/view/steps_view.dart';
 import 'package:test_steps/features/map/view/map_view.dart';
+import 'package:test_steps/providers/main_nav_provider.dart';
 import 'package:test_steps/screens/notifications_screen.dart';
 import 'package:test_steps/services/dashboard_service.dart';
 
@@ -34,24 +35,23 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     _NavItem(label: 'Profile', iconAsset: 'assets/icons/profile.png'),
   ];
 
-  /// Selected tab — pure view state, ValueNotifier instead of setState.
-  late final ValueNotifier<int> _selectedTab = ValueNotifier(
-    widget.initialIndex.clamp(0, _navItems.length - 1).toInt(),
-  );
-
   @override
-  void dispose() {
-    _selectedTab.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    final clamped = widget.initialIndex.clamp(0, _navItems.length - 1);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(mainNavTabIndexProvider.notifier).state = clamped;
+    });
   }
 
   void _onItemTapped(int index) {
-    _selectedTab.value = index;
+    ref.read(mainNavTabIndexProvider.notifier).state = index;
   }
 
   @override
   Widget build(BuildContext context) {
     final dashboardState = ref.watch(dashboardProvider);
+    final selectedIndex = ref.watch(mainNavTabIndexProvider);
     final screens = [
       const StepsView(),
       const MapView(),
@@ -60,11 +60,7 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
       const ProfileScreen(),
     ];
 
-    return ValueListenableBuilder<int>(
-      valueListenable: _selectedTab,
-      builder: (context, selectedIndex, _) =>
-          _buildScaffold(context, screens, selectedIndex),
-    );
+    return _buildScaffold(context, screens, selectedIndex);
   }
 
   Widget _buildScaffold(

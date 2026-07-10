@@ -467,6 +467,25 @@ class GameService {
     }
   }
 
+  /// Deletes a circle. Owner only; cascades to members, messages,
+  /// invites, leaderboard entries, raid alerts, and join requests.
+  /// Call from: CircleDetailScreen "Delete Circle" confirmation
+  Future<bool> deleteCircle(String circleId) async {
+    final user = currentUser;
+    if (user == null) return false;
+    try {
+      await _client
+          .from('circles')
+          .delete()
+          .eq('id', circleId)
+          .eq('owner_id', user.id);
+      return true;
+    } catch (e) {
+      _log('deleteCircle', e);
+      return false;
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // CIRCLE CHAT
   // ---------------------------------------------------------------------------

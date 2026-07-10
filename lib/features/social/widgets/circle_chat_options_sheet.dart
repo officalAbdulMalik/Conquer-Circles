@@ -4,15 +4,15 @@ import 'package:test_steps/core/theme/app_colors.dart';
 import 'package:test_steps/core/theme/app_text_styles.dart';
 import 'package:test_steps/widgets/shared/app_borders.dart';
 
-class CircleAdminOptionsSheet extends StatelessWidget {
-  const CircleAdminOptionsSheet({
+class CircleChatOptionsSheet extends StatelessWidget {
+  const CircleChatOptionsSheet({
     super.key,
-    this.onEditCircle,
-    this.onDeleteCircle,
+    this.onBlockChat,
+    this.onLeaveCircle,
   });
 
-  final VoidCallback? onEditCircle;
-  final VoidCallback? onDeleteCircle;
+  final VoidCallback? onBlockChat;
+  final VoidCallback? onLeaveCircle;
 
   @override
   Widget build(BuildContext context) {
@@ -48,16 +48,15 @@ class CircleAdminOptionsSheet extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _OptionTile(
-                    icon: Icons.edit_outlined,
-                    label: 'Edit Circle',
-                    onTap: onEditCircle,
+                    icon: Icons.block_outlined,
+                    label: 'Block Chat',
+                    onTap: onBlockChat,
                   ),
                   Divider(height: 1, color: AppColors.borderColor),
                   _OptionTile(
-                    icon: Icons.delete_outline_rounded,
-                    label: 'Delete Circle',
-                    color: AppColors.error,
-                    onTap: onDeleteCircle,
+                    icon: Icons.logout_rounded,
+                    label: 'Leave Chat',
+                    onTap: onLeaveCircle,
                   ),
                 ],
               ),
@@ -74,16 +73,15 @@ class _OptionTile extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
-    this.color = AppColors.textPrimary,
   });
 
   final IconData icon;
   final String label;
-  final Color color;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    const color = AppColors.textPrimary;
     return InkWell(
       onTap: onTap,
       child: Padding(
